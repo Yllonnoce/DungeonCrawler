@@ -94,6 +94,31 @@ public partial class RailEncounterController
 
     // ---- extension point 1: arming (spawn what stands on the line) ------------------------------
 
+    /// <summary>The S a ride is armed from (<see cref="ArmFrom"/>: the lift's takeover), or −∞ for a ride armed from its stop: what lies short of it is passed.</summary>
+    private float _armFromS = float.NegativeInfinity;
+
+    /// <summary>The ids of the pieces and encounters the last <see cref="ArmFrom"/> counted as passed (tests read it).</summary>
+    internal readonly List<string> ArmedFromPassed = new();
+
+    /// <summary>
+    /// Ride <paramref name="ride"/> arms from party S <paramref name="s"/> (plan 15 Ruling 27: the lift's takeover departs from its own place, past its stop):
+    /// as <see cref="Arm"/>, with every piece and encounter of the ride short of <paramref name="s"/> counted as passed: no stander spawns there, no encounter
+    /// starts, no piece fires, and a passed <c>parked</c> piece does not stand. Server and solo.
+    /// </summary>
+    internal void ArmFrom(int ride, float s)
+    {
+        _armFromS = s;
+        try { Arm(ride); }
+        finally { _armFromS = float.NegativeInfinity; }
+        ArmedFromPassed.Clear();
+        int pieces = 0, encounters = 0;
+        foreach (var p in _pieces)
+            if (p.Plan.Ride == ride && p.S < s) { p.Fired = true; pieces++; ArmedFromPassed.Add(p.Plan.Id); }
+        for (var i = 0; i < _encounters.Count; i++)
+            if (_encounters[i].Ride == ride && ride < _rails.StopS.Length && RideS(ride, _encounters[i].At) < s) { _started[i] = true; encounters++; ArmedFromPassed.Add(_encounters[i].Id); }
+        GD.Print($"[rails] ride {ride} armed from S={s:0.0}: {pieces} piece(s) and {encounters} encounter(s) short of it passed");
+    }
+
     private void ArmStanders(int ride)
     {
         for (var i = 0; i < _encounters.Count; i++)
@@ -101,6 +126,7 @@ public partial class RailEncounterController
             var enc = _encounters[i];
             if (enc.Ride != ride || !SetPieceRules.StandsFromDeparture(enc.Kind)) continue;
             _started[i] = true; // StartReached leaves it be
+            if (RideS(enc.Ride, enc.At) < _armFromS) continue; // armed from past it (ArmFrom): nothing stands behind the train
             SpawnStander(i, enc);
         }
         for (var i = 0; i < _pieces.Count; i++) if (_pieces[i].Plan.Ride == ride) _pieces[i].Fired = false;

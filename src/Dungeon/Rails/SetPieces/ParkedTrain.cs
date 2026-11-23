@@ -1,4 +1,5 @@
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Party;
 using DungeonCrawler.Net;
 using Godot;
 
@@ -31,6 +32,13 @@ public partial class ParkedTrain : Node3D, ISoundPoint
 
     public MineCart Cart { get; private set; } = null!;
     public IReadOnlyList<TrainWagon> Wagons => _wagons;
+    /// <summary>
+    /// The lift's prompt on any of its five bodies for a hero (plan 15 Task 6, Ruling 28: "Board the cart" by <see cref="ParkedRules.Prompt"/>, its own
+    /// rider's "Get out"), set by the encounter controller on every role; null offers nothing.
+    /// </summary>
+    public Func<ICartBody, Adventurer, string>? PromptFor { get; set; }
+    /// <summary>A hero pressed interact on one of its five bodies (the cart or a tub: the same board). Set by the encounter controller.</summary>
+    public Action<ICartBody, Adventurer>? OnUse { get; set; }
     /// <summary>Its five bodies stand (in the way, or a lift); false while gone.</summary>
     public bool Standing { get; private set; }
     /// <summary>The party's train bears down on it: the lantern blinks.</summary>
@@ -60,10 +68,15 @@ public partial class ParkedTrain : Node3D, ISoundPoint
         _wood = DungeonBuilder.Material("weathered_planks", new Color(0.5f, 0.38f, 0.24f), 1.6f);
         Cart = new MineCart { CartId = CartIds.Lift }.AsChaser();
         Cart.Name = "LiftCart";
+        var cart = Cart;
+        Cart.PromptFor = hero => PromptFor?.Invoke(cart, hero) ?? "";
+        Cart.OnUse = hero => OnUse?.Invoke(cart, hero);
         AddChild(Cart);
         for (var k = 1; k <= ParkedRules.Wagons; k++)
         {
             var wagon = new TrainWagon { Name = $"LiftWagon{k}", Number = k, OfLift = true, WireRef = NetRefs.LiftWagon(k) };
+            wagon.PromptFor = hero => PromptFor?.Invoke(wagon, hero) ?? "";
+            wagon.OnUse = hero => OnUse?.Invoke(wagon, hero);
             AddChild(wagon);
             _wagons.Add(wagon);
         }
@@ -93,6 +106,52 @@ public partial class ParkedTrain : Node3D, ISoundPoint
         for (var k = 1; k <= _wagons.Count; k++) _wagons[k - 1].Pose(party.Frame(cartS - TrainRules.Spacing * k));
         _chocks.GlobalTransform = Cart.GlobalTransform;
     }
+
+    /// <summary>
+    /// The lift runs (plan 15 Task 6): its wagons posed behind its cart, whose centre is at <paramref name="cartS"/> on <paramref name="party"/> (the cart
+    /// itself is its run's to pose), wagon k at cart S − <see cref="TrainRules.Spacing"/>·k. Its place (<see cref="CartS"/>, <see cref="RearFaceS"/>) is kept.
+    /// </summary>
+    public void PoseWagons(float cartS, TrackSampler party)
+    {
+        if (!party.Valid) return;
+        for (var k = 1; k <= _wagons.Count; k++) _wagons[k - 1].Pose(party.Frame(Mathf.Max(0f, cartS - TrainRules.Spacing * k)));
+    }
+
+    /// <summary>The lift's speed told to its wagons (their riders' velocity).</summary>
+    public void SetSpeed(float v)
+    {
+        foreach (var wagon in _wagons) wagon.Speed = v;
+    }
+
+    /// <summary>Its five bodies on <paramref name="layers"/>: <see cref="StandingLayers"/> while the lift stands, 0 while it rolls (it offers nothing and runs bodies over).</summary>
+    public void SetLayers(uint layers)
+    {
+        Cart.CollisionLayer = layers;
+        foreach (var wagon in _wagons) wagon.CollisionLayer = layers;
+    }
+
+    private readonly List<ICartRider> _riders = new();
+
+    /// <summary>Every rider of its wagons sits where its wagon stands now (the cart's riders are its run's to follow).</summary>
+    public void FollowWagonRiders()
+    {
+        _riders.Clear();
+        foreach (var wagon in _wagons) _riders.AddRange(wagon.Riders.Values);
+        foreach (var rider in _riders)
+            if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
+        _riders.Clear();
+    }
+
+    /// <summary>Its five seat books' riders (the cart's first, then W1..W4), into <paramref name="into"/> (cleared first).</summary>
+    public void CollectRiders(List<ICartRider> into)
+    {
+        into.Clear();
+        into.AddRange(Cart.Riders.Values);
+        foreach (var wagon in _wagons) into.AddRange(wagon.Riders.Values);
+    }
+
+    /// <summary><paramref name="body"/> is one of its five bodies.</summary>
+    public bool Owns(ICartBody? body) => body != null && (body == Cart || body is TrainWagon w && _wagons.Contains(w));
 
     /// <summary>Its five bodies stand, shown and solid (layers 1|8), the chocks under the cart and the lantern lit.</summary>
     public void Stand()

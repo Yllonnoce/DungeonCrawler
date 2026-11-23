@@ -140,7 +140,8 @@ public partial class RailEncounterController : Node
             case CartEventKind.Departed:
                 FreeRideRunaway("the train departs"); // one lingering behind the stop goes before the next ride arms
                 ClearRide();
-                Arm(e.Stop + 1);
+                if (!float.IsNaN(_rails.DepartedPastS)) ArmFrom(e.Stop + 1, _rails.DepartedPastS); // the lift's takeover left from its own place (plan 15 Ruling 27)
+                else Arm(e.Stop + 1);
                 break;
             case CartEventKind.Wrecked:
                 FreeRideRunaway("the train is wrecked"); // a fall too
@@ -165,6 +166,7 @@ public partial class RailEncounterController : Node
             case CartEventKind.Arrived:
                 ClearRide(); // the ride's runaway is not cleared: it halts behind the held train first (Ruling 13)
                 ResetSwitchyard(undone: false, upToRide: e.Stop); // the finished rides' levers only: one thrown ahead for a later ride stays thrown
+                ParkedOnArrived(e.Stop); // the takeover's latch clears at the last stop (plan 15 Ruling 25)
                 break;
             case CartEventKind.OnFoot:
                 FreeRideRunaway("the party is on foot");

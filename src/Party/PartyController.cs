@@ -1129,11 +1129,15 @@ public partial class PartyController : Node3D
     public Save.PartyDto CaptureState()
     {
         var anchor = HasBodies ? Anchor : null;
+        // a hero seated in ride 5's lift is saved beside the parked train outside, or on the island past the bridge: never over the lava (plan 15 Ruling 31)
+        var rails = Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc) ? rc : null;
+        Vector3 PoseOf(Adventurer a) { var p = a.IsInsideTree() ? a.GlobalPosition : a.Position; return rails != null && a.IsInsideTree() ? rails.SavePose(a, p) : p; }
+        var anchorAt = anchor != null ? PoseOf(anchor) : GlobalPosition;
         return new()
         {
-            X = anchor?.GlobalPosition.X ?? GlobalPosition.X, Y = anchor?.GlobalPosition.Y ?? GlobalPosition.Y, Z = anchor?.GlobalPosition.Z ?? GlobalPosition.Z,
+            X = anchorAt.X, Y = anchorAt.Y, Z = anchorAt.Z,
             Yaw = anchor?.Rotation.Y ?? 0f, FocusedIndex = Math.Max(0, LocalIndex),
-            Poses = Adventurers.Select(a => { var p = a.IsInsideTree() ? a.GlobalPosition : a.Position; return new Save.PoseDto { X = p.X, Y = p.Y, Z = p.Z, Yaw = a.Rotation.Y }; }).ToList(),
+            Poses = Adventurers.Select(a => { var p = PoseOf(a); return new Save.PoseDto { X = p.X, Y = p.Y, Z = p.Z, Yaw = a.Rotation.Y }; }).ToList(),
             Stances = Adventurers.Select(a => a.Stance.ToString()).ToList(),
             Members = Members.Select(Save.SaveMapper.ToDto).ToList(),
             Bag = Save.SaveMapper.ToDto(Bag),

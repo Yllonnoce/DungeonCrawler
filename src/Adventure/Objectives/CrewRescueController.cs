@@ -646,6 +646,38 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         }
     }
 
+    /// <summary>
+    /// The lift's boarding (plan 15 Task 6, Ruling 28; server and solo): every freed crew member up and on foot within <see cref="TrainRules.BoardReach"/>
+    /// of <paramref name="from"/> (the boarding player) sits at once in the first empty seat of the lift's <paramref name="wagons"/> by
+    /// <see cref="TrainRules.SeatOrder"/>, with no walk; a booking of the party's train it had ends. Never Home while it sits there (it is not the party's
+    /// train: <see cref="PartyWagonOf"/>). Returns how many sat.
+    /// </summary>
+    internal int SeatInLift(IReadOnlyList<TrainWagon> wagons, Vector3 from)
+    {
+        if (NetSession.IsClient || wagons.Count == 0) return 0;
+        var order = TrainRules.SeatOrder(wagons.Count);
+        var seated = 0;
+        foreach (var npc in _crew)
+        {
+            if (!IsInstanceValid(npc) || npc.Dead || npc.Downed || npc.Seated || !npc.Freed || CageOf(npc) is { Open: false }) continue;
+            if (Layout.InIsland(DungeonBuilder.WorldToCell(npc.GlobalPosition))) continue; // already inside: nobody is carried back across to ride in again
+            var distance = Flat(npc.GlobalPosition, from);
+            if (distance > TrainRules.BoardReach) continue;
+            (int Wagon, int Seat)? free = null;
+            foreach (var p in order)
+                if (wagons[p.Wagon - 1].Seats.OccupantOf(p.Seat) == null) { free = p; break; }
+            if (free is not { } at) break; // the lift is full
+            if (_bookings.Remove(npc, out var booked)) StopWalking(npc, booked);
+            var wagon = wagons[at.Wagon - 1];
+            if (!wagon.Seats.Put(npc.RiderId, at.Seat)) continue;
+            npc.SitIn(wagon, at.Seat);
+            seated++;
+            GD.Print($"[CrewRescue] {npc.NpcName} sits in the lift's W{at.Wagon} seat {at.Seat} at once ({distance:0.0} m)");
+        }
+        if (seated > 0) RefreshHud();
+        return seated;
+    }
+
     /// <summary>Test hook: freed crew book seats only in this wagon while it is set (0: the train's first free seats).</summary>
     internal int DebugBoardWagon { get; set; }
 

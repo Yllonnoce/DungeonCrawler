@@ -80,4 +80,38 @@ public static class ParkedRules
     /// <summary>What it offers: "Board the cart" only as a lift, with no chase on the line, to a player on foot within reach; otherwise "".</summary>
     public static string Prompt(ParkedState state, bool chaseOnLine, bool onFootPlayer, bool inReach)
         => state == ParkedState.Lift && !chaseOnLine && onFootPlayer && inReach ? BoardPrompt : "";
+
+    // ---- the lift (plan 15 Task 6, Rulings 26-31) --------------------------------------------------------------------
+
+    /// <summary>
+    /// The lift's limit (its StopAt), a centre S: the nearest of the party train's <paramref name="trainBackS"/> (<see cref="SpareRules.TrainBackS"/>)
+    /// less <see cref="SpareRules.ChaseGap"/> (NaN with no live cart ahead), the standing buffer's face <paramref name="bufferFaceS"/> less half a cart
+    /// (NaN for none), and the last stop <paramref name="lastStopS"/>. NaN arguments are ignored.
+    /// </summary>
+    public static float LiftLimit(float trainBackS, float bufferFaceS, float lastStopS)
+    {
+        var limit = lastStopS;
+        if (!float.IsNaN(trainBackS)) limit = Nearest(limit, trainBackS - SpareRules.ChaseGap);
+        if (!float.IsNaN(bufferFaceS)) limit = Nearest(limit, bufferFaceS - CartRules.HalfLength);
+        return limit;
+    }
+
+    private static float Nearest(float a, float b) => float.IsNaN(a) ? b : Math.Min(a, b);
+
+    /// <summary>A board takes the lift over as the party's train (Ruling 27): the party has no live cart, and its last wreck was not past the bridge's start.</summary>
+    public static bool TakesOver(bool partyLiveCart, bool wreckedInside) => !partyLiveCart && !wreckedInside;
+
+    /// <summary>
+    /// Where a lift rider's saved pose stands (Ruling 31), as a party-lane S: the lift's own cart S once its rear (<paramref name="liftRearS"/>) is past the
+    /// bridge's far edge (<paramref name="bridgeToS"/>: the rider is set down inside), else the parked train's place (<paramref name="parkedCartS"/>: beside
+    /// it, outside). Never over the bridge.
+    /// </summary>
+    public static float SavePoseS(float liftCartS, float liftRearS, float bridgeToS, float parkedCartS) => liftRearS > bridgeToS ? liftCartS : parkedCartS;
+
+    /// <summary>
+    /// A train with its front at <paramref name="trainFrontS"/> and its rear at <paramref name="trainRearS"/> stands within the parked train's span
+    /// (<paramref name="rearFaceS"/> .. <paramref name="frontFaceS"/>): a body of it overlaps the lift's place (Task 5 review 7). NaN: never.
+    /// </summary>
+    public static bool InItsSpan(float trainFrontS, float trainRearS, float rearFaceS, float frontFaceS)
+        => trainFrontS > rearFaceS && trainRearS < frontFaceS;
 }

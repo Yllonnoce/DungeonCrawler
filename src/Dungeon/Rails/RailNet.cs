@@ -198,6 +198,7 @@ public partial class RailNet : Node
     private CartStateDto Capture(in LiveCart c, double now)
     {
         var run = c.Run;
+        var lift = c.Id == CartIds.Lift;
         var input = run.LastInput;
         List<int>? riders = null;
         if (c.Slag is { } slag)
@@ -211,10 +212,11 @@ public partial class RailNet : Node
         {
             Cart = c.Id, Kind = (byte)c.Kind, Track = c.Track, Dir = (sbyte)run.Dir,
             S = run.State.S, V = run.State.V, Mode = (byte)run.State.Mode, Limit = run.Limit,
-            Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)Math.Clamp(input.CrewWagons, 0, 255), TargetOverride = input.TargetOverride,
+            Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)Math.Clamp(lift ? ParkedRules.Wagons : input.CrewWagons, 0, 255), TargetOverride = input.TargetOverride,
             Plating = run.State.Plating, Offset = c.Offset, EncounterId = c.EncounterId, RiderNetIds = riders, ServerTime = now,
-            // a chaser: its spare's stop and its own countdown
-            StopIndex = c.Kind == CartKind.Chaser ? c.Id - CartIds.ChaserBase : 0, BoardingLeft = c.Kind == CartKind.Chaser ? _rails.ChaserBoardingLeft : -1f,
+            // a chaser: its spare's stop and its own countdown; the lift (plan 15 Ruling 30): no stop, its four tubs as its train
+            StopIndex = lift ? -1 : c.Kind == CartKind.Chaser ? c.Id - CartIds.ChaserBase : 0, BoardingLeft = c.Kind == CartKind.Chaser ? _rails.ChaserBoardingLeft : -1f,
+            Train = lift ? new List<int> { 1, 2, 3, 4 } : null,
         };
     }
 
@@ -250,6 +252,7 @@ public partial class RailNet : Node
         b.Append("seats=");
         BookSeats(b, "P", _rails.Cart);
         if (BookChaser() is { } chaser) BookSeats(b, "C" + (chaser.CartId - CartIds.ChaserBase).ToString(CultureInfo.InvariantCulture), chaser);
+        BookLift(b); // plan 15 Ruling 30: the lift's cart and its four tubs, while anyone sits in them
         foreach (var wagon in _rails.Wagons.Where(w => IsInstanceValid(w)))
             BookSeats(b, "W" + wagon.Number.ToString(CultureInfo.InvariantCulture), wagon);
         if (ObjectiveController.Instance is CrewRescueController crew)
@@ -305,10 +308,21 @@ public partial class RailNet : Node
 
     private static int LiveId(Enemy? e) => e != null && IsInstanceValid(e) && !e.IsQueuedForDeletion() && e.IsAlive ? e.NetId : -1;
 
-    /// <summary>The chaser on this side (the server's own, a client's copy), or null.</summary>
+    /// <summary>The RIDE pass: the lift's books (L, then L1..L4), as this side has them, while any of its bodies has a rider. Test only.</summary>
+    private static void BookLift(System.Text.StringBuilder b)
+    {
+        if (RailEncounterController.Instance is not { Parked: { } train } || !IsInstanceValid(train)) return;
+        var riders = train.Cart.Riders.Count;
+        foreach (var w in train.Wagons) riders += w.Riders.Count;
+        if (riders == 0) return;
+        BookSeats(b, "L", train.Cart);
+        foreach (var w in train.Wagons) BookSeats(b, "L" + w.Number.ToString(CultureInfo.InvariantCulture), w);
+    }
+
+    /// <summary>The chaser on this side (the server's own, a client's copy), or null; never the lift (its own book, <see cref="BookLift"/>).</summary>
     private MineCart? BookChaser()
     {
-        if (!NetSession.IsClient) return _rails.Chaser;
+        if (!NetSession.IsClient) return _rails.Lift == null ? _rails.Chaser : null;
         foreach (var cc in _carts.Values) if (cc.Chaser is { } m && IsInstanceValid(m) && !m.IsQueuedForDeletion()) return m;
         return null;
     }

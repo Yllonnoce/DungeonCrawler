@@ -49,8 +49,12 @@ public static class FloorStateCapture
                 case LootDrop { QuestId: not null }:
                     break; // quest items are tracked by TakenQuestItems
                 case Npc npc:
-                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Fled = npc.Fled || npc.Thrown, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
+                {
+                    // a crew member or escort seated in ride 5's lift is saved beside the parked train or on the island, never over the lava (plan 15 Ruling 31)
+                    var at = Dungeon.Rails.RailController.Instance is { } lift && GodotObject.IsInstanceValid(lift) && lift.GetParent() == floorRoot ? lift.SavePose(npc, npc.GlobalPosition) : npc.GlobalPosition;
+                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Fled = npc.Fled || npc.Thrown, Hp = npc.Hp, X = at.X, Y = at.Y, Z = at.Z });
                     break;
+                }
                 case LootDrop drop when !drop.IsQueuedForDeletion():
                     dto.Items.Add(new WorldItemDto { Item = SaveMapper.ToDto(drop.Item), Coins = drop.Coins, DroppedByParty = drop.DroppedByParty, X = drop.GlobalPosition.X, Y = drop.GlobalPosition.Y, Z = drop.GlobalPosition.Z });
                     break;

@@ -24,6 +24,8 @@ public partial class RailNet
         public SlagCart? Slag;
         /// <summary>A chaser's tub: its riders are booked and seated in it here (SeatMsgs).</summary>
         public MineCart? Chaser;
+        /// <summary>The lift (plan 15 Ruling 30): this client's own parked train, its cart and four tubs following the server's lift (its riders seated by SeatMsgs).</summary>
+        public ParkedTrain? Lift;
         public Enemy? Rider;
         /// <summary>Its sound (the golem runner's: a track change only), and the follower's snaps it was last fed at (a snap primes it).</summary>
         public CartSound? Sound;
@@ -64,6 +66,13 @@ public partial class RailNet
             return null;
         }
     }
+
+    /// <summary>Client: the lift runs on the wire here (its copy follows the server's): its bodies stay shown whatever its place's state (pre-flight F5).</summary>
+    internal bool ClientLiftLive => _carts.TryGetValue(CartIds.Lift, out var cc) && cc.Lift is { } t && IsInstanceValid(t);
+
+    /// <summary>Client: the lift as the server runs it (its follower's mode and S, its countdown left, −1 none), or null while it is not on the wire.</summary>
+    internal (CartMode Mode, float S, float BoardingLeft)? ClientLift
+        => _carts.TryGetValue(CartIds.Lift, out var cc) && cc.Lift is { } t && IsInstanceValid(t) && cc.Follow.HasState ? (cc.Follow.Mode, cc.Follow.S, cc.BoardingLeftNow()) : null;
 
     /// <summary>Client: when <paramref name="seat"/> is the chaser's copy here, its mode (the follower's) and countdown left (−1 none) for the HUD, else null. No allocation.</summary>
     internal (CartMode Mode, float Left)? ClientChaserHud(MineCart seat)
@@ -126,6 +135,7 @@ public partial class RailNet
         cc.Follow.Apply(d, now);
         (cc.BoardingLeft, cc.BoardingAt) = (d.BoardingLeft, now);
         if (cc.Chaser is { } chaser) chaser.CollisionLayer = d.Mode == (byte)CartMode.Held ? 1u | 8u : 0u; // solid and a thing to use (its rider's "Get out") while it stands, as the server's
+        if (cc.Lift is { } lift) lift.SetLayers(d.Mode == (byte)CartMode.Held ? ParkedTrain.StandingLayers : 0u); // the lift's five bodies, as the server's
         for (var i = 0; i < cc.Wanted.Length; i++) cc.Wanted[i] = d.RiderNetIds != null && i < d.RiderNetIds.Count ? d.RiderNetIds[i] : -1;
         Bind(cc);
     }
@@ -174,6 +184,18 @@ public partial class RailNet
                 cc.Run = new CartRun(track, runner, state, d.Dir);
                 break;
             }
+            case CartKind.Chaser when d.Cart == CartIds.Lift:
+            {
+                // the lift (plan 15 Ruling 30): no copy is built; this client's own parked train follows the server's, shown while it runs
+                if (RailEncounterController.Instance is not { Parked: { } train } || !IsInstanceValid(train)) return null;
+                train.Stand();
+                cc.Body = train.Cart;
+                cc.Lift = train;
+                cc.Run = new CartRun(track, train.Cart, state, d.Dir);
+                (train.Cart.NetRun, train.Cart.NetFollow) = (cc.Run, cc.Follow); // a seated headset's comfort inputs read the server's ride
+                cc.Sound = train.Cart.Sound;
+                break;
+            }
             case CartKind.Chaser:
             {
                 // a left-behind player's spare running after the train: the party's tub, its riders seated by SeatMsgs; standing, its rider's "Get out" goes as spare:{stop}
@@ -193,8 +215,10 @@ public partial class RailNet
         }
         cc.Run.Limit = d.Limit;
         cc.Run.PoseAt(d.S);
+        cc.Lift?.PoseWagons(d.S, track);
         _carts[d.Cart] = cc;
         if (cc.Chaser is { } placed) _rails.ChaserPlacedSound(placed, track, d.S); // its first state: announced, and the spawn bell by the server's rule
+        if (cc.Lift is { } liftPlaced) _rails.ChaserPlacedSound(liftPlaced.Cart, track, d.S);
         return cc;
     }
 
@@ -245,6 +269,14 @@ public partial class RailNet
     {
         _carts.Remove(cc.Id);
         if (!IsInstanceValid(cc.Body)) return;
+        if (cc.Lift is { } lift) // the lift off the wire: never freed here; anyone still seated gets out where they sit, and it is hidden or stands at its place
+        {
+            if (!IsInstanceValid(lift)) return;
+            SetDownSeated(lift.Cart);
+            foreach (var w in lift.Wagons) SetDownSeated(w);
+            RailEncounterController.Instance?.ApplyLiftGone(lift);
+            return;
+        }
         if (cc.Slag is { } slag)
         {
             HoldLeapers(slag); // another player's leaper still on its deck here (its fate still in flight) is held hidden, never set down there (ruling (d))
@@ -455,6 +487,14 @@ public partial class RailNet
                 body.Curvature = cc.Run.Dir * cc.Run.Track.Curvature(s);
             }
             if (cc.Slag != null) cc.Slag.FollowRiders();
+            else if (cc.Lift is { } lift && IsInstanceValid(lift))
+            {
+                lift.PoseWagons(s, cc.Run.Track);
+                lift.SetSpeed(cc.Follow.Mode == CartMode.Rolling ? cc.Follow.V : 0f);
+                foreach (var rider in lift.Cart.Riders.Values)
+                    if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
+                lift.FollowWagonRiders();
+            }
             else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.FollowCarrier();
             else if (cc.Chaser is { } chaser)
                 foreach (var rider in chaser.Riders.Values)

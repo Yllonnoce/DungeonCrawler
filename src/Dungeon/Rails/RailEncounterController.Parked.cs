@@ -25,6 +25,12 @@ public partial class RailEncounterController
 
     /// <summary>The parked train's state now (every role; a client's is the server's, from its PropEvts and the prop check). In the way on a floor without one.</summary>
     public ParkedState ParkedNow { get; private set; } = ParkedState.InTheWay;
+    /// <summary>
+    /// The lift took over as the party's train (plan 15 Task 6, Ruling 25's latch): set at the takeover's press (<see cref="RailController.TakeOverAt"/>),
+    /// cleared when the party's train arrives at the last stop and at every restore. While it is set <see cref="ParkedRules.Next"/> keeps the parked train gone.
+    /// Server and solo.
+    /// </summary>
+    public bool TakenOver { get; internal set; }
     /// <summary>Times the party's train smashed the parked train on this floor build (tests read it).</summary>
     internal int ParkedSmashes { get; private set; }
     /// <summary>The parked train when built live, else null.</summary>
@@ -62,6 +68,8 @@ public partial class RailEncounterController
         root.AddChild(train);
         train.OuterSide = OuterSideOfPartyLane(cartS);
         train.Pose(cartS, _rails.Party.Track);
+        train.PromptFor = _rails.LiftPromptFor; // the lift's "Board the cart" and its rider's "Get out" on all five bodies (plan 15 Task 6, Ruling 28), on every role
+        train.OnUse = _rails.UseLift;
         piece.Parked = train;
         _parkedPiece = piece;
         ParkedNow = ParkedState.InTheWay;
@@ -84,6 +92,7 @@ public partial class RailEncounterController
     private void ArmParked(int ride)
     {
         if (_parkedPiece is not { } piece || Parked == null || piece.Plan.Ride != ride) return;
+        if (piece.S < _armFromS) return; // armed from past it (the lift's takeover, Ruling 27): a passed parked piece does not stand
         piece.Barked = false;
         SetParked(ParkedState.InTheWay, smashed: false, why: $"ride {ride}'s arming");
     }
@@ -93,6 +102,7 @@ public partial class RailEncounterController
     {
         if (_parkedPiece is not { } piece || Parked is not { } train) return;
         piece.Barked = false;
+        TakenOver = false; // Ruling 25: a restore clears the takeover's latch
         SetDownParkedRiders(train, "the cart is restored");
         SetParked(ParkedState.InTheWay, smashed: false, why: "a restore");
     }
@@ -102,7 +112,8 @@ public partial class RailEncounterController
     /// <summary>
     /// Each physics tick: while its ride is armed and it stands in the way, the lantern blinks as the party's train bears down on it (the bell at
     /// the alarm's start), a seated hero calls it once with the front within <see cref="ParkedRules.CallAt"/> of its rear face, and the front reaching
-    /// that face smashes it (<see cref="SmashParked"/>). Then <see cref="ParkedRules.Next"/> steps its state (this task passes takenOver false: Task 6's latch).
+    /// that face smashes it (<see cref="SmashParked"/>). Then <see cref="ParkedRules.Next"/> steps its state, with the takeover's latch (<see cref="TakenOver"/>)
+    /// and any chase on the line (a chaser, a relief or the lift itself: it stands again only once that is gone).
     /// </summary>
     private void TickParked(PartyController party, bool rolling)
     {
@@ -123,7 +134,7 @@ public partial class RailEncounterController
             if (rolling && onItsLane && ParkedRules.Smashes(prevFront, front, rear)) smashed = SmashParked(piece, train, front);
         }
         else if (train.Alarm) SetParkedAlarm(train, false);
-        var next = ParkedRules.Next(ParkedNow, smashed, ParkedLiftDue(), takenOver: false, chaseOnLine: _rails.Chaser != null);
+        var next = ParkedRules.Next(ParkedNow, smashed, ParkedLiftDue(), takenOver: TakenOver, chaseOnLine: _rails.Chaser != null);
         if (next != ParkedNow) SetParked(next, smashed, smashed ? "the smash" : "a lift is due");
     }
 
@@ -245,6 +256,34 @@ public partial class RailEncounterController
     }
 
     /// <summary>
+    /// The lift takes over as the party's train (Ruling 27; <see cref="RailController.TakeOverAt"/>, server and solo): the latch is set and it goes with no
+    /// tumble ("gone"); anyone aboard it is set down first.
+    /// </summary>
+    internal void ParkedTakenOver()
+    {
+        TakenOver = true;
+        SetParked(ParkedState.Gone, smashed: false, why: "the lift takes over");
+    }
+
+    /// <summary>The party's train arrived (server and solo): at the last stop the takeover's latch clears (Ruling 25), so the lift may stand again.</summary>
+    private void ParkedOnArrived(int stop)
+    {
+        if (stop >= _rails.StopS.Length - 1) TakenOver = false;
+    }
+
+    /// <summary>The nearest standing buffer's face ahead of party S <paramref name="aheadOf"/> (the lift halts short of it, <see cref="ParkedRules.LiftLimit"/>), or NaN: none, or smashed.</summary>
+    internal float StandingBufferFaceS(float aheadOf)
+    {
+        var face = float.NaN;
+        foreach (var p in _pieces)
+            if (p.Buffer is { Smashed: false } buffer && IsInstanceValid(buffer) && buffer.FaceS > aheadOf && (float.IsNaN(face) || buffer.FaceS < face)) face = buffer.FaceS;
+        return face;
+    }
+
+    /// <summary>Its state as a PropEvt word for a joiner's catch-up (the Task 5 review's Minor 1: no in-the-way glimpse until the prop check), or null without one.</summary>
+    internal string? ParkedCatchUpWord() => Parked == null ? null : ParkedNow switch { ParkedState.Lift => "standing", ParkedState.Gone => "gone", _ => "inway" };
+
+    /// <summary>
     /// The lift rolls out (pre-flight F5; Task 6 calls it at the lift's departure): its place is <see cref="ParkedState.Gone"/> and told "gone"; its
     /// bodies are the lift's, rolling, so they are not hidden here. <see cref="ParkedRules.Next"/>'s rule 2 stands a lift again once the lift is off the line.
     /// </summary>
@@ -275,7 +314,7 @@ public partial class RailEncounterController
                 ParkedNow = ParkedState.Gone;
                 train.Smash(IsInstanceValid(_rails.Cart) ? _rails.Cart.Velocity : Vector3.Zero);
                 return true;
-            case "gone": ShowParked(train, ParkedState.Gone); return true;
+            case "gone": ShowParked(train, ParkedState.Gone); return true; // the lift rolling away keeps its bodies shown (ShowParked)
             default: return false;
         }
     }
@@ -284,17 +323,35 @@ public partial class RailEncounterController
     private void ShowParked(ParkedTrain train, ParkedState state)
     {
         ParkedNow = state;
-        if (state == ParkedState.Gone) { train.Hide(); return; }
+        if (state == ParkedState.Gone)
+        {
+            if (RailNet.Instance is { ClientLiftLive: true }) return; // pre-flight F5: its place is empty, but its bodies are the lift's, rolling: shown
+            train.Hide();
+            return;
+        }
         train.Pose(ParkedRules.CartS(ExitFromS), _rails.Party.Track);
         train.Stand();
     }
 
     /// <summary>Client: its ride armed (anew): it stands in the way, as the server's arming stands it.</summary>
+    /// <summary>
+    /// Client: its ride armed (anew): it stands in the way, as the server's arming stands it, only while our cart's front is short of its rear face. A ride armed
+    /// from past it (the lift's takeover, Ruling 27) leaves it as the server has it, and so does a joiner's first state between the smash and the last stop (the
+    /// Task 5 review's Minor 1: its prop state names it).
+    /// </summary>
     private void ApplyParkedArm(int ride)
     {
         if (_parkedPiece is not { } piece || Parked is not { } train) return;
-        if (piece.Plan.Ride == ride) { if (ParkedNow != ParkedState.InTheWay) ShowParked(train, ParkedState.InTheWay); }
+        if (piece.Plan.Ride == ride) { if (ParkedNow != ParkedState.InTheWay && _rails.Party.FrontS < train.RearFaceS) ShowParked(train, ParkedState.InTheWay); }
         else train.Alarm = false;
+    }
+
+    /// <summary>Client: the lift's copy went off the wire (its Hidden state): its bodies hidden while its place is empty, else standing at its place.</summary>
+    internal void ApplyLiftGone(ParkedTrain train)
+    {
+        if (!NetSession.IsClient || train != Parked) return;
+        if (ParkedNow == ParkedState.Gone) train.Hide();
+        else ShowParked(train, ParkedNow);
     }
 
     /// <summary>Client, each rendered frame on its armed ride: the lantern blinks by the server's rule from our own cart while it stands in the way.</summary>

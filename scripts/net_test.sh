@@ -68,7 +68,12 @@
 #                                     server's CrossOut and CrossBack; nothing runs into the pit): stop 4's spare, which offered nothing while the train was held there, offers itself
 #                                     once it has gone; the joiner takes it through its intent (spare:4), and its chaser runs up behind
 #                                     the train (hopping ride 5's pit and the fallen
-#                                     trestle) and halts within 3 m of its last body (chase-done on both sides; no relief cart was sent online); the first client leaves
+#                                     trestle) and halts within 3 m of the parked train's place, outside the island (plan 15 Ruling 29:
+#                                     chase-done on both sides; no relief cart was sent online); its rider is set down there, and once the
+#                                     chaser has gone the parked train stands as a lift: put in reach of its cart, the joiner presses
+#                                     "Board the cart" through its intent (parked:{piece}), and the lift carries it over the exit bridge,
+#                                     halts within 3 m of the held train's last body inside the island and sets it down there (lift-done
+#                                     on both sides; plan 15 Task 6); the first client leaves
 #                                     seated once the chaser has gone; the server then wrecks the cart at the end of the line by a test
 #                                     hook: past the exit bridge's start no spare takes over and its riders, if any rode, are set down inside (the
 #                                     joiner sees Wrecked and no takeover); the test restores the cart at stop 4 (not a rise) and wrecks it
@@ -193,10 +198,16 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: beside stop 4's spare .* with the train held at stop 4 it offers \"\" here" "$TMP/joiner.log"; then echo "NET TEST: FAIL (stop 4's spare was not seen to offer nothing while the train was held there)"; exit 1; fi
   if ! grep -q "\[net\] ride: the train left stop 4 without us .* offers \"Take the spare cart\" .* took it through the intent (spare:4)" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never took stop 4's spare through its intent)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner took spare 4 through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never placed the joiner's chaser)"; exit 1; fi
-  if ! grep -q "\[net\] ride: our chaser halted .* behind the train's last body here (the train held at stop [0-9]*, S=[0-9.]*, 4 wagon(s);" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's chaser never halted behind the train)"; exit 1; fi
+  # plan 15 Ruling 29 (Task 6 rewrote step 8): the chaser halts behind the parked train's place, outside the island, never on the exit bridge
+  if ! grep -q "\[net\] ride: our chaser halted .* behind the parked train's place here (the train held at stop [0-9]*, S=[0-9.]*, 4 wagon(s);" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's chaser never halted behind the parked train's place)"; exit 1; fi
   if ! grep -q "\[net\] ride: chaser hud \"Spare cart — after the train\"" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's cart bar did not read the chaser's line while it rolled)"; exit 1; fi
-  if ! grep -q "\[net\] ride: chase-done" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: chase-done: the chaser halted .* behind the train's last body (the train held at stop [0-9]*, S=[0-9.]*, 4 wagon(s))" "$TMP/server.log"; then echo "NET TEST: FAIL (no chase-done on the joiner and the server)"; exit 1; fi
-  if ! grep -q "\[net-server\] ride: chase-done: .* it hopped [1-9] hole(s) in the line" "$TMP/server.log"; then echo "NET TEST: FAIL (the chaser never hopped ride 5's pit or the fallen trestle)"; exit 1; fi
+  if ! grep -q "\[net\] ride: chase-done: set down beside the lane outside the island" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: chase-done: the chaser halted .* behind the parked train's place at S=[0-9.]*, outside the island (the train held at stop [0-9]*, S=[0-9.]*, 4 wagon(s)); Joiner set down beside the lane outside at .*: yes;" "$TMP/server.log"; then echo "NET TEST: FAIL (no chase-done at the parked train's place on the joiner and the server: $(grep -m1 "chase-done" "$TMP/server.log"))"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: chase-done: .* outside the island .* it hopped [1-9] hole(s) in the line" "$TMP/server.log"; then echo "NET TEST: FAIL (the chaser never hopped ride 5's pit or the fallen trestle)"; exit 1; fi
+  # the lift (plan 15 Task 6): the joiner presses "Board the cart" on the lift's cart through its intent; the lift halts within 3 m of the held
+  # train's last body inside the island and sets its one rider down there, on both sides
+  if ! grep -q "\[net\] ride: the lift stands again here; its cart offers \"Board the cart\" .* pressed it through the intent (parked:[0-9]*)" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: Joiner boarded the lift through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded the lift through its intent)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: lift halted at S=[0-9.]*, [0-9.]* m behind the train's last body (the train held at stop [0-9]*), inside the island; 1 rider(s) set down inside; Joiner at .* (ok)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the lift did not halt within 3 m of the held train inside and set the joiner down: $(grep -m1 "ride: lift halted" "$TMP/server.log"))"; exit 1; fi
+  if ! grep -q "\[net\] ride: the lift set us down inside the island at" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner was not set down inside the island by the lift: $(grep -m1 "the lift set us down" "$TMP/joiner.log"))"; exit 1; fi
   # ride 5's lava pit (plan 15 Ruling 22): the first client throws its switch from the seat on the first frame the window offers it; the
   # server takes the press in the seated window and the train goes round the pit; both clients show the crossing as the server's (CrossOut
   # and CrossBack within 0.1 m); nothing runs into the pit, on any peer

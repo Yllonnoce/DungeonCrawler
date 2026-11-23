@@ -47,6 +47,12 @@ public static class TrainRules
     /// <summary>A walker this near its seat's spot sits in (the hop in, as a companion's).</summary>
     public const float HopReach = 3f;
 
+    /// <summary>
+    /// Nothing at the cart's place holds it (plan 15 Ruling 27): it is halted on the line past its stop (its gate is behind it), it stands past its stop
+    /// as the lift's takeover (<paramref name="standingPast"/>: no gate or cage there), or the gate of the stop it is held at is up (or it has none).
+    /// </summary>
+    public static bool GateClear(bool halted, bool standingPast, bool gateUp) => halted || standingPast || gateUp;
+
     /// <summary>Crew board while the train is held at a stop short of the last, not halted on the line.</summary>
     public static bool BoardsHere(bool held, bool halted, bool lastStop) => held && !halted && !lastStop;
 

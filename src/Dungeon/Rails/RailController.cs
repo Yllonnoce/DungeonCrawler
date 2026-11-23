@@ -70,7 +70,7 @@ public partial class RailController : Node
     /// (<see cref="CageHoldRules.Held"/>). It does not depend on the gate (the HUD shows a gate down first). A client reads the server's flag.
     /// </summary>
     public bool CageHeld => NetSession.IsClient ? (_netFlags & (byte)CartFlags.CageHeld) != 0
-        : CageHoldRules.Held(State.Mode, Halted, StopIndex, StopS.Length, _crewLeftAt.Contains(StopIndex), CageHolds?.Invoke(StopIndex) == true);
+        : CageHoldRules.Held(State.Mode, Halted, StopIndex, StopS.Length, _crewLeftAt.Contains(StopIndex), CageHolds?.Invoke(StopIndex) == true, StandingPast); // the lift's takeover stands past its stop: no cage holds it (plan 15 Ruling 27)
 
     /// <summary><paramref name="hero"/> may leave the prisoners behind now (seated in the held cart, on their feet): the prompt and the held interact ask it.</summary>
     private bool HoldFor(Adventurer hero) => CageHoldRules.MayLeaveBehind(hero.Cart == Cart, hero.Downed, CageHeld); // cart-only
@@ -181,7 +181,11 @@ public partial class RailController : Node
     {
         if (NetSession.IsClient || _wagons.Count == 0) return;
         foreach (var wagon in _wagons)
-            if (IsInstanceValid(wagon) && !wagon.Coupled) EmptyWagon(wagon);
+        {
+            if (!IsInstanceValid(wagon)) continue;
+            if (!wagon.Coupled) EmptyWagon(wagon);
+            wagon.ReviveSeenAt = double.NegativeInfinity; // a fresh wagon has offered no revive: no stale Get-out hold (plan 15 Task 0's minor)
+        }
         _train.CoupleAll(_wagons);
         GD.Print($"[rails] train: W1..W{_wagons.Count} coupled at stop {StopIndex} ({why})");
     }
@@ -501,7 +505,7 @@ public partial class RailController : Node
         List<int>? riders = null;
         if (Main.Instance?.Party is { } party)
             foreach (var hero in party.Adventurers)
-                if (IsInstanceValid(hero) && hero.Seated && (CarOf(hero) >= 0 || hero.Cart == Chaser)) (riders ??= new()).Add(hero.Index); // the train's (a wagon's heroes too, Ruling 12) and a chaser's: the chase is not saved, a load sets them down
+                if (IsInstanceValid(hero) && hero.Seated && (CarOf(hero) >= 0 || hero.Cart == Chaser && Lift == null)) (riders ??= new()).Add(hero.Index); // the train's (a wagon's heroes too, Ruling 12) and a chaser's: the chase is not saved, a load sets them down; the lift's riders' poses are SavePose's (Ruling 31)
         return riders;
     }
 
@@ -518,6 +522,8 @@ public partial class RailController : Node
         ResetRelief(); // a relief is not saved either: the clock starts clean and the standing cart has met nobody yet
         LastWreckFell = false;
         LastWreckInside = false;
+        StandingPast = false; // a load stands the cart at its saved stop (a takeover's is the last ride's: Ruling 27)
+        DepartedPastS = float.NaN;
         _arrivedStop = -1;
         _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
@@ -690,7 +696,7 @@ public partial class RailController : Node
         if (CageHeld) { _heldStartCall ??= call; Raise(new CartEvent(CartEventKind.CageHeld, Stop: StopIndex)); return; }
         _heldStartCall = null;
         Boarding.Start();
-        Raise(new CartEvent(CartEventKind.Boarding, Stop: Halted ? -1 : StopIndex));
+        Raise(new CartEvent(CartEventKind.Boarding, Stop: Halted || StandingPast ? -1 : StopIndex)); // standing past its stop (the lift's takeover) it is at no stop's cage
         if (call && RideLines.BarkFor(CartEventKind.Boarding) is { } bark && Main.Instance?.Party is { } party) RailCalls.Say(party, Cart, bark, "All aboard!");
     }
 
@@ -927,13 +933,13 @@ public partial class RailController : Node
     /// The bench of <paramref name="cart"/> (the party's, or a left-behind player's chaser) takes the escorts and allies on foot near
     /// <paramref name="from"/>, as <see cref="SeatBench(Vector3)"/> describes: one rule for both carts.
     /// </summary>
-    private void SeatBench(MineCart cart, Vector3 from)
+    private void SeatBench(MineCart cart, Vector3 from, Func<Node3D, bool>? may = null)
     {
         if (GetParent() is not { } floor) return;
         _bench.Clear();
         for (var i = 0; i < floor.GetChildCount(); i++)
             if (floor.GetChild(i) is Npc { Dead: false, Downed: false, Escorting: true, Seated: false, Crew: false } npc
-                && npc.GlobalPosition.DistanceTo(from) <= CompanionBoardRange) _bench.Add(npc);
+                && npc.GlobalPosition.DistanceTo(from) <= CompanionBoardRange && (may == null || may(npc))) _bench.Add(npc);
         if (_bench.Count == 0) return;
         _benchFrom = from;
         _bench.Sort(_benchOrder);
@@ -1080,13 +1086,26 @@ public partial class RailController : Node
         bool Free(GridPos c) => CrevasseRules.SetDownOk(_layout, c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c); // never a drop: a plank is walkable, not a place to put someone
         var lane = _layout.Rail!.Party;
         var here = DungeonBuilder.WorldToCell(at);
-        var side = inside ?? ExitBridgeRules.SideOf(_layout, here);
+        var side = inside ?? SideOfBody(lane, here); // plan 15 Task 6 (the Task 3 and Task 5 carries): a body over the exit bridge keeps the nearer end's side
         var best = NearestOf(lane, here);
         if (!useTaken) return ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, atStop, side);
         var cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop, side);
         // every free cell nearby taken: share the first one rather than land on the track
         if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, true, side);
         return cell;
+    }
+
+    /// <summary>
+    /// The side of the exit island a body at <paramref name="here"/> stands on (true inside; null without an island): its cell's, and over the exit
+    /// bridge's span (its cells count as outside) the nearer end's, so a rider set down from a car over the bridge never lands across it.
+    /// </summary>
+    private bool? SideOfBody(IReadOnlyList<GridPos> lane, GridPos here)
+    {
+        if (_layout.Rail?.Island is not { } island) return null;
+        var i = -1;
+        for (var k = island.Bridge.From; k <= island.Bridge.To && k < lane.Count; k++) if (lane[k] == here) { i = k; break; }
+        if (i < 0) return _layout.InIsland(here);
+        return i - island.Bridge.From > island.Bridge.To - i;
     }
 
     // ---- the ride --------------------------------------------------------------------------------
@@ -1125,6 +1144,8 @@ public partial class RailController : Node
             else if (Boarding.Tick(dt, seated, living, hold: CrewBoardingHolds?.Invoke(StopIndex) == true) && StopIndex < StopS.Length - 1)
             {
                 Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
+                DepartedPastS = StandingPast ? State.S : float.NaN; // the lift's takeover leaves from its own place: the ride arms from there (Ruling 27)
+                StandingPast = false;
                 Party.State = State with { Mode = CartMode.Rolling };
                 SetCartLayer();
                 Party.Settle(); // it sets off from a standstill: nothing banked from the wait
@@ -1227,7 +1248,7 @@ public partial class RailController : Node
     /// </summary>
     private void Wreck(bool fall = false, bool seen = false)
     {
-        EndChase(atOnce: true); // a chase ends with the train's wreck: its riders step out beside the chaser
+        if (Lift == null) EndChase(atOnce: true); // a chase ends with the train's wreck: its riders step out beside the chaser (the lift rolls on to its limit: Ruling 29)
         Wrecks++;
         WreckedAt = Cart.GlobalPosition;
         LastWreckFell = fall;
@@ -1368,6 +1389,7 @@ public partial class RailController : Node
             EventBus.Instance.Log("No carts left. The rest is on foot.");
             Raise(new CartEvent(CartEventKind.OnFoot, Stop: StopIndex));
             HideWreck(); // the tumble was the wreck: nothing is left standing on the line (the node stays for a Restore)
+            ClearTheLiftsSpan(); // the lift stands next tick: no party wagon is left shown in its place (Task 5 review 7)
             return;
         }
         _spares.Use(pick);
@@ -1546,7 +1568,7 @@ public partial class RailController : Node
             (mode, left) = hud;
             return true;
         }
-        if (_chase is not { Ended: false } c || !IsInstanceValid(c.Cart) || seat != c.Cart) return false;
+        if (_chase is not { Ended: false, Lift: false } c || !IsInstanceValid(c.Cart) || seat != c.Cart) return false; // the lift has no line of its own
         mode = c.Run.State.Mode;
         left = ChaserBoardingLeft;
         relief = c.Relief;

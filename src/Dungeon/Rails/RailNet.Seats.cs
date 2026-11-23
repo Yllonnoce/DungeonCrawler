@@ -50,12 +50,18 @@ public partial class RailNet
         var wagons = _rails.Wagons;
         var crew = ObjectiveController.Instance as CrewRescueController;
         var cages = crew?.Cages;
-        if (wagons.Count + (cages?.Count ?? 0) == _wagonsHeard.Count) return;
+        var lift = RailEncounterController.Instance is { Parked: { } t } && IsInstanceValid(t) ? t : null;
+        if (wagons.Count + (cages?.Count ?? 0) + (lift != null ? 1 + lift.Wagons.Count : 0) == _wagonsHeard.Count) return;
         foreach (var wagon in wagons)
             if (IsInstanceValid(wagon)) Hear(wagon, CartIds.Wagon(wagon.Number));
         if (cages != null)
             foreach (var cage in cages)
                 if (IsInstanceValid(cage)) Hear(cage, CartIds.Cage(cage.Stop));
+        if (lift != null) // the lift (plan 15 Ruling 30): its cart under CartIds.Lift, its wagons under CartIds.LiftWagon(k)
+        {
+            Hear(lift.Cart, CartIds.Lift);
+            foreach (var w in lift.Wagons) Hear(w, CartIds.LiftWagon(w.Number));
+        }
     }
 
     private void Hear(ICartBody body, int id)
@@ -117,6 +123,12 @@ public partial class RailNet
         if (_rails.Chaser is { } chaser) SendSeated(world, peer, chaser, chaser.CartId);
         foreach (var wagon in _rails.Wagons)
             if (IsInstanceValid(wagon)) SendSeated(world, peer, wagon, CartIds.Wagon(wagon.Number));
+        if (RailEncounterController.Instance is { Parked: { } lift } parkedEnc && IsInstanceValid(lift))
+        {
+            SendSeated(world, peer, lift.Cart, CartIds.Lift); // the lift's riders, after the cart state that lists it (plan 15 Ruling 30)
+            foreach (var w in lift.Wagons) SendSeated(world, peer, w, CartIds.LiftWagon(w.Number));
+            if (parkedEnc.ParkedCatchUpWord() is { } word && lift.NetRef.Length > 0) world.SendTo(peer, new PropEvt(lift.NetRef, word)); // its state by name (the Task 5 review's Minor 1)
+        }
         if (ObjectiveController.Instance is CrewRescueController crew)
             foreach (var cage in crew.Cages)
                 if (IsInstanceValid(cage)) SendSeated(world, peer, cage, CartIds.Cage(cage.Stop));
@@ -194,6 +206,8 @@ public partial class RailNet
         if (_carts.TryGetValue(id, out var sc) && sc.Slag is { } slag && IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed) return slag;
         if (id >= CartIds.WagonBase && id < CartIds.CageBase) return _rails.WagonAt(id - CartIds.WagonBase);
         if (id >= CartIds.CageBase && id < CartIds.ChaserBase) return CageAt(id - CartIds.CageBase);
+        if (id >= CartIds.Lift && id <= CartIds.LiftWagon(ParkedRules.Wagons)) // the lift and its tubs (plan 15 Ruling 30), before the chaser range
+            return RailEncounterController.Instance is { Parked: { } lift } && IsInstanceValid(lift) ? id == CartIds.Lift ? lift.Cart : lift.Wagons[id - CartIds.Lift - 1] : null;
         if (id >= CartIds.ChaserBase && _carts.TryGetValue(id, out var cc) && cc.Chaser is { } chaser && IsInstanceValid(chaser) && !chaser.IsQueuedForDeletion()) return chaser;
         return null;
     }

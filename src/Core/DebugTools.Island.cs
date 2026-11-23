@@ -16,6 +16,7 @@ namespace DungeonCrawler.Core;
 // =bridge and =wreck (DebugTools.Island.Bridge.cs): ride 5 ridden from its stop: no Get out and no move car to car over the exit bridge,
 // braked on it too, a save there; and a wreck past its start that sets everyone down inside, spends no spare and takes the last stop.
 // =parked (DebugTools.Island.Parked.cs, Task 5): ride 5's parked train in the way, called, smashed through and standing again as a lift.
+// =lift and =takeover (DebugTools.Island.Lift.cs, Task 6): the lift carries the left-behind in; with no live cart it takes over as the party's train.
 public partial class DebugTools
 {
     private bool _testIsland;
@@ -42,7 +43,7 @@ public partial class DebugTools
             return;
         }
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
-            if (e.IsAlive) e.Kill(); // the flow owns the fights
+            if (e.IsAlive && !(v == "takeover" && e.Group?.Id == "col_stop4")) e.Kill(); // the flow owns the fights (=takeover spares stop 4's holders: its gate stays down)
         RideWaiveCages(main, rc, "island");
         HoldTheRunaway("island");
         enc.RunawayClock = 0f; // no traffic runaway on the party line
@@ -61,6 +62,8 @@ public partial class DebugTools
             case "bridge": IslandBridge(main, layout, island, rc, enc, party, me, Fail, Pass); break;
             case "wreck": IslandWreck(main, layout, island, rc, enc, party, Fail, Pass); break;
             case "parked": IslandParked(main, layout, island, rc, enc, party, me, root, Fail, Pass); break;
+            case "lift": IslandLift(main, layout, rc, enc, party, me, Fail, Pass); break;
+            case "takeover": IslandTakeover(main, layout, rc, enc, party, me, Fail, Pass); break;
             default: Fail($"no such variant {v}"); break;
         }
     }

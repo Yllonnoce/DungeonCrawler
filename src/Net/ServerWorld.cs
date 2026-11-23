@@ -578,7 +578,8 @@ public partial class ServerWorld : Node
                 // thrown from the seat of a rolling cart was in reach a round trip ago: the cart's speed times that member's round trip is allowed too
                 var reach = node is Dungeon.Rails.TrackSwitch ? Dungeon.Rails.PropPromptRules.LeverReach(body.Seated, SeatSpeed(body), _rttOf.GetValueOrDefault(slot.MemberIndex)) : Dungeon.Rails.PropPromptRules.InteractReach;
                 // a cart, or a wagon of the party's train (plan 14: the same tub), is measured to its tub (2.2 m long), as the look ray reaches its box and
-                // the cart's prompt measures it (RideInputRules.BoardReach): its end is in reach, not only its middle
+                // the cart's prompt measures it (RideInputRules.BoardReach): its end is in reach, not only its middle. The lift's five bodies (plan 15
+                // Task 6: "parked:{piece}" its cart, "liftwagon:{k}" its tubs) are the same tubs, measured the same way as its prompt measures them
                 var dist = node is Dungeon.Rails.MineCart tub ? tub.TubDistance(body)
                     : node is Dungeon.Rails.TrainWagon wagonTub ? wagonTub.TubDistance(body)
                     : Math.Min(node.GlobalPosition.DistanceTo(body.GlobalPosition), node.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
@@ -647,6 +648,11 @@ public partial class ServerWorld : Node
                 var seatedBefore = body.Seated;
                 target.Interact(party, body);
                 if (node is Dungeon.Rails.MineCart && !seatedBefore && body.Seated) Trace.Add($"aboard:{slot.Name}");
+                if (node.GetParent() is Dungeon.Rails.ParkedTrain && !seatedBefore && body.Seated) // a press on any of the lift's bodies (plan 15 Ruling 28)
+                {
+                    Trace.Add($"lift:{slot.Name}");
+                    if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: boarded {(body.Cart is Dungeon.Rails.MineCart { Kind: CartKind.Chaser } ? "the lift" : "the party's cart that took its place")} ({dist:0.0} m)");
+                }
                 if (moveTaken) Trace.Add($"move:{slot.Name}");
                 if (NetSession.Instance.TestServer && node is Dungeon.Rails.MineCart && seatedBefore && body.Seated && !leapTaken && Dungeon.Rails.RailEncounterController.Instance?.HoldReason() is { } holdReason)
                     GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: get out refused ({holdReason})"); // the refusal is RailController.UseCart's

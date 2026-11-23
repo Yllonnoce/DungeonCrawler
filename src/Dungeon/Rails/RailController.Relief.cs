@@ -167,10 +167,10 @@ public partial class RailController
             RefreshHud();
             return;
         }
-        if (c.Phase == ReliefPhase.Riding && SpareRules.ChaseDone(c.Boarded, held, State.Mode == CartMode.Held, run.State.S, trainLimit))
+        // its limit (TickChase's trainLimit) is the chaser's, Ruling 29's included: behind the parked train's place on ride 5, never on the exit bridge
+        if (c.Phase == ReliefPhase.Riding && SpareRules.ChaseDone(c.Boarded, held, TrainStoppedAhead, run.State.S, trainLimit))
         {
-            LastChaseGap = TrainBackS + CartRules.HalfLength - (run.State.S + CartRules.HalfLength); // the last body's back to the relief's front
-            ChasesDone++;
+            NoteChaseDone(c, trainLimit); // the last body's back (or the parked train's place) to the relief's front
             EventBus.Instance.Log("The relief cart pulls up behind the train.");
             GD.Print($"[rails] the relief cart pulls up behind the train at S={run.State.S:0.0}, {LastChaseGap:0.00} m short of its last body");
             EndChase(atOnce: false);

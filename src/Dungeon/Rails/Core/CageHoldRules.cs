@@ -16,10 +16,11 @@ public static class CageHoldRules
     /// <summary>
     /// The cart is held by its stop's cage: it stands Held at a stop (not halted on the line) short of the end of the line, nobody
     /// has left that stop's prisoners behind (<paramref name="waived"/>), and the stop's cage holds (<see cref="Holds"/>). Stop 0
-    /// never has a wagon, so its <paramref name="cageHolds"/> is false.
+    /// never has a wagon, so its <paramref name="cageHolds"/> is false. A cart standing past its stop as the lift's takeover (<paramref name="standingPast"/>,
+    /// plan 15 Ruling 27) is held by no cage.
     /// </summary>
-    public static bool Held(CartMode mode, bool halted, int stopIndex, int stopCount, bool waived, bool cageHolds)
-        => mode == CartMode.Held && !halted && stopIndex < stopCount - 1 && !waived && cageHolds;
+    public static bool Held(CartMode mode, bool halted, int stopIndex, int stopCount, bool waived, bool cageHolds, bool standingPast = false)
+        => mode == CartMode.Held && !halted && !standingPast && stopIndex < stopCount - 1 && !waived && cageHolds;
 
     /// <summary>
     /// The stops whose prisoners count as left behind after a load (nothing about them is saved): every cage stop before the one the

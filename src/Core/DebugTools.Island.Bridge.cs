@@ -25,7 +25,9 @@ namespace DungeonCrawler.Core;
 // =wreck (Review Focus 3): rc.Restore(Shape(rc).LastRideStop) with stop 1's crew in W1 and stop 2's in W2 (ctrl.DebugSeatCrew) and the spares
 // left; the lava pit's switch thrown from the seat on the way (ThrowPitOnTheWay); the cart is wrecked (rc.DebugWreck) as its front passes ExitFromS + 0.5. Within 1 s: no spare took over, the stop is the last,
 // LastWreckInside, the cart and every party wagon hidden and not solid, every hero and crew member who rode on an island cell that may take
-// a body, and (plan 15 Task 5) the parked train, smashed on the way, standing as a lift with no party body shown within its span; 3 s later none fallen and still there. Then a save and a load give the cart Held at the last stop.
+// a body, and (plan 15 Task 5) the parked train, smashed on the way, standing as a lift with no party body shown within its span; 3 s later none fallen and still there.
+// Then (plan 15 Task 6) the lead, put outside beside the parked train, boards the lift: no takeover (the wreck was inside), it rides in and sets the lead
+// down on an island cell. Then a save and a load give the cart Held at the last stop.
 public partial class DebugTools
 {
     private const string IslandSlot = "islandtest";
@@ -319,10 +321,29 @@ public partial class DebugTools
                 }
                 if (_isClock < 3f) break;
                 GD.Print($"[island] wreck: 3 s on nobody has fallen and everyone stands inside");
+                // plan 15 Task 6 (Ruling 27's wreckedInside): the lead, put outside beside the parked train, boards the lift: no takeover, it rides in
+                if (enc.Parked is not { } lift) { Fail("no parked train for the lift leg"); return; }
+                if (party.Local is not { } lead) { Fail("no lead"); return; }
+                lead.Teleport(BesideLift(main, layout, rc, enc, lift.Cart), lift.Cart.GlobalPosition + Vector3.Up * 0.9f);
+                var offer = lift.Cart.Prompt;
+                lift.Cart.Interact(party, lead);
+                GD.Print($"[island] wreck: the lead put beside the lift outside at {DungeonBuilder.WorldToCell(lead.GlobalPosition)}, offered \"{offer}\", pressed: seated in the lift {lead.Cart == lift.Cart}, takeovers {rc.Takeovers}");
+                if (offer != ParkedRules.BoardPrompt || lead.Cart != lift.Cart || rc.Takeovers != 0 || rc.Lift == null) { Fail($"after the inside wreck the lift offered \"{offer}\", the lead seated in it {lead.Cart == lift.Cart}, {rc.Takeovers} takeover(s)"); return; }
+                _isStep = 6; _isClock = 0f;
+                break;
+            }
+            case 6:
+            {
+                if (rc.LiftsDone < 1) { if (_isClock > 40f) Fail($"the lift never halted inside (S={rc.LiftS:0.0})"); break; }
+                if (party.Local is not { } lead) { Fail("no lead"); return; }
+                var cell = DungeonBuilder.WorldToCell(lead.GlobalPosition);
+                if (lead.Seated || !layout.InIsland(cell) || !CrevasseRules.SetDownOk(layout, cell)) { Fail($"after the lift's halt the lead at {cell} seated={lead.Seated} island={layout.InIsland(cell)}"); return; }
+                if (rc.Takeovers != 0) { Fail($"{rc.Takeovers} takeover(s) after an inside wreck"); return; }
+                GD.Print($"[island] wreck: the lift halted at S={rc.LastLiftHaltS:0.0} ({rc.LastLiftGap:0.00} m short of what stopped it) and set the lead down inside at {cell}; no takeover");
                 _isRc = rc;
                 main.SaveGame(IslandSlot);
                 if (!main.LoadGame(IslandSlot)) { Fail("the save after the wreck would not load"); return; }
-                _isStep++; _isClock = 0f;
+                _isStep = 5; _isClock = 0f;
                 break;
             }
             case 5:
@@ -330,7 +351,7 @@ public partial class DebugTools
                 if (rc == _isRc) { if (_isClock > 10f) Fail("the floor was not built again within 10 s of the load"); break; }
                 if (_isClock < 1f) break;
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != shape.Rides || !rc.Cart.Visible) { Fail($"after the load the cart is {rc.State.Mode} at stop {rc.StopIndex} visible={rc.Cart.Visible}, not Held at stop {shape.Rides}"); return; }
-                Pass($"the wreck past the exit bridge's start (S {enc.ExitFromS:0.0} + 0.5) spent no spare, took stop {shape.Rides}, hid the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}], and set {_isRode.Count} riders (crew too) down inside within 1 s, none fallen 3 s on; within 1 s the parked train stood as a lift with no party body shown within its span; the save and load gave the cart Held at stop {shape.Rides}");
+                Pass($"the wreck past the exit bridge's start (S {enc.ExitFromS:0.0} + 0.5) spent no spare, took stop {shape.Rides}, hid the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}], and set {_isRode.Count} riders (crew too) down inside within 1 s, none fallen 3 s on; within 1 s the parked train stood as a lift with no party body shown within its span; the lead, put outside, boarded the lift (no takeover), rode it in and was set down inside; the save and load gave the cart Held at stop {shape.Rides}");
                 return;
             }
         }

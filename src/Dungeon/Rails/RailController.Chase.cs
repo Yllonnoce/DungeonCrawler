@@ -54,6 +54,10 @@ public partial class RailController
         public float SpawnS;
         /// <summary>The coming relief's stop point (centre S): it only moves forward.</summary>
         public float Target;
+        /// <summary>Ride 5's parked train running as the lift (plan 15 Task 6, Ruling 26): one chase at a time; no spare spent or given back, its own limit (<see cref="ParkedRules.LiftLimit"/>).</summary>
+        public bool Lift;
+        /// <summary>The lift's parked train (its cart is <see cref="Cart"/>, its four tubs ride behind it), or null for a chaser or relief.</summary>
+        public ParkedTrain? Train;
     }
 
     private Chase? _chase;
@@ -85,8 +89,43 @@ public partial class RailController
     /// <summary>The S of the train's last body's back, one half length further back: the S the chaser's centre stops short of (<see cref="SpareRules.TrainBackS"/>).</summary>
     private float TrainBackS => SpareRules.TrainBackS(Party.BackS, _train.Count, WagonSpacing);
 
-    /// <summary>The chaser's limit now: behind the train's last body, never past the stop after the one the train last reached.</summary>
-    private float ChaseLimitNow() => SpareRules.ChaseLimit(TrainBackS, StopS[Math.Min(StopIndex + 1, StopS.Length - 1)]);
+    /// <summary>
+    /// The chaser's (and a relief's) limit now: behind the train's last body, never past the stop after the one the train last reached, and with a
+    /// live parked train (plan 15 Ruling 29) behind its place (<see cref="ParkedRules.BackS"/>, whether or not it stands) and short of the exit bridge.
+    /// </summary>
+    private float ChaseLimitNow() => SpareRules.ChaseLimit(TrainBackS, StopS[Math.Min(StopIndex + 1, StopS.Length - 1)], ParkedBackS, ParkedBridgeFromS);
+
+    /// <summary>With a live parked train, the S just behind its place (a centre S, <see cref="ParkedRules.BackS"/>), else NaN.</summary>
+    private static float ParkedBackS => Exit is { Parked: not null } enc ? ParkedRules.BackS(enc.ExitFromS, ParkedRules.Wagons) : float.NaN;
+    /// <summary>With a live parked train, the exit bridge's near edge, else NaN.</summary>
+    private static float ParkedBridgeFromS => Exit is { Parked: not null } enc ? enc.ExitFromS : float.NaN;
+    /// <summary>The floor's encounter controller, or null.</summary>
+    private static RailEncounterController? Exit => RailEncounterController.Instance is { } e && IsInstanceValid(e) ? e : null;
+
+    /// <summary>
+    /// The chaser's or relief's limit now came from the parked train's place or the exit bridge, not from the train or the next stop (Ruling 29): its
+    /// chase ends there, outside, once the train is held at the last stop (or wrecked inside).
+    /// </summary>
+    private bool LimitAtParked(float limit) => !float.IsNaN(ParkedBackS) && limit < SpareRules.ChaseLimit(TrainBackS, StopS[Math.Min(StopIndex + 1, StopS.Length - 1)]) - 1e-3f;
+
+    /// <summary>The train ahead of a chaser, relief or lift has stopped for good there: held (at a stop or halted), or wrecked past the exit bridge's start (Ruling 29).</summary>
+    private bool TrainStoppedAhead => State.Mode == CartMode.Held || LastWreckInside;
+
+    /// <summary>
+    /// A chase that ended up against its limit (<see cref="SpareRules.ChaseDone"/>): its gap is the last body's back to its front, or, halted at the parked
+    /// train's place (Ruling 29), the place's rear face to its front, with the server's line there.
+    /// </summary>
+    private void NoteChaseDone(Chase c, float limit)
+    {
+        var front = c.Run.State.S + CartRules.HalfLength;
+        LastChaseAtParked = LimitAtParked(limit);
+        LastChaseGap = LastChaseAtParked && Exit is { } enc ? ParkedRules.RearS(enc.ExitFromS, ParkedRules.Wagons) - front : TrainBackS + CartRules.HalfLength - front;
+        ChasesDone++;
+        if (LastChaseAtParked) GD.Print($"[rails] chase-done: the {(c.Relief ? "relief cart" : "chaser")} halted {LastChaseGap:0.0} m behind the parked train's place at S={c.Run.State.S:0.0}, outside the island; it hopped {ChaserHops} hole(s) in the line");
+    }
+
+    /// <summary>The last chase ended at the parked train's place (Ruling 29), not behind the train (test hooks read it).</summary>
+    internal bool LastChaseAtParked { get; private set; }
 
     /// <summary>The spare at <paramref name="stop"/> may be taken now, as this peer knows the cart (a client: the server's mode, stop, flags and used spares).</summary>
     private bool MayChaseAt(int stop)
@@ -120,8 +159,23 @@ public partial class RailController
     /// <summary>The spare is spent and a chaser stands Held on the line at its stop (or back at its limit while the train's tail is still there), the actor and theirs seated.</summary>
     private void StartChase(int stop, Adventurer actor)
     {
+        if (PlaceChaser(stop) is not { } chase) return;
+        var cart = chase.Cart;
+        SeatIn(cart, actor);
+        foreach (var mate in Main.Instance.Party.Active)
+            if (mate != actor && !mate.Downed && !mate.Seated && OwnCompanion(mate, actor) && mate.GlobalPosition.DistanceTo(actor.GlobalPosition) <= CompanionBoardRange)
+                SeatIn(cart, mate);
+        SeatBench(cart, actor.GlobalPosition);
+        chase.Boarding.Start();
+        EventBus.Instance.Log($"{actor.State.Name} takes the spare cart after the train.");
+        RefreshHud();
+    }
+
+    /// <summary>The spare at <paramref name="stop"/> is spent and its chaser stands Held, empty, at its stop (or back at its limit while the train's tail is still there). Null without a floor root.</summary>
+    private Chase? PlaceChaser(int stop)
+    {
         if (_chase != null) FreeChaser(); // one still waiting to be hidden goes now
-        if (GetParent() is not Node3D root) return;
+        if (GetParent() is not Node3D root) return null;
         _spares.Use(stop); // the "used" PropEvt: it vanishes from beside the platform
         var s = SpareRules.ChaserStart(StopS[stop], ChaseLimitNow());
         var cart = new MineCart { Name = $"ChaserCart{stop}", CartId = CartIds.Chaser(stop), PromptFor = ChaserPromptFor, OnUse = GetOutOfChaser, CollisionLayer = ChaserHeldLayer }.AsChaser();
@@ -134,14 +188,7 @@ public partial class RailController
         _chaseHitAt.Clear();
         _chaseWarned.Clear();
         ChaserPlaced?.Invoke(cart, stop);
-        SeatIn(cart, actor);
-        foreach (var mate in Main.Instance.Party.Active)
-            if (mate != actor && !mate.Downed && !mate.Seated && OwnCompanion(mate, actor) && mate.GlobalPosition.DistanceTo(actor.GlobalPosition) <= CompanionBoardRange)
-                SeatIn(cart, mate);
-        SeatBench(cart, actor.GlobalPosition);
-        _chase.Boarding.Start();
-        EventBus.Instance.Log($"{actor.State.Name} takes the spare cart after the train.");
-        RefreshHud();
+        return _chase;
     }
 
     private static bool SeatIn(MineCart cart, Adventurer hero)
@@ -224,6 +271,7 @@ public partial class RailController
         var limit = enc != null ? SpareRules.HeapLimit(trainLimit, run.FrontS, enc.LiveHeapFaceAhead(run.FrontS)) : trainLimit;
         if (_chaseHoles.Count > 0) limit = SpareRules.HoleLimit(limit, _chaseHoles);
         if (c.Relief) { TickReliefChase(party, c, enc, limit, trainLimit, dt); return; }
+        if (c.Lift) { TickLift(party, c, enc, dt); return; }
         if (!c.Boarded)
         {
             CountChasers(party, c.Cart, out var seated, out var living);
@@ -239,10 +287,9 @@ public partial class RailController
             c.Departed = true;
         }
         StepChaser(party, c, enc, limit, dt);
-        if (SpareRules.ChaseDone(c.Boarded, run.State.Mode == CartMode.Held, State.Mode == CartMode.Held, run.State.S, trainLimit))
+        if (SpareRules.ChaseDone(c.Boarded, run.State.Mode == CartMode.Held, TrainStoppedAhead, run.State.S, trainLimit))
         {
-            LastChaseGap = TrainBackS + CartRules.HalfLength - (run.State.S + CartRules.HalfLength); // the last body's back to the chaser's front
-            ChasesDone++;
+            NoteChaseDone(c, trainLimit); // the last body's back (or the parked train's place) to the chaser's front
             EventBus.Instance.Log("The spare cart pulls up behind the train.");
             EndChase(atOnce: false);
         }
@@ -259,14 +306,15 @@ public partial class RailController
         {
             run.Limit = Mathf.Max(limit, run.State.S); // the train never backs: a limit behind S would only pull the chaser back
             var prevFront = run.FrontS;
-            run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit), dt);
+            run.Step(new CartInput(run.SlopeAhead, false, 0, c.Lift ? ParkedRules.Wagons : 0, run.Limit), dt); // the lift draws its four tubs
             HopHoles(party, c, prevFront);
             ChaseRunOver(party, c); // nothing left to sweep after a hop (it settled)
             if (run.State.Mode == CartMode.Rolling) enc?.WarnPartyLane(run, c.Cart, _chaseWarned, party);
-            if (run.State.Mode == CartMode.Held) { run.Settle(); c.Cart.CollisionLayer = ChaserHeldLayer; }
+            if (run.State.Mode == CartMode.Held) { run.Settle(); SetChaseLayers(c, ChaserHeldLayer); }
         }
         else run.Settle();
         run.Sync();
+        c.Train?.SetSpeed(run.State.Mode == CartMode.Rolling ? run.State.V : 0f);
     }
 
     /// <summary>
@@ -338,7 +386,7 @@ public partial class RailController
     {
         if (_chase is not { Ended: false } c) return;
         c.Ended = true;
-        if (!c.Relief && SpareRules.GivesSpareBack(c.Departed)) _spares.GiveBack(c.Stop); // it never rolled: the spare stands parked again ("restored"); a relief never spent one
+        if (!c.Relief && !c.Lift && SpareRules.GivesSpareBack(c.Departed)) _spares.GiveBack(c.Stop); // it never rolled: the spare stands parked again ("restored"); a relief or the lift never spent one
         if (c.Relief) ReliefSpawnStop = -1;
         c.HideAt = _now + SpareRules.HideSeconds;
         if (IsInstanceValid(c.Cart))
@@ -346,8 +394,9 @@ public partial class RailController
             c.Run.State = c.Run.State with { Mode = CartMode.Held, V = 0f };
             c.Run.Settle();
             c.Run.Sync();
-            c.Cart.CollisionLayer = 1; // over: solid, nothing left to use
-            SetDownChasers(c.Cart);
+            SetChaseLayers(c, 1); // over: solid, nothing left to use
+            if (c.Lift) SetDownLift(c, "the lift ends");
+            else SetDownChasers(c.Cart);
         }
         if (atOnce) FreeChaser();
         RefreshHud();
@@ -370,12 +419,13 @@ public partial class RailController
         _chaseRiders.Clear();
     }
 
-    /// <summary>The chaser goes (anyone still in it gets out where it stands first).</summary>
+    /// <summary>The chaser goes (anyone still in it gets out where it stands first). The lift is never freed: it is hidden, or stands again at its place (<see cref="FreeLift"/>).</summary>
     private void FreeChaser()
     {
         if (_chase is not { } c) return;
         _chase = null;
         if (!IsInstanceValid(c.Cart)) return;
+        if (c.Lift) { FreeLift(c); return; }
         if (c.Cart.Riders.Count > 0) SetDownChasers(c.Cart);
         c.Cart.Visible = false;
         c.Cart.CollisionLayer = 0;
@@ -386,7 +436,7 @@ public partial class RailController
     private void UnseatChaserQuietly(Adventurer hero)
     {
         if (_chase is not { } c || !IsInstanceValid(c.Cart) || hero.Cart != c.Cart) return;
-        var at = _builder.Surface(ExitCellNear(c.Cart.GlobalPosition, atStop: true, useTaken: false));
+        var at = c.Lift ? LiftSetDownSpot(c, hero) : _builder.Surface(ExitCellNear(c.Cart.GlobalPosition, atStop: true, useTaken: false)); // the lift's: never over the bridge (Ruling 31)
         hero.GetOut(at, Vector3.Zero);
     }
 
@@ -396,6 +446,7 @@ public partial class RailController
         if (_chase is not { } c || !IsInstanceValid(c.Cart)) return;
         var s = c.Run.RenderS((float)Engine.GetPhysicsInterpolationFraction());
         c.Run.PoseAt(s);
+        if (c.Train is { } lift && IsInstanceValid(lift)) { lift.PoseWagons(s, c.Run.Track); lift.FollowWagonRiders(); } // the lift's four tubs behind its cart
         FeedChaserSound(c.Cart, c.Run, s); // an ended chase stands Held: its loops fall silent
         foreach (var rider in c.Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();

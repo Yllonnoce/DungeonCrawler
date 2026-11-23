@@ -34,8 +34,11 @@ public partial class RailController
     public bool Halted { get; private set; }
     /// <summary>An obstacle stands on the party lane (a client reads the server's flag).</summary>
     private bool LineBlocked => NetSession.IsClient ? (_netFlags & (byte)CartFlags.LineBlocked) != 0 : !float.IsPositiveInfinity(BlockedAt);
-    /// <summary>Nothing at the cart's place holds it: the gate of the stop it is held at is up, or it is halted on the line past that stop (its gate is behind it). A client reads the server's flag.</summary>
-    private bool GateClear => NetSession.IsClient ? (_netFlags & (byte)CartFlags.GateClear) != 0 : Halted || GateUp(StopIndex);
+    /// <summary>
+    /// Nothing at the cart's place holds it (<see cref="TrainRules.GateClear"/>): the gate of the stop it is held at is up, it is halted on the line past
+    /// that stop (its gate is behind it), or it stands past its stop as the lift's takeover (<see cref="StandingPast"/>). A client reads the server's flag.
+    /// </summary>
+    private bool GateClear => NetSession.IsClient ? (_netFlags & (byte)CartFlags.GateClear) != 0 : TrainRules.GateClear(Halted, StandingPast, GateUp(StopIndex));
 
     /// <summary>The enemy lane beside the party's and the map between them (the encounter controller has both). Before any <see cref="Cross"/>.</summary>
     public void UseLanes(TrackSampler enemy, LaneMap lanes)

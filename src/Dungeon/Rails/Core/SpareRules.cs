@@ -61,6 +61,27 @@ public static class SpareRules
     /// <summary>The chaser's Limit (its StopAt), recomputed every tick: <see cref="ChaseGap"/> short of <paramref name="trainBackS"/>, and never past <paramref name="nextStopS"/>.</summary>
     public static float ChaseLimit(float trainBackS, float nextStopS) => Math.Min(nextStopS, trainBackS - ChaseGap);
 
+    /// <summary>A chaser or relief halts this far short of the exit bridge's near edge (its front at <c>bridgeFromS</c> − this), never on it (plan 15 Ruling 29).</summary>
+    public const float BridgeClear = 0.5f;
+
+    /// <summary>
+    /// The chaser's (and a relief's) limit on a line with a live parked train (plan 15, Ruling 29): the nearest of <see cref="ChaseLimit(float, float)"/>,
+    /// <paramref name="parkedBackS"/> − <see cref="ChaseGap"/> (behind the parked train's place, <see cref="ParkedRules.BackS"/>, whether or not it stands)
+    /// and <paramref name="bridgeFromS"/> − half a cart − <see cref="BridgeClear"/> (short of the exit bridge). NaN arguments are ignored; every argument
+    /// and the result is a centre S in <see cref="TrainBackS"/>'s sense. So no chaser or relief ever runs through a standing lift or onto the bridge.
+    /// </summary>
+    public static float ChaseLimit(float trainBackS, float nextStopS, float parkedBackS, float bridgeFromS)
+    {
+        var limit = float.NaN;
+        if (!float.IsNaN(nextStopS)) limit = nextStopS;
+        if (!float.IsNaN(trainBackS)) limit = Nearest(limit, trainBackS - ChaseGap);
+        if (!float.IsNaN(parkedBackS)) limit = Nearest(limit, parkedBackS - ChaseGap);
+        if (!float.IsNaN(bridgeFromS)) limit = Nearest(limit, bridgeFromS - CartRules.HalfLength - BridgeClear);
+        return limit;
+    }
+
+    private static float Nearest(float a, float b) => float.IsNaN(a) ? b : Math.Min(a, b);
+
     /// <summary>Where the chaser is placed: at its stop, or back at its limit while the train's tail still stands there; never before the line's start.</summary>
     public static float ChaserStart(float stopS, float limit) => Math.Max(0f, Math.Min(stopS, limit));
 
