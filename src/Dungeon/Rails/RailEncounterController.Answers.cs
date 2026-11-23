@@ -29,6 +29,8 @@ public partial class RailEncounterController
         public Adventurer Hero = null!;
         public int Wagon;
         public bool FromSeat;
+        /// <summary>A seat answer: when its answerer was last seen losing its shot (the server's physics clock), or −1 while it has one.</summary>
+        public double ShotLostAt = -1;
         public double LastMove = double.NegativeInfinity;
         /// <summary>When its wagon was last seen without a boarder (the server's physics clock), or −1 while it has one.</summary>
         public double ClearSince = -1;
@@ -101,6 +103,15 @@ public partial class RailEncounterController
         if (DebugHoldAnswers || !IsInstanceValid(_rails.Cart)) return;
         var party = Main.Instance.Party;
         var train = _rails.Train;
+        // the answers under way first: one that ends this tick (its answerer pumps, goes down, loses its shot past the grace, is taken over)
+        // leaves its wagon to be answered afresh below, in the same tick
+        for (var i = _answers.Count - 1; i >= 0; i--)
+        {
+            if (TickAnswer(_answers[i])) continue;
+            EndAnswer(_answers[i]);
+            _answers.RemoveAt(i);
+        }
+
         for (var i = 0; i < train.Count; i++)
         {
             var wagon = train[i];
@@ -113,12 +124,6 @@ public partial class RailEncounterController
             AnswersStarted.Add((hero.State.Name, wagon.Number, from, fromSeat, a.Route, Engine.GetPhysicsFrames(), ulong.MaxValue));
             if (fromSeat) hero.AnswerTarget = boarder;
             GD.Print($"[rails] answer: {hero.State.Name} answers wagon {wagon.Number} {(fromSeat ? $"from its seat in car {from} ({hero.GlobalPosition.DistanceTo(boarder.GlobalPosition):0.0} m, a clear shot)" : $"(from car {from})")}");
-        }
-        for (var i = _answers.Count - 1; i >= 0; i--)
-        {
-            if (TickAnswer(_answers[i])) continue;
-            EndAnswer(_answers[i]);
-            _answers.RemoveAt(i);
         }
     }
 
@@ -142,8 +147,7 @@ public partial class RailEncounterController
             if (!IsInstanceValid(hero) || hero.Control != ControlKind.Companion || hero.Downed || hero.Parked || Answering(hero) || _rails.Hopping(hero)) continue;
             var car = _rails.CarOf(hero);
             if (car < 0) continue;
-            var shooter = hero.Shooter;
-            _candidates.Add(new BoarderRules.AnswerCandidate(_candidateHeroes.Count, car, Blade: !shooter, Bot: NetSession.IsServer && hero.Leader != null, HasShot: shooter && hero.HasShotAt(boarder)));
+            _candidates.Add(new BoarderRules.AnswerCandidate(_candidateHeroes.Count, car, Blade: hero.Blade, Bot: NetSession.IsServer && hero.Leader != null, HasShot: hero.HasShotAt(boarder), Pumping: hero.Pumping));
             _candidateHeroes.Add(hero);
         }
         return BoarderRules.PickAnswerer(wagon, _candidates) is { } pick ? (_candidateHeroes[pick.Order], pick.FromSeat) : null;
@@ -155,16 +159,23 @@ public partial class RailEncounterController
         var hero = a.Hero;
         var name = IsInstanceValid(hero) ? hero.State.Name : "?";
         var car = IsInstanceValid(hero) ? _rails.CarOf(hero) : -1;
-        if (car < 0 || hero.Downed || hero.Parked || _rails.WagonAt(a.Wagon) is not { Coupled: true } wagon)
+        if (car < 0 || hero.Downed || hero.Parked || hero.Control != ControlKind.Companion || _rails.WagonAt(a.Wagon) is not { Coupled: true } wagon)
         {
-            GD.Print($"[rails] answer: {name} stops answering wagon {a.Wagon} ({(car < 0 ? "not in the train" : hero.Downed ? "down" : hero.Parked ? "parked" : "the wagon is lost")})");
+            GD.Print($"[rails] answer: {name} stops answering wagon {a.Wagon} ({(car < 0 ? "not in the train" : hero.Downed ? "down" : hero.Parked ? "parked" : hero.Control != ControlKind.Companion ? "a player took it over" : "the wagon is lost")})");
             return false;
         }
         var boarder = BoarderOn(wagon);
         if (a.FromSeat)
         {
             if (boarder == null) { GD.Print($"[rails] answer: {name}'s answer to wagon {a.Wagon} from its seat ends: the wagon is clear"); return false; }
-            if (!hero.HasShotAt(boarder)) { GD.Print($"[rails] answer: {name} loses its shot at wagon {a.Wagon}'s boarder: the answer is open again"); return false; }
+            if (hero.HasShotAt(boarder)) a.ShotLostAt = -1;
+            else if (a.ShotLostAt < 0) a.ShotLostAt = _now;
+            var lostFor = a.ShotLostAt < 0 ? 0 : _now - a.ShotLostAt;
+            if (!BoarderRules.SeatAnswerHolds(up: true, companion: true, hero.Pumping, lostFor))
+            {
+                GD.Print($"[rails] answer: {name}'s answer to wagon {a.Wagon} from its seat ends: {(hero.Pumping ? "it pumps" : $"no shot for {lostFor:0.00} s")}; the wagon is open again");
+                return false;
+            }
             hero.AnswerTarget = boarder; // a fresh boarder on the same rim is the same answer
             return true;
         }

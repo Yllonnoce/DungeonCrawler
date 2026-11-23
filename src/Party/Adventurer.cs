@@ -1208,20 +1208,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
         var w = State.WeaponProfile;
         var abilities = new List<AbilityView>();
-        for (var i = 0; i < State.KnownAbilities.Count; i++)
-        {
-            var a = Party.GetAbilityFor(State, State.KnownAbilities[i]);
-            var ready = AbilityRules.WhyCannotUse(State, a, Party.ArrowCount) == null;
-            var range = a.Kind switch
-            {
-                AbilityKind.WeaponAttack => w.IsRanged ? 14f : w.Range + 0.4f,
-                AbilityKind.Projectile => 14f,
-                AbilityKind.MeleeStrike => w.Range + 0.4f,
-                AbilityKind.Nova => a.Radius,
-                _ => 999f,
-            };
-            abilities.Add(new AbilityView(i, a, ready, range, a.Kind == AbilityKind.MeleeStrike || (a.Kind == AbilityKind.WeaponAttack && !w.IsRanged)));
-        }
+        FillAbilityViews(abilities);
 
         var prefersRange = w.IsRanged || State.KnownAbilities.Any(id => Party.GetAbility(id).Kind == AbilityKind.Projectile && Party.GetAbility(id).ArrowCost == 0);
         var alive = Party.Members.Where(m => m.IsAlive).ToList();
@@ -1297,35 +1284,52 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// </summary>
     internal Enemy? AnswerTarget { get; set; }
 
-    /// <summary>A shot or a spell this body knows: a ranged weapon's swing, a projectile or a nova (what a companion may take another car's boarder with).</summary>
-    internal bool Shooter
+    /// <summary>What the brain is handed of this body's abilities (<see cref="Think"/>): ready, range, a blow or not, its arrows in the bag. <paramref name="into"/> is cleared first.</summary>
+    private void FillAbilityViews(List<AbilityView> into)
     {
-        get
+        into.Clear();
+        var w = State.WeaponProfile;
+        for (var i = 0; i < State.KnownAbilities.Count; i++)
         {
-            foreach (var id in State.KnownAbilities)
-                if (ShotRange(Party.GetAbilityFor(State, id)) > 0f) return true;
-            return false;
+            var a = Party.GetAbilityFor(State, State.KnownAbilities[i]);
+            var ready = AbilityRules.WhyCannotUse(State, a, Party.ArrowCount) == null;
+            var range = a.Kind switch
+            {
+                AbilityKind.WeaponAttack => w.IsRanged ? 14f : w.Range + 0.4f,
+                AbilityKind.Projectile => 14f,
+                AbilityKind.MeleeStrike => w.Range + 0.4f,
+                AbilityKind.Nova => a.Radius,
+                _ => 999f,
+            };
+            into.Add(new AbilityView(i, a, ready, range, a.Kind == AbilityKind.MeleeStrike || (a.Kind == AbilityKind.WeaponAttack && !w.IsRanged),
+                Ammo: AbilityRules.ArrowCost(State, a) <= Party.ArrowCount));
         }
     }
 
-    /// <summary>How far ability <paramref name="a"/> reaches as a shot or a spell (as <see cref="Think"/> hands the brain its ranges), or 0 for a blade or a buff.</summary>
-    private float ShotRange(AbilityProfile a) => a.Kind switch
-    {
-        AbilityKind.WeaponAttack when State.WeaponProfile.IsRanged => 14f,
-        AbilityKind.Projectile when a.Attack != null => 14f,
-        AbilityKind.Nova when a.Attack != null => a.Radius,
-        _ => 0f,
-    };
+    private readonly List<AbilityView> _shotViews = new();
 
-    /// <summary>A clear shot at <paramref name="e"/> now, the brain's own test for a ranged target (<see cref="CompanionBrain.CanStrike"/>): a shot or spell in range, and the line clear.</summary>
+    /// <summary>It knows a shot the brain fires at one enemy (<see cref="CompanionBrain.KnowsShot"/>: a ranged weapon or a projectile, never a nova).</summary>
+    internal bool Shooter { get { FillAbilityViews(_shotViews); return CompanionBrain.KnowsShot(_shotViews); } }
+
+    /// <summary>A blade (<see cref="CompanionBrain.IsBlade"/>): no shot of its own and a blow to strike with; the one an answer sends climbing.</summary>
+    internal bool Blade { get { FillAbilityViews(_shotViews); return CompanionBrain.IsBlade(_shotViews); } }
+
+    /// <summary>
+    /// The brain would fire at <paramref name="e"/> alone now (<see cref="CompanionBrain.HasShot"/>, with the view <see cref="Think"/> builds of it):
+    /// a shot with its arrows in the bag in range, and the line clear.
+    /// </summary>
     internal bool HasShotAt(Enemy e)
     {
         if (!IsInstanceValid(e) || !e.IsAlive) return false;
-        var d = e.GlobalPosition.DistanceTo(GlobalPosition);
-        foreach (var id in State.KnownAbilities)
-            if (ShotRange(Party.GetAbilityFor(State, id)) is > 0f and var range && d <= range) return ClearLine(e.GlobalPosition);
-        return false;
+        FillAbilityViews(_shotViews);
+        var boarder = BoarderCar(e) >= 0;
+        var reaches = boarder && BlowReaches(e);
+        var view = new EnemyView(0, e.GlobalPosition.DistanceTo(GlobalPosition), e.IsHostile, ClearLine(e.GlobalPosition), e.Hp / Math.Max(1f, e.MaxHp), CarBoarder: reaches, OtherCarBoarder: boarder && !reaches);
+        return CompanionBrain.HasShot(_shotViews, view);
     }
+
+    /// <summary>Test hook (plan 14's --test-boarders): this companion is marked pumping while it sits in the cart, as the cart's pump picks it.</summary>
+    internal bool DebugPump { get; set; }
 
     /// <summary>Test hook (plan 14's --test-boarders): this companion's brain chooses no attack, so a flow counts one striker's blows; <see cref="DebugStrikeAt"/> still strikes.</summary>
     internal bool DebugHoldFire { get; set; }
@@ -1824,6 +1828,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     /// <summary>A perfect blow with a cleaving item carries this far from the struck enemy.</summary>
     private const float CleaveRadius = 2.5f;
+
+    /// <summary>Test hook: the shatter chain a shattering blow on <paramref name="from"/> would carry into <paramref name="count"/> frozen enemies near it.</summary>
+    internal void DebugShatterChain(Enemy from, int count) => ShatterChain(from, count, State.WeaponProfile.ToAttack(), State);
 
     /// <summary>Test hook: the cleave a perfect blow on <paramref name="struck"/> would carry, of <paramref name="amount"/>, out to <paramref name="radius"/>.</summary>
     internal void DebugCleave(Enemy struck, float amount, float radius) => Cleave(struck, amount, State.WeaponProfile.ToAttack(), radius);

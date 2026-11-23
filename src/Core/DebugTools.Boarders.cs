@@ -79,7 +79,8 @@ public partial class DebugTools
     private Enemies.Enemy? _bdHound;
     private bool _bdLeverChecked, _bdWasHopping;
     private readonly List<(float At, int From, int To)> _bdAnswerHops = new();
-    private readonly List<Adventurer> _bdShootersDown = new();
+    private readonly List<Adventurer> _bdShootersDown = new(); // pass 3b: the seat answerers made to pump, in turn
+    private float _bdHandoffAt = -1f;
     /// <summary>A wagon's track curvature (1/m) from which the reach sample counts as "in a bend" (a radius of 25 m or less); under 0.01 is the straight.</summary>
     private const float BdBendK = 0.04f;
 
@@ -589,6 +590,14 @@ public partial class DebugTools
                     me.DebugCleave(h2, 10f, radius);
                     GD.Print($"[boarders] reach: a cleave off W2's hound out to {radius:0.00} m (W1's hound {d1:0.00} m from it, W3's {d3:0.00} m): W1's hits {BdHits(_bdH1)}, hp {_bdH1.Hp:0}/{_bdHp1:0}; W3's hits {BdHits(_bdH3)}, hp {_bdH3.Hp:0}/{_bdHp3:0}");
                     if (BdHits(_bdH1) != 0 || BdHits(_bdH3) != 0 || _bdH1.Hp < _bdHp1 || _bdH3.Hp < _bdHp3) { Fail("a cleave off W2's hound carried into W1's or W3's"); return; }
+                    // and a chained one (fix round 2): both neighbours frozen and inside the chain's 4 m, a shatter chain off W2's hound takes neither
+                    foreach (var n in new[] { _bdH1, _bdH3 }) n.ApplyStatus(new Combat.StatusApplication(Combat.StatusKind.Frost, 5f, 0));
+                    var frozen = new[] { _bdH1, _bdH3 }.Count(n => n.Effects.Has(Combat.StatusKind.Frost) && n.GlobalPosition.DistanceTo(h2.GlobalPosition) <= Adventure.Fortune.FortuneRules.ShatterChainRadius);
+                    me.DebugShatterChain(h2, 2);
+                    GD.Print($"[boarders] reach: a shatter chain off W2's hound ({frozen} frozen neighbour(s) within {Adventure.Fortune.FortuneRules.ShatterChainRadius:0} m): W1's hits {BdHits(_bdH1)}, hp {_bdH1.Hp:0}/{_bdHp1:0}; W3's hits {BdHits(_bdH3)}, hp {_bdH3.Hp:0}/{_bdHp3:0}");
+                    if (frozen != 2) { Fail($"the shatter chain's pin needs both neighbours frozen within reach ({frozen})"); return; }
+                    if (BdHits(_bdH1) != 0 || BdHits(_bdH3) != 0 || _bdH1.Hp < _bdHp1 || _bdH3.Hp < _bdHp3) { Fail("a shatter chain off W2's hound carried into W1's or W3's"); return; }
+                    foreach (var n in new[] { _bdH1, _bdH3 }) n.Effects.Remove(Combat.StatusKind.Frost);
                 }
                 _bdMate = party.Adventurers.Where(a => IsInstanceValid(a) && a != me && a.Control == ControlKind.Companion && a.Cart == rc.Cart && !a.Downed && BdBlade(a))
                     .OrderBy(a => a.GlobalPosition.DistanceTo(_bdH1.GlobalPosition)).FirstOrDefault();
@@ -880,27 +889,45 @@ public partial class DebugTools
             }
             case 37:
             {
-                // 3b: every companion with a shot held down (as =move holds the lead down): a blade must climb
+                // 3b (fix round 2): each seat answerer is made to pump (DebugPump) in turn: the answer passes on to the next shooter with a
+                // shot, and with none left to the cart's blade, which climbs
                 if (t < 0.5f) break;
                 if (enc.AnswersNow.Any(a => a.Wagon == 3)) { if (t > 2f) Fail("pass 3a: the seat answer did not end with W3 clear"); break; }
                 if (BdRideLeft(rc) < 90f || rc.State.Mode != CartMode.Rolling || rc.MovesRefused) { if (t > 60f) Fail("pass 3b: no ride with 90 m left"); break; }
                 _bdShootersDown.Clear();
-                foreach (var a in party.Adventurers)
-                    if (IsInstanceValid(a) && a.Control == ControlKind.Companion && !a.Downed && a.Shooter)
-                    {
-                        a.State.Mangled = true;
-                        a.State.Hp = 0;
-                        party.OnMemberDowned(a.Index);
-                        _bdShootersDown.Add(a);
-                    }
-                GD.Print($"[boarders] pass 3b: the shooters held down [{string.Join(", ", _bdShootersDown.Select(a => a.State.Name))}]");
                 _bdHound = enc.DebugBoard(3);
                 if (_bdHound == null) { Fail("pass 3b: no hound could be put on W3"); return; }
+                _bdMate = party.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && a.Control == ControlKind.Companion && rc.CarOf(a) == 0 && a.Blade);
+                if (_bdMate == null) { Fail("pass 3b: no blade companion in the cart"); return; }
                 _bdKnockBase = enc.KnockOffs;
-                _bdMate = null;
                 _bdAnswerHops.Clear();
                 _bdWasHopping = false;
                 _bdClearAt = -1f;
+                _bdHandoffAt = -1f;
+                Next(38);
+                break;
+            }
+            case 38:
+            {
+                var blade = _bdMate!;
+                BdTrackHops(rc, blade);
+                var answer = enc.AnswersNow.FirstOrDefault(a => a.Wagon == 3);
+                if (answer.Name == null) { if (_bdHandoffAt >= 0f ? _bdClock - _bdHandoffAt > 0.25f : t > 1f) Fail($"pass 3b: W3 went unanswered {(_bdHandoffAt >= 0f ? "after its seat answerer began to pump" : "")}"); break; }
+                var who = party.Adventurers.First(a => IsInstanceValid(a) && a.State.Name == answer.Name);
+                if (answer.FromSeat)
+                {
+                    if (_bdShootersDown.Contains(who)) { if (_bdClock - _bdHandoffAt > 0.25f) Fail($"pass 3b: {who.State.Name} kept W3's seat answer while it pumped"); break; }
+                    if (_bdHandoffAt >= 0f) GD.Print($"[boarders] pass 3b: W3's answer passed to {who.State.Name}'s seat {_bdClock - _bdHandoffAt:0.00} s after {_bdShootersDown[^1].State.Name} began to pump");
+                    else GD.Print($"[boarders] pass 3b: {who.State.Name} answers W3 from its seat");
+                    if (!who.Shooter || who.Pumping) { Fail($"pass 3b: {who.State.Name} answers from its seat with no shot, or pumping"); return; }
+                    who.DebugPump = true; // the cart's pump picks it: it holds its fire, so its seat answer must pass on
+                    _bdShootersDown.Add(who);
+                    _bdHandoffAt = _bdClock;
+                    break;
+                }
+                var unforced = party.Adventurers.Where(a => IsInstanceValid(a) && a.Control == ControlKind.Companion && !a.Downed && rc.CarOf(a) >= 0 && a.Shooter && !_bdShootersDown.Contains(a) && a.HasShotAt(_bdHound!)).Select(a => a.State.Name).ToList();
+                GD.Print($"[boarders] pass 3b: with [{string.Join(", ", _bdShootersDown.Select(a => a.State.Name))}] pumping, {who.State.Name} answers W3 by climbing {(_bdHandoffAt >= 0f ? $"{_bdClock - _bdHandoffAt:0.00} s after the last pump began" : "")}; shooters with a shot left: [{string.Join(", ", unforced)}]");
+                if (who != blade || _bdShootersDown.Count == 0 || unforced.Count > 0) { Fail("pass 3b: the answer did not pass through every shooter to the cart's blade"); return; }
                 Next(31);
                 break;
             }
@@ -961,8 +988,8 @@ public partial class DebugTools
                 GD.Print($"[boarders] pass 3: {mate.State.Name} moves back {hop.From}>{hop.To} {after:0.00} s after W3 went clear (AnswerBack {TrainMoveRules.AnswerBack} s)");
                 if (hop.To >= hop.From || after < TrainMoveRules.AnswerBack - 2f * tick || after > TrainMoveRules.AnswerBack + 0.6f) { Fail("pass 3: the move back was not toward the cart 5 s after W3 went clear"); return; }
                 mate.DebugHoldFire = true;
-                foreach (var a in _bdShootersDown) { a.State.Mangled = false; a.Revive(); a.State.Hp = a.State.Stats[Characters.Stat.MaxHp]; }
-                GD.Print($"[boarders] pass 3b: the shooters stand again [{string.Join(", ", _bdShootersDown.Select(a => $"{a.State.Name} downed {a.Downed}"))}]");
+                foreach (var a in _bdShootersDown) a.DebugPump = false;
+                GD.Print($"[boarders] pass 3b: the shooters' pumps let go [{string.Join(", ", _bdShootersDown.Select(a => a.State.Name))}] (the cart's pump picks its pumpers afresh next tick)");
                 Next(40);
                 break;
             }

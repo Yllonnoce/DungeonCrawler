@@ -13,8 +13,11 @@ public enum Stance { Defensive, Aggressive, Hold }
 /// </summary>
 public sealed record EnemyView(int Id, float Distance, bool Hostile, bool Visible, float HpFraction, bool CarBoarder = false, bool BitingCrew = false, bool OtherCarBoarder = false);
 
-/// <summary>One ability the companion could use now. Range is the distance at which it can be used; <paramref name="Melee"/>: a blow of the held weapon (a swing or a melee strike), not a shot or a spell.</summary>
-public sealed record AbilityView(int Index, AbilityProfile Ability, bool Ready, float Range, bool Melee = false);
+/// <summary>
+/// One ability the companion could use now. Range is the distance at which it can be used; <paramref name="Melee"/>: a blow of the held weapon
+/// (a swing or a melee strike), not a shot or a spell; <paramref name="Ammo"/>: the arrows it costs are in the bag (a cooldown aside).
+/// </summary>
+public sealed record AbilityView(int Index, AbilityProfile Ability, bool Ready, float Range, bool Melee = false, bool Ammo = true);
 
 /// <summary>Snapshot handed to the brain. Built by the Godot layer; kept plain so decisions are unit-testable.</summary>
 public sealed record CompanionContext
@@ -166,7 +169,7 @@ public static class CompanionBrain
     {
         EnemyView? best = null;
         var bestScore = float.MaxValue;
-        var reachesOtherCars = ctx.Seated && ctx.Abilities.Any(a => !a.Melee && a.Ability.Kind is AbilityKind.Projectile or AbilityKind.WeaponAttack or AbilityKind.Nova);
+        var reachesOtherCars = ctx.Seated && ctx.Abilities.Any(a => !a.Melee && a.Ability.Kind is AbilityKind.Projectile or AbilityKind.WeaponAttack or AbilityKind.Nova); // a nova from the seat may still take it, with two near
         foreach (var e in ctx.Enemies)
         {
             if (e.HpFraction <= 0) continue;
@@ -192,12 +195,48 @@ public static class CompanionBrain
     public static float RangeFor(AbilityView a, EnemyView target)
         => !a.Melee ? a.Range : target.OtherCarBoarder ? -1f : target.CarBoarder ? Math.Max(a.Range, BoarderReach) : a.Range;
 
-    /// <summary>Some damaging ability of this companion (ready or cooling down) reaches <paramref name="e"/> from where it is, and it sees it.</summary>
+    /// <summary>Some damaging ability of this companion (ready or cooling down) reaches <paramref name="e"/> from where it is, and it sees it: a blow (<see cref="IsBlow"/>) or a shot (<see cref="IsShot"/>).</summary>
     public static bool CanStrike(CompanionContext ctx, EnemyView e)
     {
         if (!e.Visible) return false;
         foreach (var a in ctx.Abilities)
-            if (a.Ability.Kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike or AbilityKind.Projectile && e.Distance <= RangeFor(a, e)) return true;
+            if ((IsBlow(a) || IsShot(a)) && e.Distance <= RangeFor(a, e)) return true;
+        return false;
+    }
+
+    /// <summary>A blow of the held weapon the brain strikes one enemy with: the weapon's melee swing or a melee strike.</summary>
+    public static bool IsBlow(AbilityView a) => a.Melee && a.Ability.Kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike;
+
+    /// <summary>
+    /// A shot the brain fires at one enemy (<see cref="ChooseAbility"/>): a ranged weapon's swing, or a projectile with an attack. Never a nova,
+    /// which it casts only with two enemies near.
+    /// </summary>
+    public static bool IsShot(AbilityView a) => !a.Melee && (a.Ability.Kind == AbilityKind.WeaponAttack || a.Ability.Kind == AbilityKind.Projectile && a.Ability.Attack != null);
+
+    /// <summary>
+    /// The brain would fire at <paramref name="e"/> alone now (plan 14, Ruling 15 as amended: the seat answer's "clear shot"): it sees it and a
+    /// shot (<see cref="IsShot"/>) with its arrows in the bag reaches it (<see cref="RangeFor"/>), a cooldown aside.
+    /// </summary>
+    public static bool HasShot(IReadOnlyList<AbilityView> abilities, EnemyView e)
+    {
+        if (!e.Visible) return false;
+        foreach (var a in abilities)
+            if (IsShot(a) && a.Ammo && e.Distance <= RangeFor(a, e)) return true;
+        return false;
+    }
+
+    /// <summary>It knows a shot (<see cref="IsShot"/>), arrows or not.</summary>
+    public static bool KnowsShot(IReadOnlyList<AbilityView> abilities)
+    {
+        foreach (var a in abilities) if (IsShot(a)) return true;
+        return false;
+    }
+
+    /// <summary>A blade (the one an answer sends climbing): it knows no shot, and has a blow (<see cref="IsBlow"/>); a nova of its own does not count.</summary>
+    public static bool IsBlade(IReadOnlyList<AbilityView> abilities)
+    {
+        if (KnowsShot(abilities)) return false;
+        foreach (var a in abilities) if (IsBlow(a)) return true;
         return false;
     }
 

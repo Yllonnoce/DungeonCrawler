@@ -1277,7 +1277,7 @@ public partial class RailController : Node
                 if (hero.Control == ControlKind.Companion) { if (companionPumps > 0) { companionPumps--; pumping = true; } }
                 else pumping = PlayerRide(hero, party, server).Pump;
             }
-            hero.Pumping = pumping;
+            hero.Pumping = pumping || hero.DebugPump; // a test's hook marks one pumping
         }
         return input with { Brake = brakeOn, Pumpers = pumpers };
     }

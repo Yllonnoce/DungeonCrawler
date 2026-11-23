@@ -47,14 +47,25 @@ public static class BoarderRules
     public static bool NeedsAnswer(bool boarderAboard, int crewAboard, int upHeroesAboard) => boarderAboard && crewAboard > 0 && upHeroesAboard == 0;
 
     /// <summary>
-    /// One seated, up companion (or hero bot) not already answering, as the answer's choice sees it: its party order, its car, whether it fights
-    /// with a blade (no shot or spell of its own), whether it is a hero bot, and whether it has a clear shot at the wagon's boarder now
-    /// (range and line of sight, as the brain's own test for a ranged target).
+    /// One seated, up companion (or hero bot) not already answering, as the answer's choice sees it: its party order, its car, whether it is a
+    /// blade (no shot of its own, a blow to strike with), whether it is a hero bot, whether it has a clear shot at the wagon's boarder now (what
+    /// the brain would fire at it alone: <c>CompanionBrain.HasShot</c>), and whether it is pumping the cart (fix round 2: a pumper holds its fire,
+    /// so it never answers from its seat).
     /// </summary>
-    public readonly record struct AnswerCandidate(int Order, int Car, bool Blade, bool Bot, bool HasShot);
+    public readonly record struct AnswerCandidate(int Order, int Car, bool Blade, bool Bot, bool HasShot, bool Pumping = false);
+
+    /// <summary>A seat answerer may be without its shot this long (a line of sight that flickers) before its answer ends (fix round 2).</summary>
+    public const float ShotGrace = 0.5f;
 
     /// <summary>
-    /// Who answers wagon <paramref name="wagon"/> (Ruling 15 as amended in Task 4's fix round): a candidate with a clear shot answers from its
+    /// A seat answer goes on (fix round 2): its answerer is up, still run by the companion AI (no player took it over), not pumping, and has been
+    /// without its shot no longer than <see cref="ShotGrace"/> (<paramref name="shotLostFor"/>, 0 while it has one). Else it ends that tick and
+    /// the wagon is answered afresh.
+    /// </summary>
+    public static bool SeatAnswerHolds(bool up, bool companion, bool pumping, double shotLostFor) => up && companion && !pumping && shotLostFor <= ShotGrace;
+
+    /// <summary>
+    /// Who answers wagon <paramref name="wagon"/> (Ruling 15 as amended in Task 4's fix rounds): a candidate with a clear shot, not pumping, answers from its
     /// seat (the nearest by cars, then the nearer the cart, then party order); only when none has one does an answerer move: the nearest blade or
     /// hero bot, a tie by cars going to a blade, then the nearer the cart, then party order. Null when nobody may.
     /// </summary>
@@ -63,7 +74,7 @@ public static class BoarderRules
         AnswerCandidate? shot = null, mover = null;
         foreach (var c in candidates)
         {
-            if (c.HasShot && (shot is not { } s || Nearer(c, s, wagon, blades: false))) shot = c;
+            if (c.HasShot && !c.Pumping && (shot is not { } s || Nearer(c, s, wagon, blades: false))) shot = c;
             if ((c.Blade || c.Bot) && (mover is not { } m || Nearer(c, m, wagon, blades: true))) mover = c;
         }
         if (shot is { } byShot) return (byShot.Order, true);
