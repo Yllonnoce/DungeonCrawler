@@ -16,7 +16,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// nearer on a tie), else the cart's, else an empty wagon's (<see cref="TrainRules.BoardingOrder"/>). With no spot free it
 /// leaps and misses: it lands beside the party lane as a normal creature. A boarder is carried by what it boarded, bites with
 /// its normal melee (a wagon boarder: the crew inside, else nobody in particular) and, on the party cart, dents the plating. It falls
-/// off, beside the lane, when it dies. Server only.
+/// off, beside the lane, when it dies. A wagon boarder also has a grip (plan 14, Ruling 14): the party's hits on it
+/// (<see cref="BoarderRules.Counts"/>), weighed by <see cref="BoarderRules.GripTaken"/>, knock it off alive at <see cref="BoarderRules.Grip"/>
+/// (<see cref="OnEnemyHurt"/>): it drops beside the lane, aggro on, left behind. The cart's own rim boarders have none. Server only.
 /// </summary>
 public partial class RailEncounterController
 {
@@ -43,6 +45,8 @@ public partial class RailEncounterController
         /// <summary>Where it leapt to on the wire (<see cref="Net.CartIds"/>: the cart it aims at, or the body it misses beside) and when (the server's clock).</summary>
         public int ToCart;
         public double SentAt;
+        /// <summary>A wagon boarder's grip taken so far (<see cref="BoarderRules.GripTaken"/> of each party hit) and the hits that took it.</summary>
+        public int GripTaken, GripHits;
     }
 
     private readonly List<Leap> _leaps = new();
@@ -318,6 +322,96 @@ public partial class RailEncounterController
     {
         for (var i = 0; i < _leaps.Count; i++)
             if (_leaps[i].Phase == LeapPhase.Aboard && IsInstanceValid(_leaps[i].Hound)) _leaps[i].Hound.FollowCarrier();
+    }
+
+    // ---- the grip (plan 14, Ruling 14) ----------------------------------------------------------------
+
+    /// <summary>Wagon boarders knocked off on this floor build (tests read it).</summary>
+    internal int KnockOffs { get; private set; }
+
+    /// <summary>The aboard leap of <paramref name="hound"/> riding a coupled wagon's rim, or null (the cart's rim boarders have no grip).</summary>
+    private Leap? WagonBoarderLeap(Enemy hound)
+    {
+        for (var i = 0; i < _leaps.Count; i++)
+        {
+            var l = _leaps[i];
+            if (l.Hound == hound && l.Phase == LeapPhase.Aboard && l.Dest is TrainWagon { Coupled: true } wagon && IsInstanceValid(wagon) && hound.Carrier == wagon) return l;
+        }
+        return null;
+    }
+
+    /// <summary>The grip taken off <paramref name="hound"/> so far while it rides a wagon's rim (test hook), or −1 when it does not.</summary>
+    internal int GripOf(Enemy hound) => WagonBoarderLeap(hound)?.GripTaken ?? -1;
+
+    private static string MemberName(int index)
+        => Main.Instance?.Party is { } party && index >= 0 && index < party.Members.Length ? party.Members[index].Name : $"member {index}";
+
+    /// <summary>
+    /// <see cref="EventBus.EnemyHurt"/> (server and solo): a party member's hit on a wagon boarder that lives through it takes
+    /// <see cref="BoarderRules.GripTaken"/> of its kind (<see cref="Enemy.LastHitKind"/>) off its grip; at <see cref="BoarderRules.KnockedOff"/>
+    /// it is knocked off (<see cref="KnockOff"/>). A killing blow leaves it to its death's drop, as before.
+    /// </summary>
+    private void OnEnemyHurt(Enemy e, float amount, Combat.HitFlavor flavor, int byMember)
+    {
+        if (NetSession.IsClient || !Current || !BoarderRules.Counts(byMember) || !IsInstanceValid(e) || !e.IsAlive) return;
+        if (WagonBoarderLeap(e) is not { } l || l.Dest is not TrainWagon wagon) return;
+        l.GripTaken += BoarderRules.GripTaken(e.LastHitKind);
+        l.GripHits++;
+        var by = MemberName(byMember);
+        GD.Print($"[rails] t={_now:0.00} {e.Name} on wagon {wagon.Number}: grip {l.GripTaken}/{BoarderRules.Grip} after a {e.LastHitKind} hit by {by} (hp {e.Hp:0}/{e.MaxHp:0})");
+        if (BoarderRules.KnockedOff(l.GripTaken)) KnockOff(l, wagon, by);
+    }
+
+    /// <summary>The grip is gone: the hound drops beside the lane alive, aggro on, and its rim spot is free; <see cref="TickBoarder"/> lets the leap go.</summary>
+    private void KnockOff(Leap l, TrainWagon wagon, string by)
+    {
+        var h = l.Hound;
+        h.Drop(Beside(h.GlobalPosition));
+        h.BoardTarget = null;
+        h.DeathDrop = null;
+        h.ForceAggro();
+        ReleaseLeap(l);
+        KnockOffs++;
+        EventBus.Instance.Log($"{by} knocks the hound off wagon {wagon.Number}!");
+        GD.Print($"[rails] t={_now:0.00} {h.Name} knocked off wagon {wagon.Number} by {by} after {l.GripHits} hit(s)");
+    }
+
+    // ---- test hooks ----------------------------------------------------------------------------------
+
+    private readonly HashSet<Enemy> _debugBoarders = new();
+
+    /// <summary>A hound <see cref="DebugBoard"/> put on a wagon: the test flows' culls spare it.</summary>
+    internal bool IsDebugBoarder(Enemy e) => _debugBoarders.Contains(e);
+
+    /// <summary>
+    /// Test hook (server and solo): an ember hound landed on wagon <paramref name="wagon"/>'s rim spot, as a leap lands one (carried, aggro on,
+    /// biting the nearest crew inside, its death dropping it beside the lane). With <paramref name="holdHp"/> its HP never drops below 1, so
+    /// only the grip ends it. Null when the wagon is not coupled or its spot is held.
+    /// </summary>
+    internal Enemy? DebugBoard(int wagon, bool holdHp = false)
+    {
+        if (NetSession.IsClient || !Current || _rails.WagonAt(wagon) is not { Coupled: true } w) return null;
+        if (_builder.SpawnEnemy(HoundId, w.BoarderSpotTransform().Origin, _builder.CurrentFloor) is not { } h) return null;
+        if (w.ReserveBoarderSpot(h) < 0) { h.QueueFree(); return null; }
+        h.IsReinforcement = true; // no loot farm
+        h.DebugHoldHp = holdHp;
+        h.Carry(w, () => w.BoarderSpotTransform(0));
+        h.ForceAggro();
+        h.DeathDrop = () => Beside(h.GlobalPosition);
+        h.BoardTarget = NearestCrew(w, h.GlobalPosition);
+        _leaps.Add(new Leap { Hound = h, Phase = LeapPhase.Aboard, Dest = w, Spot = 0, ToCart = WireId(w), SentAt = NetSession.Instance?.Now ?? 0 });
+        _debugBoarders.Add(h);
+        GD.Print($"[rails] test: a hound boards wagon {wagon}");
+        return h;
+    }
+
+    /// <summary>Test hook: <paramref name="hound"/> dies as a blow would kill it (its death drops it beside the lane).</summary>
+    internal void DebugKill(Enemy hound)
+    {
+        if (!IsInstanceValid(hound) || !hound.IsAlive) return;
+        hound.DebugHoldHp = false;
+        hound.Kill();
+        GD.Print($"[rails] test: {hound.Name} killed on {(hound.Carrier as Node)?.Name ?? "foot"}");
     }
 
     /// <summary>

@@ -5,11 +5,13 @@ namespace DungeonCrawler.Characters;
 public enum Stance { Defensive, Aggressive, Hold }
 
 /// <summary>
-/// What a companion knows about one enemy this tick. <paramref name="RoofBoarder"/>: a hound riding a coupled cage wagon's roof
-/// (a melee blow reaches it up to <see cref="CompanionBrain.BoarderReach"/>); <paramref name="BitingCrew"/>: that boarder is biting
-/// the crew inside (companions go for it first).
+/// What a companion knows about one enemy this tick. <paramref name="CarBoarder"/>: a hound the companion's own car of the train carries
+/// on its rim (or any train boarder, for a companion on foot): a melee blow reaches it up to <see cref="CompanionBrain.BoarderReach"/>.
+/// <paramref name="OtherCarBoarder"/>: a hound another car of the train carries, while the companion sits in the train: no blade of its
+/// reaches it (Ruling 13), only a shot or a spell. <paramref name="BitingCrew"/>: that boarder is biting the crew inside (companions go
+/// for it first).
 /// </summary>
-public sealed record EnemyView(int Id, float Distance, bool Hostile, bool Visible, float HpFraction, bool RoofBoarder = false, bool BitingCrew = false);
+public sealed record EnemyView(int Id, float Distance, bool Hostile, bool Visible, float HpFraction, bool CarBoarder = false, bool BitingCrew = false, bool OtherCarBoarder = false);
 
 /// <summary>One ability the companion could use now. Range is the distance at which it can be used; <paramref name="Melee"/>: a blow of the held weapon (a swing or a melee strike), not a shot or a spell.</summary>
 public sealed record AbilityView(int Index, AbilityProfile Ability, bool Ready, float Range, bool Melee = false);
@@ -77,19 +79,16 @@ public static class CompanionBrain
     /// <summary>Only a signature this close is worth dodging.</summary>
     public const float DodgeReach = 6f;
     /// <summary>
-    /// A melee blow reaches a hound on a coupled cage wagon's roof this far (body to body). Measured on ride 2 of --test-chase,
-    /// which prints it: from the cart's rear seats the first wagon's roof hound is 3.38 m away on the level (2.73 m back, 1.98 m
-    /// up) and 3.21–3.37 m in the bends; from the front seats 3.79–3.83 m (3.64 m in a bend); a climb or a dip of 10% under the
-    /// 2.6 m to the wagon adds about 0.15 m. So every seat reaches the first wagon's roof, while the second wagon's roof, one
-    /// wagon spacing (2.6 m) further (about 5.8 m from the rear seats, 6.4 m from the front), stays out of reach. Only roof
-    /// boarders get it: a sword still reaches nothing else beside the line that it did not before.
+    /// A melee blow reaches a boarder its own car of the train carries this far (body to body): the wagon rim's reach,
+    /// <see cref="Dungeon.Rails.BoarderRules.WagonReach"/> (measured there), under the 2.6 m car spacing. Only its own car's boarder
+    /// gets it: a sword still reaches nothing else beside the line that it did not before, and never another car's boarder.
     /// </summary>
-    public const float BoarderReach = 3.9f;
-    /// <summary>A player's blow that met nothing still finds a roof boarder this far either side of where it aims (flat, degrees).</summary>
+    public const float BoarderReach = Dungeon.Rails.BoarderRules.WagonReach;
+    /// <summary>A player's blow that met nothing still finds its own car's boarder this far either side of where it aims (flat, degrees).</summary>
     public const float BoarderSwingCone = 45f;
 
     /// <summary>
-    /// A player's melee blow that met nothing lands on a roof boarder at (<paramref name="toX"/>, <paramref name="toZ"/>) from the body (flat)
+    /// A player's melee blow that met nothing lands on its own car's boarder at (<paramref name="toX"/>, <paramref name="toZ"/>) from the body (flat)
     /// and <paramref name="distance"/> away (body to body): within <see cref="BoarderReach"/>, and within <see cref="BoarderSwingCone"/> of the
     /// aim (<paramref name="aimX"/>, <paramref name="aimZ"/>, flat). One straight overhead is in the swing whichever way it aims.
     /// </summary>
@@ -138,7 +137,7 @@ public static class CompanionBrain
             return new CompanionAction(ActionKind.Attack, target.Id, ability.Index, heavy);
         }
 
-        var desired = ctx.PrefersRange ? ctx.RangedDistance : (target.RoofBoarder ? Math.Max(ctx.MeleeRange, BoarderReach) : ctx.MeleeRange) * 0.85f; // a roof boarder is struck from below: no closer than that
+        var desired = ctx.PrefersRange ? ctx.RangedDistance : (target.CarBoarder ? Math.Max(ctx.MeleeRange, BoarderReach) : ctx.MeleeRange) * 0.85f; // its own car's boarder is struck from the seat: no closer than that
         if (target.Distance > desired || !target.Visible) return new CompanionAction(ActionKind.Approach, target.Id);
         return CompanionAction.Idle; // in position, waiting for a cooldown
     }
@@ -160,13 +159,15 @@ public static class CompanionBrain
     {
         EnemyView? best = null;
         var bestScore = float.MaxValue;
+        var reachesOtherCars = ctx.Seated && ctx.Abilities.Any(a => !a.Melee && a.Ability.Kind is AbilityKind.Projectile or AbilityKind.WeaponAttack or AbilityKind.Nova);
         foreach (var e in ctx.Enemies)
         {
             if (e.HpFraction <= 0) continue;
+            if (e.OtherCarBoarder && !reachesOtherCars) continue; // another car's boarder: never a blade's target (Ruling 13); a shot or a spell may take it
             var allowed = ctx.Stance switch
             {
                 Stance.Aggressive => e.Visible && e.Distance <= ctx.EngageRadius,
-                Stance.Hold => e.Distance <= 3f || (e.RoofBoarder && e.Distance <= BoarderReach), // what it can strike without a step: a roof boarder above it too
+                Stance.Hold => e.Distance <= 3f || (e.CarBoarder && e.Distance <= BoarderReach), // what it can strike without a step: its own car's boarder too
                 _ => (e.Hostile && e.Distance <= ctx.EngageRadius) || e.Id == ctx.LeadTargetId || e.Distance <= 4f,
             };
             if (!allowed) continue;
@@ -176,8 +177,12 @@ public static class CompanionBrain
         return best;
     }
 
-    /// <summary>How far <paramref name="a"/> reaches <paramref name="target"/>: its own range, and for a melee blow at a roof boarder at least <see cref="BoarderReach"/>.</summary>
-    public static float RangeFor(AbilityView a, EnemyView target) => target.RoofBoarder && a.Melee ? Math.Max(a.Range, BoarderReach) : a.Range;
+    /// <summary>
+    /// How far <paramref name="a"/> reaches <paramref name="target"/>: its own range; a melee blow at least <see cref="BoarderReach"/> at its own
+    /// car's boarder, and never (−1) at another car's.
+    /// </summary>
+    public static float RangeFor(AbilityView a, EnemyView target)
+        => !a.Melee ? a.Range : target.OtherCarBoarder ? -1f : target.CarBoarder ? Math.Max(a.Range, BoarderReach) : a.Range;
 
     /// <summary>Some damaging ability of this companion (ready or cooling down) reaches <paramref name="e"/> from where it is, and it sees it.</summary>
     public static bool CanStrike(CompanionContext ctx, EnemyView e)

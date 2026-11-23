@@ -39,8 +39,9 @@ namespace DungeonCrawler.Core;
 // frames logged; a barricade the cart smashes, each one its own call), and the cart is mended to full plating at every stop. At stop 1, before ride 2, the party is levelled to
 // --party-level=N (default ChaseDefaultLevel = 12, the level a run of the shipped campaign has by floor 12), its points spent; on
 // ride 2 the lead sits idle, who kills each boarder is logged, and at that level or higher at most one companion may be
-// down by stop 2; a hound must board a wagon, a wagon boarder struck by a companion within 6 s is reported (the check waits for
-// Task 4's answering rule; the reach from each seat is printed), and no crewman may go down to a wagon boarder's bite. Ride 2 is ridden twice with those checks: in
+// down by stop 2; a hound must board a wagon, and one that boards a crewed wagon with no hero up in it must be answered: struck by a
+// companion within ChaseBoarderAnswer + 3 s (plan 14, Ruling 15: the answerer climbs to it car by car; its line prints the answerer, its
+// moves and the first strike; the reach from each seat is printed), and no crewman may go down to a wagon boarder's bite. Ride 2 is ridden twice with those checks: in
 // section 1 in the natural seating (the rear seats hold whoever hopped in there, often the ranged companions, who turn right
 // round to shoot), and in section 2, after the thrower's save, from a restored stop 1 with a blade swapped into a rear seat.
 // Prints [chase] lines and [chase] RESULT.
@@ -95,7 +96,8 @@ public partial class DebugTools
     private readonly HashSet<int> _chDownedRide2 = new();
     private readonly Dictionary<Enemies.Enemy, ulong> _chBoardedAt = new(); // a wagon boarder -> the physics frame it boarded
     private readonly Dictionary<Enemies.Enemy, (string Who, ulong Frame)> _chFirstMateHit = new(); // a wagon boarder -> the first companion to hit it
-    private readonly HashSet<Enemies.Enemy> _chAnswerWaits = new(); // wagon boarders unanswered past 6 s, reported once (the check waits for Task 4)
+    private readonly Dictionary<Enemies.Enemy, int> _chNeedsAnswer = new(); // a wagon boarder that boarded a crewed wagon with no hero up -> the wagon
+    private readonly HashSet<Enemies.Enemy> _chAnswerSaid = new(); // its answer line printed
     private readonly List<string> _chCrewBitten = new(); // crew who went down on ride 2 to a wagon boarder's bite
     private readonly List<string> _chCrewDownOther = new(); // crew who went down on ride 2 to something else
     /// <summary>Which ride-2 boarder pass is on: 0 none, 1 section 1's (natural seating), 2 section 2's (a blade swapped into a rear seat).</summary>
@@ -165,6 +167,9 @@ public partial class DebugTools
         if (rc == null || enc == null || ctrl == null) { if (_chClock > 3f) Fail($"floor 12 lacks {(rc == null ? "a RailController " : "")}{(enc == null ? "a RailEncounterController " : "")}{(ctrl == null ? "a CrewRescueController" : "")}"); return; }
         if (_chSection2 && rc == _chRails) return; // the floor is being built again: wait for the new one
         RideWaiveCages(main, rc, "chase");
+        // the flow's human is one hero throughout (its lead sits idle on ride 2 and acts by its own hand later): no possession when it goes
+        // down (plan 14 Task 4: companions now climb off to answer boarded wagons, and on ride 4 the idle lead can fall to r4_slag's priest)
+        party.AllowPossession = false;
         ChaseListen(rc, enc);
         ChaseMusicPoll();
         if (_chFail != null) { Fail(_chFail); return; }
@@ -1384,7 +1389,8 @@ public partial class DebugTools
         _chBoarders.Clear();
         _chBoardedAt.Clear();
         _chFirstMateHit.Clear();
-        _chAnswerWaits.Clear();
+        _chNeedsAnswer.Clear();
+        _chAnswerSaid.Clear();
         _chKiller.Clear();
         _chLastHit.Clear();
         _chDiedNow = null;
@@ -1394,7 +1400,11 @@ public partial class DebugTools
         GD.Print($"[chase] 2 boarder pass {pass} ({(pass == 1 ? "natural seating" : "a blade swapped behind")}): {string.Join(", ", party.Adventurers.Where(a => IsInstanceValid(a) && a.Cart == rc.Cart).OrderBy(a => a.Seat).Select(a => $"{a.State.Name} ({a.State.Class.Name}{(a.Control == ControlKind.Companion ? "" : $", {a.Control}")}) seat {a.Seat}"))}");
     }
 
-    /// <summary>Per frame on ride 2: hounds that board (a wagon boarder's reach from each seat printed); one left 6 s unstruck by a companion fails.</summary>
+    /// <summary>
+    /// Per frame on ride 2: hounds that board (a wagon boarder's reach from each seat printed). One that boarded a crewed wagon with no hero up
+    /// (<see cref="BoarderRules.NeedsAnswer"/>) and is still aboard and unstruck by a companion <see cref="ChaseBoarderAnswer"/> + 3 s on fails;
+    /// the first companion strike on it prints the answer: the answerer, its moves, and who struck first.
+    /// </summary>
     private bool ChaseTrackBoarders(PartyController party, Node3D root, RailController rc, Action<string> fail)
     {
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
@@ -1405,15 +1415,33 @@ public partial class DebugTools
                 var most = rc.Train.Where(w => IsInstanceValid(w)).Select(w => w.Riders.Values.Count(r => r is Npc { Crew: true, Dead: false })).DefaultIfEmpty(0).Max();
                 if (prisoners > 0) _chCrewedBoards++;
                 GD.Print($"[chase] 2 {e.Name} boards {e.Carrier.Name} at S={rc.State.S:0.0} (hp {e.Hp:0}/{e.MaxHp:0}){(e.Carrier is TrainWagon ? $", {prisoners} prisoner(s) in it (the most in a wagon {most}), biting {e.BoardTarget?.NpcName ?? "nobody"}" : "")}");
-                if (e.Carrier is TrainWagon) { _chBoardedAt[e] = Engine.GetPhysicsFrames(); ChaseReachReport(party, e); }
+                if (e.Carrier is TrainWagon w)
+                {
+                    _chBoardedAt[e] = Engine.GetPhysicsFrames();
+                    var up = w.Riders.Values.Count(r => r is Adventurer { Downed: false, Parked: false });
+                    if (BoarderRules.NeedsAnswer(true, prisoners, up)) _chNeedsAnswer[e] = w.Number;
+                    GD.Print($"[chase] 2 {e.Name} on W{w.Number}: {prisoners} crew, {up} hero(es) up in it: {(_chNeedsAnswer.ContainsKey(e) ? "it needs an answer" : "no answer needed")}");
+                    ChaseReachReport(party, rc, e);
+                }
             }
-        foreach (var (e, at) in _chBoardedAt)
-            if (IsInstanceValid(e) && e.IsAlive && !_chFirstMateHit.ContainsKey(e) && ChaseSeconds(Engine.GetPhysicsFrames() - at) > ChaseBoarderAnswer && _chAnswerWaits.Add(e))
+        var enc = RailEncounterController.Instance;
+        foreach (var (e, wagon) in _chNeedsAnswer)
+        {
+            var at = _chBoardedAt[e];
+            if (_chFirstMateHit.TryGetValue(e, out var first) && _chAnswerSaid.Add(e))
             {
-                // Ruling 21: suspended from Task 1 (wagon boarders on any wagon, the crew no longer in the wagon behind the cart) until Task 4's answering rule
-                ChaseReachReport(party, e);
-                GD.Print($"[chase] 2 {e.Name} boarded {_chBoarders[e]} on ride 2 (boarder pass {_chBoarderPass}) and no companion struck it within {ChaseBoarderAnswer:0} s (the answer check waits for Task 4)");
+                var answer = enc?.AnswersStarted.LastOrDefault(a => a.Wagon == wagon) ?? default;
+                GD.Print($"[chase] 2 {(IsInstanceValid(e) ? e.Name : "a hound")} on W{wagon} answered {ChaseSeconds(first.Frame - at):0.00} s after it boarded (bound {ChaseBoarderAnswer + 3f:0} s): "
+                    + (answer.Name != null ? $"the answerer {answer.Name} from car {answer.From}, moves [{string.Join(" > ", answer.Route)}]" : "no answerer sent")
+                    + $"; the first strike by {first.Who}");
+                if (ChaseSeconds(first.Frame - at) > ChaseBoarderAnswer + 3f) { fail($"{e.Name} on W{wagon} was first struck by a companion {ChaseSeconds(first.Frame - at):0.00} s after it boarded, past {ChaseBoarderAnswer + 3f:0} s"); return false; }
             }
+            if (!IsInstanceValid(e) || !e.IsAlive || e.Carrier is not TrainWagon || _chFirstMateHit.ContainsKey(e) || ChaseSeconds(Engine.GetPhysicsFrames() - at) <= ChaseBoarderAnswer + 3f) continue;
+            ChaseReachReport(party, rc, e);
+            var sent = enc?.AnswersStarted.LastOrDefault(a => a.Wagon == wagon) ?? default;
+            fail($"{e.Name} boarded {_chBoarders[e]} (W{wagon}, crewed, no hero up) on ride 2 (boarder pass {_chBoarderPass}) and no companion struck it within {ChaseBoarderAnswer + 3f:0} s ({(sent.Name != null ? $"{sent.Name} sent from car {sent.From}, moves [{string.Join(" > ", sent.Route)}]" : "nobody sent")})");
+            return false;
+        }
         return true;
     }
 
@@ -1428,7 +1456,7 @@ public partial class DebugTools
             GD.Print($"[chase] 2   boarder {(IsInstanceValid(hound) ? hound.Name : "(freed)")} on {carrier}: {fate}{answer}");
         }
         var pass = _chBoarderPass;
-        GD.Print($"[chase] 2 boarder pass {pass}: wagon boarders on ride 2: {_chBoardedAt.Count}, struck by a companion within {ChaseBoarderAnswer:0} s: {_chFirstMateHit.Count(kv => _chBoardedAt.TryGetValue(kv.Key, out var b) && ChaseSeconds(kv.Value.Frame - b) <= ChaseBoarderAnswer)}; crew down to a wagon boarder's bite: {_chCrewBitten.Count} [{string.Join(", ", _chCrewBitten)}], to anything else: {_chCrewDownOther.Count} [{string.Join(", ", _chCrewDownOther)}]");
+        GD.Print($"[chase] 2 boarder pass {pass}: wagon boarders on ride 2: {_chBoardedAt.Count}, {_chNeedsAnswer.Count} needing an answer, {_chAnswerSaid.Count} of them answered; struck by a companion within {ChaseBoarderAnswer + 3f:0} s: {_chFirstMateHit.Count(kv => _chBoardedAt.TryGetValue(kv.Key, out var b) && ChaseSeconds(kv.Value.Frame - b) <= ChaseBoarderAnswer + 3f)}; crew down to a wagon boarder's bite: {_chCrewBitten.Count} [{string.Join(", ", _chCrewBitten)}], to anything else: {_chCrewDownOther.Count} [{string.Join(", ", _chCrewDownOther)}]");
         _chBoarderPass = 0;
         if (_chCrewBitten.Count > 0) { fail($"crew went down to a wagon boarder on ride 2 (boarder pass {pass}): {string.Join(", ", _chCrewBitten)}"); return false; }
         if (_chBoardedAt.Count == 0) { fail($"no hound boarded a wagon on ride 2 (boarder pass {pass}): the companions' answer to a wagon boarder is unproven"); return false; }
@@ -1460,17 +1488,22 @@ public partial class DebugTools
         return true;
     }
 
-    /// <summary>The measured reach to a wagon boarder: each seated companion's seat, and its body-to-body distance (flat and up) to the hound.</summary>
-    private static void ChaseReachReport(PartyController party, Enemies.Enemy hound)
+    /// <summary>
+    /// The measured reach to a wagon boarder (plan 14, Ruling 13): each seated hero's car and seat, its body-to-body distance (flat and up) to the
+    /// hound, and whether its blade reaches it (its own car's boarder, within BoarderReach).
+    /// </summary>
+    private static void ChaseReachReport(PartyController party, RailController rc, Enemies.Enemy hound)
     {
         var parts = new List<string>();
+        var car = rc.CarCarrying(hound.Carrier);
         foreach (var a in party.Adventurers)
         {
             if (!IsInstanceValid(a) || a.Parked || !a.Seated) continue;
             var d = hound.GlobalPosition - a.GlobalPosition;
-            parts.Add($"{a.State.Name} seat {a.Seat}{(a.Pumping ? " pumping" : "")}{(a.Control == ControlKind.Companion ? "" : $" {a.Control}")}: {d.Length():0.00} m (flat {new Vector2(d.X, d.Z).Length():0.00}, up {d.Y:0.00}), target {a.Target?.Name ?? "-"}");
+            var own = rc.CarOf(a) == car;
+            parts.Add($"{a.State.Name} car {rc.CarOf(a)} seat {a.Seat}{(a.Pumping ? " pumping" : "")}{(a.Control == ControlKind.Companion ? "" : $" {a.Control}")}: {d.Length():0.00} m (flat {new Vector2(d.X, d.Z).Length():0.00}, up {d.Y:0.00}), {(own ? d.Length() <= Characters.CompanionBrain.BoarderReach ? "its own car's, in a blade's reach" : "its own car's, out of reach" : "another car's: no blade")}, target {a.Target?.Name ?? "-"}");
         }
-        GD.Print($"[chase] 2 reach to {hound.Name} on {hound.Carrier?.Name} (BoarderReach {Characters.CompanionBrain.BoarderReach:0.00}): {string.Join("; ", parts)}");
+        GD.Print($"[chase] 2 reach to {hound.Name} on {hound.Carrier?.Name} (car {car}; BoarderReach {Characters.CompanionBrain.BoarderReach:0.00}): {string.Join("; ", parts)}");
     }
 
     private static string ChaseStriker(int index)

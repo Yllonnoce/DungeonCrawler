@@ -1198,8 +1198,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 var id = byId.Count;
                 byId.Add(e);
                 if (Party.LeadTarget == e) leadTargetId = id;
-                var roof = OnWagonRoof(e);
-                enemies.Add(new EnemyView(id, dist, e.IsHostile, ClearLine(e.GlobalPosition), e.Hp / Math.Max(1f, e.MaxHp), roof, roof && e.BoardTarget is { } bitten && IsInstanceValid(bitten) && bitten.IsAlive));
+                // a train boarder (Ruling 13): its own car's (or any, on foot) is struck out to BoarderReach; another car's never by a blade
+                var boarder = BoarderCar(e) >= 0;
+                var reaches = boarder && BlowReaches(e);
+                enemies.Add(new EnemyView(id, dist, e.IsHostile, ClearLine(e.GlobalPosition), e.Hp / Math.Max(1f, e.MaxHp), CarBoarder: reaches,
+                    BitingCrew: boarder && e.BoardTarget is { } bitten && IsInstanceValid(bitten) && bitten.IsAlive, OtherCarBoarder: boarder && !reaches));
             }
 
         var w = State.WeaponProfile;
@@ -1257,6 +1260,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (Seated) _action = CompanionBrain.WhileSeated(_action);
         if (Seated && Pumping && _action.Kind == ActionKind.Attack) _action = new CompanionAction(ActionKind.Hold, _action.TargetId); // pumping means not fighting
         else if (!Seated && lead.Seated) _action = BesideTheCart(lead, _action);
+        if (DebugHoldFire && _action.Kind == ActionKind.Attack) _action = new CompanionAction(ActionKind.Hold, _action.TargetId); // a test's: it holds fire
         if (CompanionBrain.DodgeDecisionDue(ctx)) _lastTelegraphDecided = ctx.TelegraphId; // one roll per signature, win or lose
         RescueTarget = _action.Kind == ActionKind.Rescue ? mangled : null;
         Target = _action.Kind != ActionKind.Rescue && _action.TargetId >= 0 && _action.TargetId < byId.Count ? byId[_action.TargetId] : null;
@@ -1283,6 +1287,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 Attack(_action.Heavy, false);
                 break;
         }
+    }
+
+    /// <summary>Test hook (plan 14's --test-boarders): this companion's brain chooses no attack, so a flow counts one striker's blows; <see cref="DebugStrikeAt"/> still strikes.</summary>
+    internal bool DebugHoldFire { get; set; }
+
+    /// <summary>Test hook: this companion strikes <paramref name="target"/> now with its active ability, as its brain strikes the target it chose.</summary>
+    internal void DebugStrikeAt(Enemy target)
+    {
+        Target = target;
+        AimAt(target.GlobalPosition + Vector3.Up * 0.5f);
+        Attack();
     }
 
     private void DrinkPotion()
@@ -1531,56 +1546,70 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         var targetStruck = false;
         for (var i = 0; i < _meleeCast.GetCollisionCount(); i++)
         {
-            if (_meleeCast.GetCollider(i) is not ICombatTarget target || !target.IsAlive) continue;
+            if (_meleeCast.GetCollider(i) is not ICombatTarget target || !target.IsAlive || !BlowReaches(target)) continue; // another car's boarder is out of a seated blow's reach
             if (Target != null && ReferenceEquals(target, Target)) targetStruck = true;
             hitSomething = true;
             var result = Strike(target, attack, heavy, perfect, heavyMultiplier);
             if (perfect && result.Hit && !perfectSaid) { perfectSaid = true; EventBus.Instance.RaisePerfectBlow(Index); }
         }
-        // a hound on a coupled cage wagon's roof is struck from below (from a cart seat, or the ground beside the wagon) out to
+        // a hound on the rim of the striker's own car of the train (Ruling 13; on foot, any train boarder) is struck out to
         // CompanionBrain.BoarderReach: a companion's where the brain chose it; a player's (here or remote: the server swings it) when the
         // blow met nothing else, the nearest one within the swing's cone. The blow lands on that boarder only, never on anything else that far
-        if (Control == ControlKind.Companion && Target is { } boarder && IsInstanceValid(boarder) && boarder.IsAlive && OnWagonRoof(boarder) && !targetStruck
+        if (Control == ControlKind.Companion && Target is { } boarder && IsInstanceValid(boarder) && boarder.IsAlive && BoarderCar(boarder) >= 0 && BlowReaches(boarder) && !targetStruck
             && boarder.GlobalPosition.DistanceTo(GlobalPosition) <= CompanionBrain.BoarderReach)
         {
             hitSomething = true;
             Strike(boarder, attack, heavy, perfect, heavyMultiplier);
         }
-        else if (!hitSomething && RoofBoarderInSwing() is { } roof)
+        else if (!hitSomething && CarBoarderInSwing() is { } rim)
         {
             hitSomething = true;
-            Strike(roof, attack, heavy, perfect, heavyMultiplier);
+            Strike(rim, attack, heavy, perfect, heavyMultiplier);
         }
         if (!hitSomething && IsLocal) EventBus.Instance.Log($"{m.Name} swings at nothing.");
     }
 
-    /// <summary>A creature riding the rim of a train wagon coupled behind the cart (a boarding hound).</summary>
-    private static bool OnWagonRoof(Enemy e) => e.Carrier is TrainWagon wagon && IsInstanceValid(wagon) && wagon.Coupled;
+    /// <summary>The car of the train carrying <paramref name="e"/> on its rim (a boarding hound): 0 the party's cart, k the coupled wagon Wk, −1 none.</summary>
+    private static int BoarderCar(Enemy e) => RailController.Instance is { } rails && IsInstanceValid(rails) ? rails.CarCarrying(e.Carrier) : -1;
 
     /// <summary>
-    /// A player's melee blow that met nothing (server or solo): the nearest hound riding a coupled wagon's roof within
-    /// <see cref="CompanionBrain.BoarderReach"/> and the swing's cone (<see cref="CompanionBrain.InBoarderSwing"/>), as a companion
-    /// reaches one; null for a companion (its brain picks its own) or with none there. No allocation.
+    /// A blow of this body's lands on <paramref name="target"/> (<see cref="BoarderRules.Strikes"/>, Ruling 13): seated in the train, a train
+    /// boarder only when its own car carries it; anything else, and anything on foot, as ever.
     /// </summary>
-    private Enemy? RoofBoarderInSwing()
+    private bool BlowReaches(ICombatTarget target)
+    {
+        if (target is not Enemy e || RailController.Instance is not { } rails || !IsInstanceValid(rails)) return true;
+        var mine = rails.CarOf(this);
+        return BoarderRules.Strikes(mine >= 0, mine, rails.CarCarrying(e.Carrier));
+    }
+
+    /// <summary>
+    /// A player's melee blow that met nothing (server or solo): the nearest hound on the rim of a car of the train that the blow may land on
+    /// (<see cref="BlowReaches"/>: seated, its own car's only) within <see cref="CompanionBrain.BoarderReach"/> and the swing's cone
+    /// (<see cref="CompanionBrain.InBoarderSwing"/>), as a companion reaches one; null for a companion (its brain picks its own) or with none
+    /// there. No allocation.
+    /// </summary>
+    private Enemy? CarBoarderInSwing()
     {
         if (Control == ControlKind.Companion || RailController.Instance is not { } rails || !IsInstanceValid(rails)) return null;
         var aim = -Camera.GlobalTransform.Basis.Z;
         var from = GlobalPosition;
         Enemy? best = null;
         var bestD = float.MaxValue;
+        void Consider(Enemy? hound)
+        {
+            if (hound == null || !IsInstanceValid(hound) || !hound.IsAlive || BoarderCar(hound) < 0 || !BlowReaches(hound)) return;
+            var to = hound.GlobalPosition - from;
+            var d = to.Length();
+            if (d < bestD && CompanionBrain.InBoarderSwing(aim.X, aim.Z, to.X, to.Z, d)) { best = hound; bestD = d; }
+        }
+        if (IsInstanceValid(rails.Cart)) foreach (var hound in rails.Cart.Boarders) Consider(hound);
         var train = rails.Train;
         for (var i = 0; i < train.Count; i++)
         {
             var wagon = train[i];
             if (!IsInstanceValid(wagon) || !wagon.Coupled) continue;
-            foreach (var hound in wagon.Boarders)
-            {
-                if (hound == null || !IsInstanceValid(hound) || !hound.IsAlive || !OnWagonRoof(hound)) continue;
-                var to = hound.GlobalPosition - from;
-                var d = to.Length();
-                if (d < bestD && CompanionBrain.InBoarderSwing(aim.X, aim.Z, to.X, to.Z, d)) { best = hound; bestD = d; }
-            }
+            foreach (var hound in wagon.Boarders) Consider(hound);
         }
         return best;
     }
@@ -1656,8 +1685,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (s.Time < BladeRules.Ends(s.Move)) return;
         if (s.Cut.Count == 0)
         {
-            // a blade that met nothing still reaches a hound on a wagon's roof above it, as an instant blow does (MeleeSwing)
-            if (RoofBoarderInSwing() is { } roof) Strike(roof, s.Attack, s.Heavy, s.Perfect, s.HeavyMultiplier);
+            // a blade that met nothing still reaches a hound on its own car's rim, as an instant blow does (MeleeSwing)
+            if (CarBoarderInSwing() is { } rim) Strike(rim, s.Attack, s.Heavy, s.Perfect, s.HeavyMultiplier);
             else EventBus.Instance.Log($"{State.Name} swings at nothing.");
         }
         _blade = null;
@@ -1683,7 +1712,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         var space = GetWorld3D().DirectSpaceState;
         foreach (var found in space.IntersectShape(_bladeQuery, 16))
         {
-            if (found["collider"].AsGodotObject() is not ICombatTarget target || !target.IsAlive || s.Cut.Contains(target)) continue;
+            if (found["collider"].AsGodotObject() is not ICombatTarget target || !target.IsAlive || s.Cut.Contains(target) || !BlowReaches(target)) continue; // another car's boarder: out of a seated blade's reach
             var at = tip;
             if (target is Node3D body)
             {

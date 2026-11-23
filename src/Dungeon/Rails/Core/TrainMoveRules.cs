@@ -69,6 +69,13 @@ public static class TrainMoveRules
     /// <summary>The longest a hero needs to reach a wagon <paramref name="moves"/> moves away: the cooldowns between presses, the last hop and 2 s to act.</summary>
     public static float ThrowBound(int moves) => (moves - 1) * MoveCooldown + HopSeconds + 2f;
 
-    /// <summary>A companion's next move toward <paramref name="toCar"/> (Task 4): the target that way from <paramref name="fromCar"/>.</summary>
-    public static int? AnswerStep(int fromCar, int toCar, IReadOnlyList<bool> placeFree) => Target(fromCar, Math.Sign(toCar - fromCar), placeFree);
+    /// <summary>
+    /// A companion's next move toward <paramref name="toCar"/> (Task 4): the target that way from <paramref name="fromCar"/>, never past
+    /// <paramref name="toCar"/> (null while every free place short of it is taken: it waits rather than overshoot its wagon).
+    /// </summary>
+    public static int? AnswerStep(int fromCar, int toCar, IReadOnlyList<bool> placeFree)
+    {
+        var dir = Math.Sign(toCar - fromCar);
+        return Target(fromCar, dir, placeFree) is int to && (to - toCar) * dir <= 0 ? to : null;
+    }
 }

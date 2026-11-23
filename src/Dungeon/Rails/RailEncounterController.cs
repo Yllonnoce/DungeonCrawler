@@ -94,6 +94,7 @@ public partial class RailEncounterController : Node
     public override void _Ready()
     {
         _rails.CartEvents += OnCartEvent;
+        EventBus.Instance.EnemyHurt += OnEnemyHurt; // a wagon boarder's grip (server and solo)
         BuildSetPieces(); // every role: a client's copies are dressing that shows what the server tells
         WarmModels(ride: null); // every role (a client spawns the server's riders too): the floor's creatures read on a loader thread while the party walks to the cart
         if (_encounters.Any(e => e.Kind == "slag_cart") && _enemy.Valid) SlagCart.Prewarm(_enemy); // every role: a client builds the server's carts as dressing
@@ -121,6 +122,7 @@ public partial class RailEncounterController : Node
     {
         if (Instance == this) Instance = null;
         if (IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
+        if (EventBus.Instance is { } bus) bus.EnemyHurt -= OnEnemyHurt;
         FreeRideRunaway("the controller leaves");
         ReleaseSeekers(); // a hero must not keep walking to a refuge on a floor that is gone
     }
@@ -143,6 +145,7 @@ public partial class RailEncounterController : Node
             case CartEventKind.Wrecked:
                 FreeRideRunaway("the train is wrecked"); // a fall too
                 ClearRide(wrecked: true);
+                ClearAnswers();
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
                 BridgeOnWreck(); // the collapse stops where it stands; a spare's takeover stands it again
@@ -151,6 +154,7 @@ public partial class RailEncounterController : Node
             case CartEventKind.Restored:
                 FreeRideRunaway("the cart is restored"); // a wipe's rise or a load
                 ClearRide(loaded: true);
+                ClearAnswers();
                 ClearThrowers();
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
@@ -164,6 +168,7 @@ public partial class RailEncounterController : Node
             case CartEventKind.OnFoot:
                 FreeRideRunaway("the party is on foot");
                 ClearRide();
+                ClearAnswers();
                 ResetSwitchyard(undone: false);
                 break;
         }
@@ -310,6 +315,7 @@ public partial class RailEncounterController : Node
         TickSetPieces(Main.Instance.Party, dt);
         TickGolem(dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
+        TickAnswers(dt); // companions climb to a boarded, crewed wagon with no hero up, and back
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null && _rideRunaway == null)
         {

@@ -73,6 +73,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public float MaxHp { get; private set; }
     public float Hp { get; private set; }
     public bool IsAlive => Hp > 0;
+    /// <summary>Test hook (plan 14, Task 4: <c>RailEncounterController.DebugBoard</c>'s holdHp): hits and ticks never take it below 1 HP, so only a wagon's grip ends it.</summary>
+    internal bool DebugHoldHp { get; set; }
+    private float HpFloor => DebugHoldHp ? 1f : 0f;
     public bool IsUnaware => Net.NetSession.IsClient ? (_netFlags & Net.EntityState.FlagAware) == 0 : State.Unaware;
     /// <summary>The collective this enemy belongs to, if any (set before entering the tree).</summary>
     public Collective? Group { get; set; }
@@ -485,7 +488,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             {
                 if (tick.IsHeal) { Hp = Math.Min(MaxHp, Hp + tick.Amount * Effects.HealingMultiplier); continue; }
                 var mitigated = DamagePipeline.Mitigate(tick.Amount, tick.Type, Stats, Effects);
-                Hp = Math.Max(0, Hp - mitigated);
+                Hp = Math.Max(HpFloor, Hp - mitigated);
                 EventBus.Instance.RaiseEnemyHurt(this, mitigated, FeedbackRules.TickFlavor(tick.Kind), -1);
                 if (Hp <= 0) { EventBus.Instance.Log($"{DisplayName} succumbs to {tick.Kind.ToString().ToLower()}."); _dying = true; break; }
             }
@@ -1041,6 +1044,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public override void _ExitTree() => Shrouds.Remove(this);
 
     private AttackKind _lastHitKind;
+    /// <summary>The kind of attack its last <see cref="ReceiveAttack"/> took (a wagon boarder's grip weighs the hit by it, plan 14 Ruling 14).</summary>
+    public AttackKind LastHitKind => _lastHitKind;
 
     /// <summary>A party member's blow has landed (PartyController.OnHitLanded): Thorned pays melee back, Hexed slows the hand that struck. Server only.</summary>
     public void OnStruckBy(CharacterState striker, DamageResult r)
@@ -1169,7 +1174,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var result = HitResolver.Resolve(attackerStats, Stats, Effects, attack, ctx, rng);
         if (!result.Hit) return result;
         if (Profile.Has(EliteAffix.Juggernaut)) Effects.Remove(StatusKind.Stun); // nothing stuns a Juggernaut
-        Hp = Math.Max(0, Hp - result.Amount);
+        Hp = Math.Max(HpFloor, Hp - result.Amount);
         _flash = 0.25f;
         SinceHurt = 0f;
         var by = Party == null ? -1 : Array.FindIndex(Party.Members, x => x.Name == attackerName); // "Brand's thorns" and "the ignition" give -1

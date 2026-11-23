@@ -54,6 +54,20 @@ public partial class RailController
     private int CarNumberOf(object? target)
         => target == Cart ? 0 : target is TrainWagon { Coupled: true } wagon && WagonAt(wagon.Number) == wagon ? wagon.Number : -1;
 
+    /// <summary>The car of the train <paramref name="carrier"/> is (a boarder's carrier, Task 4): 0 the party's cart, k the coupled wagon Wk, −1 anything else or none.</summary>
+    public int CarCarrying(Node? carrier) => carrier == null ? -1 : CarNumberOf(carrier);
+
+    /// <summary>
+    /// A companion answering a boarded wagon (Task 4, Ruling 15): the car its next move toward car <paramref name="toCar"/> goes to
+    /// (<see cref="TrainMoveRules.AnswerStep"/> on this peer's book of free places), or null when there is none that way.
+    /// </summary>
+    internal ICartBody? AnswerStepFor(Adventurer hero, int toCar)
+    {
+        var from = IsInstanceValid(hero) ? CarOf(hero) : -1;
+        if (from < 0 || from == toCar) return null;
+        return TrainMoveRules.AnswerStep(from, toCar, PlacesFree()) is int to ? CarBody(to) : null;
+    }
+
     /// <summary>The hero places free now, by car: [0] a hero seat of the cart, [k] Wk's seat 0 (a wagon lost reads taken). No allocation.</summary>
     private IReadOnlyList<bool> PlacesFree()
     {
