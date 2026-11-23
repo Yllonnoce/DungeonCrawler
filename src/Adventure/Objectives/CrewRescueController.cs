@@ -698,17 +698,41 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         GriselNamesTheRide(e);
     }
 
-    /// <summary>Every living crew member seated in a train wagon climbs out beside it and follows the party on foot (no carts left).</summary>
+    /// <summary>
+    /// Every living crew member seated in a train wagon climbs out beside it and follows the party on foot (no carts left), each on a cell of
+    /// its own (the final review's M3, as the old cage wagon's <c>LetOut</c> did): the nearest free cell round its wagon that no one let out
+    /// before it took, or, with every one taken, the farthest found.
+    /// </summary>
     private void LetOutOfTrain()
     {
+        var taken = new HashSet<GridPos>();
         foreach (var npc in _crew)
         {
             if (!IsInstanceValid(npc) || npc.Dead || npc.Ride is not TrainWagon wagon) continue;
-            var cells = FreeCellsNear(DungeonBuilder.WorldToCell(wagon.GlobalPosition), 1);
-            npc.GetOut(_builder!.Surface(cells[0]) + Vector3.Up * 0.1f);
+            var cells = FreeCellsNear(DungeonBuilder.WorldToCell(wagon.GlobalPosition), taken.Count + 1);
+            var cell = cells.FirstOrDefault(c => !taken.Contains(c), cells[^1]);
+            taken.Add(cell);
+            npc.GetOut(_builder!.Surface(cell) + Vector3.Up * 0.1f);
             if (!npc.Escorting) npc.StartFollowing();
+            if (DebugLetOut) GD.Print($"[CrewRescue] test: {npc.NpcName} let out of W{wagon.Number} at {cell}");
         }
         RefreshHud();
+    }
+
+    /// <summary>Test hook: <see cref="LetOutOfTrain"/> prints each set-down (set by <see cref="DebugLetOutOfTrain"/>).</summary>
+    private bool DebugLetOut;
+
+    /// <summary>
+    /// Test hook (server and solo): the train's crew are let out as when no cart is left (<see cref="LetOutOfTrain"/>); returns each one's
+    /// name, wagon and the cell it stands on.
+    /// </summary>
+    internal List<(string Name, int Wagon, GridPos Cell)> DebugLetOutOfTrain()
+    {
+        var aboard = _crew.Where(n => IsInstanceValid(n) && !n.Dead && n.Ride is TrainWagon).Select(n => (Npc: n, Wagon: ((TrainWagon)n.Ride!).Number)).ToList();
+        DebugLetOut = true;
+        LetOutOfTrain();
+        DebugLetOut = false;
+        return aboard.Select(a => (a.Npc.NpcName, a.Wagon, DungeonBuilder.WorldToCell(a.Npc.GlobalPosition))).ToList();
     }
 
     /// <summary>

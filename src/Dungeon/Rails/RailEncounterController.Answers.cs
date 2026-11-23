@@ -19,6 +19,10 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// There it fights from the seat by its own brain; when a downed hero holds that wagon's hero place it lands on a free crew bench seat of it
 /// (<see cref="RailController.AnswerSeatIn"/>; Task 5, Task 4 review M2), and with both bench seats held by crew it waits one car short. Once
 /// its wagon has had no boarder for <see cref="TrainMoveRules.AnswerBack"/> it climbs back toward the cart, while the cart has a free hero seat (with none it stays where it sits).</item>
+/// <item>A companion left in a wagon (the final review's M8: an answer that ended with it there, the cart having no free hero seat or the
+/// answerer going down; or a lead the player possessed away from in a wagon) goes back toward the cart by itself once a hero seat of the cart is
+/// free, by the answer's rules: one car per <see cref="TrainMoveRules.MoveCooldown"/>, none while <see cref="RailController.MovesRefused"/> or a
+/// hop of its own is under way, and never while its own wagon carries a boarder (it fights from there). Answering a wagon again ends it.</item>
 /// </list>
 /// <see cref="DebugHoldAnswers"/> stops all of it.
 /// </summary>
@@ -42,6 +46,20 @@ public partial class RailEncounterController
     }
 
     private readonly List<Answer> _answers = new();
+
+    /// <summary>A companion left in a wagon going back to the cart by itself (M8), and when it last moved (the server's physics clock).</summary>
+    private sealed class Stray
+    {
+        public Adventurer Hero = null!;
+        public double LastMove = double.NegativeInfinity;
+    }
+
+    private readonly List<Stray> _strays = new();
+    /// <summary>Each party member was played by a player (this machine's or a remote one) at the last tick, by index: a possession away from one in a wagon leaves it a stray.</summary>
+    private readonly bool[] _wasPlayed = new bool[8];
+
+    /// <summary>Companions left in a wagon going back to the cart by themselves now (tests read them).</summary>
+    internal IEnumerable<string> StraysNow { get { foreach (var s in _strays) yield return IsInstanceValid(s.Hero) ? s.Hero.State.Name : "?"; } }
     private readonly List<BoarderRules.AnswerCandidate> _candidates = new();
     private readonly List<Adventurer> _candidateHeroes = new();
 
@@ -104,8 +122,18 @@ public partial class RailEncounterController
         {
             if (TickAnswer(_answers[i])) continue;
             EndAnswer(_answers[i]);
+            LeftInAWagon(_answers[i].Hero, "its answer ended there");
             _answers.RemoveAt(i);
         }
+        var heroes = party.Adventurers;
+        for (var i = 0; i < heroes.Length && i < _wasPlayed.Length; i++)
+        {
+            var hero = heroes[i];
+            var played = IsInstanceValid(hero) && hero.Control is ControlKind.LocalHuman or ControlKind.Remote;
+            if (_wasPlayed[i] && !played && IsInstanceValid(hero)) LeftInAWagon(hero, "the player took another hero");
+            _wasPlayed[i] = played;
+        }
+        TickStrays();
 
         for (var i = 0; i < train.Count; i++)
         {
@@ -220,5 +248,40 @@ public partial class RailEncounterController
     {
         foreach (var a in _answers) EndAnswer(a);
         _answers.Clear();
+        _strays.Clear();
+    }
+
+    /// <summary><paramref name="hero"/>, a companion up or down in a coupled wagon, is left there: it goes back to the cart by itself (<see cref="TickStrays"/>).</summary>
+    private void LeftInAWagon(Adventurer hero, string why)
+    {
+        if (!IsInstanceValid(hero) || hero.Control != ControlKind.Companion || hero.Parked || _rails.CarOf(hero) < 1) return;
+        for (var i = 0; i < _strays.Count; i++) if (_strays[i].Hero == hero) return;
+        _strays.Add(new Stray { Hero = hero });
+        GD.Print($"[rails] answer: {hero.State.Name} is left in car {_rails.CarOf(hero)} ({why}): it goes back to the cart once a hero seat there is free");
+    }
+
+    /// <summary>
+    /// Each tick (server and solo): every companion left in a wagon goes back toward the cart while a hero seat of it is free (M8), one car per
+    /// cooldown, none while moves are refused, a hop of its own is under way or its own wagon carries a boarder; home, gone from the train, taken
+    /// over by a player or answering a wagon again, it is no longer a stray. No allocation.
+    /// </summary>
+    private void TickStrays()
+    {
+        for (var i = _strays.Count - 1; i >= 0; i--)
+        {
+            var s = _strays[i];
+            var hero = s.Hero;
+            var car = IsInstanceValid(hero) ? _rails.CarOf(hero) : -1;
+            if (car < 1 || hero.Control != ControlKind.Companion || Answering(hero))
+            {
+                if (car == 0) GD.Print($"[rails] answer: {hero.State.Name} is back in the cart by itself");
+                _strays.RemoveAt(i);
+                continue;
+            }
+            if (hero.Downed || hero.Parked || _rails.Hopping(hero) || _rails.MovesRefused || _now - s.LastMove < TrainMoveRules.MoveCooldown || !_rails.HeroSeatFree()) continue;
+            if (_rails.WagonAt(car) is { } own && BoarderOn(own) != null) continue; // it fights the boarder of its own wagon from there
+            if (_rails.AnswerStepFor(hero, 0) is not int step || _rails.CarAt(step) is not { } to) continue;
+            if (_rails.Move(hero, to, "back to the cart")) s.LastMove = _now;
+        }
     }
 }

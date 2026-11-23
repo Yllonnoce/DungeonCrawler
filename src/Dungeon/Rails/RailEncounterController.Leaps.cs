@@ -200,7 +200,7 @@ public partial class RailEncounterController
     {
         _leaps.Add(new Leap { Hound = hound, Source = cart, Phase = LeapPhase.Crouch });
         TelegraphFx.HandGlow(hound, SetPieceRules.LeapWindup);
-        RailCalls.Say(Main.Instance.Party, _rails.Cart, BarkTrigger.HoundLeap, "Hound!");
+        RailCalls.Say(Main.Instance.Party, _rails.Cart, BarkTrigger.HoundLeap, "Hound!", place: hound); // the cart's call; from the wagons, the hero nearest the hound
         GD.Print($"[rails] {hound.Name} crouches on {cart.EncounterId} for the leap");
     }
 

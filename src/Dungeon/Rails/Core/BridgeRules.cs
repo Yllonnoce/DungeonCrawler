@@ -35,8 +35,9 @@ public static class BridgeRules
     public const float FallSeen = 1.4f;
 
     /// <summary>
-    /// A client sees the take from its player's seat (<see cref="FallSeen"/>): its hero sits in the cart now, or sat in it when the cart's last
-    /// state before this one was applied or on a frame since (<paramref name="inCartSinceLastState"/>), or is told fallen beside the cart. The
+    /// A client sees the take from its player's seat (<see cref="FallSeen"/>): its hero sits in the train now (the cart or a coupled wagon: plan
+    /// 14's final review M2; each argument reads the train), or sat in it when the cart's last state before this one was applied or on a frame
+    /// since (<paramref name="inCartSinceLastState"/>), or is told fallen beside the car it rode. The
     /// server's unseat pose for the taken player is sent at the take, so on the one ordered stream it comes after every state before the take
     /// and before the Wrecked|Fell one, however many frames apart they land; its Fallen sheet comes after both.
     /// </summary>

@@ -170,11 +170,13 @@ public partial class RailController : ISlopeSource
     internal int NetWrecksSeen { get; private set; }
     internal double NetWreckedAt { get; private set; } = -1;
     /// <summary>
-    /// Client: our player's hero sat in this cart when the last state was applied or on a posed frame since (<see cref="BridgeRules.LocalRode"/>),
-    /// and its eye the last time it sat there (the seen fall's start).
+    /// Client: our player's hero sat in the train (this cart or a coupled wagon; the final review's M2) when the last state was applied or on a
+    /// posed frame since (<see cref="BridgeRules.LocalRode"/>), and its eye and car (0 the cart, k the wagon Wk) the last time it sat there (the
+    /// seen fall's start).
     /// </summary>
     private bool _localInCartSinceState;
     private Transform3D? _localEyeInCart;
+    private int _localCarSinceState = -1;
 
     /// <summary>
     /// Client: the server's state of the party's cart, applied at <paramref name="serverNow"/>. Sets no server state. The first state
@@ -206,11 +208,15 @@ public partial class RailController : ISlopeSource
                 // where its eye last was in the seat, BridgeRules.LocalRode)
                 if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.BackS, _train.Count, WagonSpacing) <= enc.BridgeToS)
                 {
+                    // in the train: the cart or a coupled wagon, each rider seen from its own car (the final review's M2)
                     var me = Core.Main.Instance?.Party?.Local is { } local && IsInstanceValid(local) ? local : null;
-                    var inCart = me != null && me.Cart == Cart; // cart-only
-                    var fallenNear = me != null && me.State.Fallen && new Vector2(me.GlobalPosition.X - Cart.GlobalPosition.X, me.GlobalPosition.Z - Cart.GlobalPosition.Z).Length() < DungeonBuilder.CellSize;
+                    var carNow = me != null ? CarOf(me) : -1;
+                    var inCart = carNow >= 0;
+                    var car = inCart ? carNow : _localCarSinceState;
+                    var near = car >= 1 && WagonAt(car) is { } rodeIn ? rodeIn.GlobalPosition : Cart.GlobalPosition;
+                    var fallenNear = me != null && me.State.Fallen && new Vector2(me.GlobalPosition.X - near.X, me.GlobalPosition.Z - near.Z).Length() < DungeonBuilder.CellSize;
                     var rode = me != null && BridgeRules.LocalRode(inCart, _localInCartSinceState, fallenNear);
-                    SeenFall(lost, cart: Cart.Visible, localRode: rode, eyeFrom: !inCart && _localInCartSinceState ? _localEyeInCart : null); // the seat's eye only for one who rode by the window (review Minor 1b)
+                    SeenFall(lost, cart: Cart.Visible, localRode: rode, eyeFrom: !inCart && _localInCartSinceState ? _localEyeInCart : null, localCar: Math.Max(0, car)); // the seat's eye only for one who rode by the window (review Minor 1b)
                 }
                 else Plunge(lost, cart: Cart.Visible); // where they stand now, before the state moves them
             }
@@ -243,15 +249,18 @@ public partial class RailController : ISlopeSource
     }
 
     /// <summary>
-    /// Client: our hero in this cart, noted for the seen fall: at each applied state (in the cart then, or not: a fresh window) and on each
-    /// posed frame (in the cart: still in the window), with its eye.
+    /// Client: our hero in the train (this cart or a coupled wagon: the final review's M2), noted for the seen fall: at each applied state (in the
+    /// train then, or not: a fresh window) and on each posed frame (in the train: still in the window), with its eye and its car.
     /// </summary>
     private void NoteLocalInCart(bool fromState)
     {
         var local = Core.Main.Instance?.Party?.Local is { } l && IsInstanceValid(l) ? l : null;
-        var inCart = local != null && local.Cart == Cart; // cart-only
+        var car = local != null ? CarOf(local) : -1;
+        var inCart = car >= 0;
         _localInCartSinceState = BridgeRules.LocalInCartNext(_localInCartSinceState, fromState, inCart);
-        if (inCart && local!.Camera.IsInsideTree()) _localEyeInCart = local.Camera.GlobalTransform;
+        if (!inCart) return;
+        _localCarSinceState = car;
+        if (local!.Camera.IsInsideTree()) _localEyeInCart = local.Camera.GlobalTransform;
     }
 
     /// <summary>

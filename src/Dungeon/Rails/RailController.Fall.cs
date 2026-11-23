@@ -139,31 +139,46 @@ public partial class RailController
 
     /// <summary>
     /// The cavern bridge's take seen (every peer; the server's fall, a client's Wrecked edge with Fell over the bridge's span): the cart's body
-    /// (with <paramref name="cart"/>), each of <paramref name="wagons"/>' and the look of each hero still seated in the cart (<see cref="Adventurer.FallLook"/>)
-    /// copied onto rigid bodies that nothing holds (layer 0, mask 0), dropping straight down through the gone cells with a little of the
-    /// train's way on them, freed after <see cref="PlungeSeconds"/>; and this peer's player, if they rode it (<paramref name="localRode"/>) and wear no headset, sees it from their seat as it
-    /// goes (<see cref="FallEye"/>) for <see cref="BridgeRules.FallSeen"/>, from <paramref name="eyeFrom"/> when given (a client's taken player, already
+    /// (with <paramref name="cart"/>), each of <paramref name="wagons"/>' and the look of each hero still seated in the cart or in one of those
+    /// wagons (<see cref="Adventurer.FallLook"/>, riding down with its own car) copied onto rigid bodies that nothing holds (layer 0, mask 0),
+    /// dropping straight down through the gone cells with a little of the train's way on them, freed after <see cref="PlungeSeconds"/>; and this
+    /// peer's player, if they rode it (<paramref name="localRode"/>) and wear no headset, sees it from their seat as it goes (<see cref="FallEye"/>,
+    /// riding down with car <paramref name="localCar"/>: 0 the cart, k the wagon Wk; plan 14's final review M2: a wagon's rider is shown the fall
+    /// as a cart's rider is) for <see cref="BridgeRules.FallSeen"/>, from <paramref name="eyeFrom"/> when given (a client's taken player, already
     /// posed at the hold point by its unseat: where its eye last was in the seat). Call it before the riders are taken. Cosmetic and silent.
     /// </summary>
-    private void SeenFall(IReadOnlyList<TrainWagon> wagons, bool cart, bool localRode, Transform3D? eyeFrom = null)
+    private void SeenFall(IReadOnlyList<TrainWagon> wagons, bool cart, bool localRode, Transform3D? eyeFrom = null, int localCar = 0)
     {
         if (!IsInsideTree() || GetParent() is not Node3D root) return;
-        RigidBody3D? carFall = null;
-        if (cart && Cart.GetNodeOrNull<Node3D>("Body") is { } body) carFall = DropBody(root, "CartDrop", body, Cart.GlobalTransform, Cart.Velocity);
+        RigidBody3D? carFall = null, localFall = null;
+        if (cart && Cart.GetNodeOrNull<Node3D>("Body") is { } body)
+        {
+            carFall = DropBody(root, "CartDrop", body, Cart.GlobalTransform, Cart.Velocity);
+            RideDown(carFall, Cart);
+            if (localCar == 0) localFall = carFall;
+        }
         foreach (var wagon in wagons)
             if (IsInstanceValid(wagon) && wagon.GetNodeOrNull<Node3D>("Body") is { } wagonBody)
-                DropBody(root, "WagonDrop", wagonBody, wagon.GlobalTransform, wagon.Velocity);
-        if (carFall == null) return;
-        foreach (var rider in Aboard())
+            {
+                var wagonFall = DropBody(root, "WagonDrop", wagonBody, wagon.GlobalTransform, wagon.Velocity);
+                RideDown(wagonFall, wagon);
+                if (localCar == wagon.Number) localFall = wagonFall;
+            }
+        // a headset is not shown the fall (comfort, the final review's M10): its rig keeps the view, so no eye is made to fight it each frame
+        if (localFall != null && localRode && !Vr.Active && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(localFall, local.Camera, eyeFrom);
+    }
+
+    /// <summary>The look of each hero seated in <paramref name="car"/> rides down with <paramref name="falling"/>, its copy.</summary>
+    private static void RideDown(RigidBody3D falling, ICartBody car)
+    {
+        foreach (var rider in car.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero))
             {
                 var look = hero.FallLook();
                 var at = look.Transform;
-                carFall.AddChild(look);
+                falling.AddChild(look);
                 look.GlobalTransform = at;
             }
-        // a headset is not shown the fall (comfort, the final review's M10): its rig keeps the view, so no eye is made to fight it each frame
-        if (localRode && !Vr.Active && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(carFall, local.Camera, eyeFrom);
     }
 
     /// <summary>The seen fall's eye lets go this long (ms) before the held wipe is judged, so the local camera is current when the floor goes.</summary>

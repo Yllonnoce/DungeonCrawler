@@ -138,22 +138,23 @@ public partial class RailController
 
     /// <summary>
     /// A use of <paramref name="target"/> by <paramref name="actor"/> is a move press: the actor rides another car of the train, moves are not
-    /// refused, and <paramref name="target"/> is the place a move that way goes to on this peer's book. Anything else is the car's plain use
-    /// (a revive from beside the wagon, a get-out).
+    /// refused, <paramref name="target"/> is the place a move that way goes to on this peer's book, and the car's plain prompt offers the actor
+    /// nothing (<see cref="PlainPromptOf"/>: a downed crew member's revive wins over the move, the final review's I1). Anything else is the car's
+    /// plain use (a revive, from beside the wagon or from another car, a get-out).
     /// </summary>
     public bool IsMovePress(Adventurer actor, object target)
     {
         if (!Current || !IsInstanceValid(actor)) return false;
         var from = CarOf(actor);
         var to = CarNumberOf(target);
-        if (from < 0 || to < 0 || from == to || MovesRefused) return false;
+        if (from < 0 || to < 0 || from == to || MovesRefused || PlainPromptOf(target, actor) is { Length: > 0 }) return false;
         return TrainMoveRules.Target(from, Math.Sign(to - from), PlacesFree()) == to;
     }
 
     /// <summary>
     /// A use of <paramref name="target"/> by <paramref name="actor"/> asks for a move even when no move to it is offered on this peer's book
-    /// (fix round 1, I1): the actor rides another car of the rolling train and the car's plain use offers it nothing (the cart's never does to a
-    /// wagon's rider; a wagon's when it has no downed crew to revive). It is judged as a move and refused out loud
+    /// (fix round 1, I1): the actor rides another car of the rolling train and the car's plain prompt offers it nothing (<see cref="PlainPromptOf"/>:
+    /// the cart's never does to a wagon's rider; a wagon's when it has no downed crew to revive). It is judged as a move and refused out loud
     /// (<see cref="WhyMoveRefused"/>: the place booked by another press, a lever window, the live bridge), never taken as a plain use the
     /// presser's screen did not offer. Held, the press stays the car's plain use (a revive from beside the wagon).
     /// </summary>
@@ -163,7 +164,7 @@ public partial class RailController
         var from = CarOf(actor);
         var to = CarNumberOf(target);
         if (from < 0 || to < 0 || from == to) return false;
-        return to == 0 || target is TrainWagon wagon && (WagonCrewPrompt?.Invoke(wagon, actor) ?? "").Length == 0;
+        return PlainPromptOf(target, actor) is "";
     }
 
     /// <summary>A use that the move's rules judge (<see cref="Move"/> takes or refuses it): <see cref="IsMovePress"/> or <see cref="IsMoveAttempt"/>.</summary>

@@ -206,17 +206,40 @@ public partial class RailController : Node
     }
 
     /// <summary>
-    /// A wagon's prompt for <paramref name="hero"/>, on every peer: a lost wagon offers nothing; a coupled one the move offered to it first
-    /// (<see cref="MoveOfferFor"/>: "Climb back to wagon N", "Climb forward to wagon N"), then what the crew controller offers, then, to its own
-    /// rider, "Get out" only held or under 1 m/s (Ruling 9: at speed a wagon offers only moves).
+    /// A wagon's prompt for <paramref name="hero"/>, on every peer: a lost wagon offers nothing; a coupled one its plain prompt first
+    /// (<see cref="WagonPlainPrompt"/>: the crew's revive, its own rider's "Get out"), and only when that offers nothing the move offered to it
+    /// (<see cref="MoveOfferFor"/>: "Climb back to wagon N", "Climb forward to wagon N"). A press is the same: a use of a car whose plain prompt
+    /// offers something is that use, never a move (<see cref="IsMovePress"/>; the final review's I1).
     /// </summary>
     private string WagonPrompt(TrainWagon wagon, Adventurer hero)
     {
+        var plain = WagonPlainPrompt(wagon, hero);
+        return plain.Length > 0 ? plain : MovePromptFor(wagon, hero) ?? "";
+    }
+
+    /// <summary>
+    /// A wagon's prompt for <paramref name="hero"/> with no move in it, on every peer: a lost wagon offers nothing; a coupled one what the crew
+    /// controller offers ("Revive {name}"), then, to its own rider, "Get out" only held or under 1 m/s (Ruling 9: at speed a wagon offers its
+    /// rider only moves).
+    /// </summary>
+    private string WagonPlainPrompt(TrainWagon wagon, Adventurer hero)
+    {
         if (!wagon.Coupled) return "";
-        if (MovePromptFor(wagon, hero) is { } move) return move;
         var crew = WagonCrewPrompt?.Invoke(wagon, hero) ?? "";
         if (crew.Length > 0 || hero.Cart != wagon) return crew;
         return WagonGetOutOk(hero) ? "Get out" : "";
+    }
+
+    /// <summary>
+    /// What <paramref name="thing"/> offers <paramref name="hero"/> with no move car to car in it (the final review's I1), on every peer: the
+    /// party's cart's or a wagon of the train's plain prompt; null for anything else (its own prompt stands). The look asks this of what its ray
+    /// finds before it offers a move (<see cref="Adventurer"/>'s view): a revive or a get-out within reach wins over the move.
+    /// </summary>
+    public string? PlainPromptOf(object thing, Adventurer hero)
+    {
+        if (!IsInstanceValid(hero)) return null;
+        if (thing == Cart) return CartPlainPrompt(hero);
+        return thing is TrainWagon wagon && WagonAt(wagon.Number) == wagon ? WagonPlainPrompt(wagon, hero) : null;
     }
 
     /// <summary>
@@ -625,11 +648,20 @@ public partial class RailController : Node
         if (call && RideLines.BarkFor(CartEventKind.Boarding) is { } bark && Main.Instance?.Party is { } party) RailCalls.Say(party, Cart, bark, "All aboard!");
     }
 
-    /// <summary>The cart's prompt for <paramref name="hero"/>, on every peer (a client's state is the server's: its mode, stop and seat book).</summary>
+    /// <summary>
+    /// The cart's prompt for <paramref name="hero"/>, on every peer (a client's state is the server's: its mode, stop and seat book): its plain
+    /// prompt (<see cref="CartPlainPrompt"/>), and only when that offers nothing the move into it from a wagon of the rolling train (plan 14).
+    /// </summary>
     private string PromptFor(Adventurer hero)
     {
+        var plain = CartPlainPrompt(hero);
+        return plain.Length > 0 ? plain : MovePromptFor(Cart, hero) ?? ""; // "Climb forward into the cart" (a wagon's rider is offered nothing else)
+    }
+
+    /// <summary>The cart's prompt for <paramref name="hero"/> with no move car to car in it (<see cref="PromptFor"/>, <see cref="PlainPromptOf"/>).</summary>
+    private string CartPlainPrompt(Adventurer hero)
+    {
         if (LeapOffered(hero)) return LeapRules.BackPrompt; // first: from a slag cart's deck, whatever the aim (plan 13)
-        if (MovePromptFor(Cart, hero) is { } move) return move; // "Climb forward into the cart" from a wagon of the rolling train (plan 14)
         if (hero.Seated && hero.Cart != Cart) return ""; // in another seat book
         if (HoldFor(hero)) return CageHoldRules.SeatedPrompt; // a tap still gets out; a held press leaves the prisoners behind
         var seatedHere = hero.Cart == Cart; // cart-only
@@ -1139,7 +1171,8 @@ public partial class RailController : Node
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
-        if (lost != null && seen) SeenFall(lost, cart: true, localRode: Main.Instance?.Party?.Local is { } me && IsInstanceValid(me) && me.Cart == Cart); // cart-only: the bridge's take: the train drops through the gone cells, its riders with it
+        var localCar = Main.Instance?.Party?.Local is { } me && IsInstanceValid(me) ? CarOf(me) : -1; // the cart or a coupled wagon (the final review's M2)
+        if (lost != null && seen) SeenFall(lost, cart: true, localRode: localCar >= 0, localCar: localCar); // the bridge's take: the train drops through the gone cells, its riders with it
         else if (lost != null) Plunge(lost, cart: true); // before the speed is zeroed: the train goes over the way it was going
         else Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
         RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here (at the lip, for a fall): the cart's sound sees no wreck (a spare takes over in this call)

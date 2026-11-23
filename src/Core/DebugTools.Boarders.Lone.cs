@@ -1,4 +1,5 @@
 using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Objectives;
 using DungeonCrawler.Dungeon.Rails;
 using DungeonCrawler.Party;
 using Godot;
@@ -10,7 +11,8 @@ namespace DungeonCrawler.Core;
 // and a companion seated in W2's place. A hound is put on W4 in the frame the lead's first move is pressed; the lead presses back from the cart
 // at each cooldown with the grip, cart -> W1 -> W3 (passing W2) -> W4. It lands in W4 within TrainMoveRules.ThrowBound(4) = 5.6 s of the
 // hound's landing, the clock resets (not alone, nought counted) and no glow or throw follows (watched to 8 s after the landing). Prints
-// "[boarders] lone: in W4 {t} s after the hound landed, {6 - t} s to spare".
+// "[boarders] lone: in W4 {t} s after the hound landed, {6 - t} s to spare". Then (the final review's M3) the train's crew are let out as when no
+// cart is left (CrewRescueController.DebugLetOutOfTrain): W4's two stand on two cells of their own, neither a rail.
 public partial class DebugTools
 {
     private void BoardersLone(RailController rc, RailEncounterController enc, PartyController party, Adventurer me, Action<string> Fail)
@@ -96,7 +98,13 @@ public partial class DebugTools
                 var crew = W(4).Riders.Values.OfType<Npc>().Count(n => n.Crew && !n.Dead);
                 GD.Print($"[boarders] lone: 8 s after the landing: throws {enc.Throws - _bdThrowsBase}, W4's log [{string.Join(", ", log.Select(e => e.Step))}], {crew} crew in W4");
                 if (enc.Throws != _bdThrowsBase || log.Count != 1 || crew != 2) { Fail("with the lead in W4 the hound still glowed or threw"); return; }
-                GD.Print($"[boarders] RESULT ok ({_bdVariant}): the lead climbed cart > W1 > W3 (past {_bdMate?.State.Name} in W2) > W4 in three moves and landed {_bdAnswerHops[^1].At + TrainMoveRules.HopSeconds:0.00} s after the hound, inside {TrainMoveRules.ThrowBound(4):0.0} s; the clock reset and nobody was thrown");
+                // the final review's M3: the train's crew let out as when no cart is left (the test's hook) stand on cells of their own
+                if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller"); return; }
+                var out4 = ctrl.DebugLetOutOfTrain();
+                var layout = Main.Instance.Builder.Layout!;
+                GD.Print($"[boarders] lone: the crew let out of the train: [{string.Join(", ", out4.Select(c => $"{c.Name} from W{c.Wagon} at {c.Cell}{(layout.IsRail(c.Cell) ? " (a rail)" : "")}"))}]");
+                if (out4.Count != 2 || out4.Select(c => c.Cell).Distinct().Count() != out4.Count || out4.Any(c => layout.IsRail(c.Cell))) { Fail("the crew let out of W4 do not stand on two cells of their own beside the lane"); return; }
+                GD.Print($"[boarders] RESULT ok ({_bdVariant}): the lead climbed cart > W1 > W3 (past {_bdMate?.State.Name} in W2) > W4 in three moves and landed {_bdAnswerHops[^1].At + TrainMoveRules.HopSeconds:0.00} s after the hound, inside {TrainMoveRules.ThrowBound(4):0.0} s; the clock reset and nobody was thrown; W4's two crew let out of the train stood on two cells of their own (M3)");
                 _done = true;
                 GetTree().Quit(0);
                 break;

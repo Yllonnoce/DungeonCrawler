@@ -16,7 +16,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <item>An alone stretch begins: the seated up hero of the train nearest the wagon calls it (<see cref="RailCalls.SayNearest"/>,
 /// <see cref="BarkTrigger.BoarderThrow"/>); with nobody to speak the log reads "It's at the prisoners — wagon {k}!".</item>
 /// <item><see cref="BoarderRules.ThrowGlow"/> before each throw the hound crouches over the crew with the hazard warning's glow
-/// (<see cref="TelegraphFx.HandGlow"/>), told to clients as the telegraph <see cref="TelegraphRules.BoarderThrow"/> (the kiln golem's path).</item>
+/// (<see cref="TelegraphFx.HandGlow"/>), told to clients as the telegraph <see cref="TelegraphRules.BoarderThrow"/> (the kiln golem's path).
+/// A throw due after a pause (a lever window, the bridge's hold) whose glow came before that pause glows again first and comes
+/// <see cref="BoarderRules.ThrowGlow"/> later (<see cref="ThrowClock"/>, the final review's M4).</item>
 /// <item>At <see cref="BoarderRules.ThrowFirst"/>, and each <see cref="BoarderRules.ThrowEvery"/> after, it throws one crew member off, the
 /// rear bench seat first (<see cref="BoarderRules.ThrowSeat"/>), through <see cref="CrewRescueController.ThrowCrew"/>.</item>
 /// </list>
@@ -45,8 +47,10 @@ public partial class RailEncounterController
         if (ArmedRide < 1 || !IsInstanceValid(_rails.Cart)) return;
         var rolling = _rails.State.Mode == CartMode.Rolling;
         var paused = rolling && _rails.MovesRefused;
-        foreach (var wagon in _rails.Wagons)
+        var wagons = _rails.Wagons;
+        for (var i = 0; i < wagons.Count; i++) // by index: no enumerator on the list's interface (the final review's M5)
         {
+            var wagon = wagons[i];
             if (!IsInstanceValid(wagon)) continue;
             if (!_throwClocks.TryGetValue(wagon.Number, out var clock)) _throwClocks[wagon.Number] = clock = new ThrowClock();
             var coupled = wagon.Coupled && _rails.WagonAt(wagon.Number) == wagon;
@@ -74,7 +78,7 @@ public partial class RailEncounterController
                 TelegraphFx.HandGlow(hound, BoarderRules.ThrowGlow); // the crouch over the crew: the hazard warning's glow, as the leap's
                 EventBus.Instance.RaiseEnemyTelegraph(hound, TelegraphRules.BoarderThrow); // clients glow it too (EnemyStateMsg, as the kiln golem's fist: Enemy.ClientTelegraph)
                 ThrowLog.Add((k, step, Engine.GetPhysicsFrames(), clock.Running, clock.Paused, hound.Name));
-                GD.Print($"[rails] t={_now:0.00} {hound.Name} crouches over the crew of wagon {k} ({clock.Running:0.0} s alone)");
+                GD.Print($"[rails] t={_now:0.00} {hound.Name} crouches over the crew of wagon {k} ({clock.Running:0.0} s alone){(clock.GlowRetold ? $"; its glow again after a pause: the throw put back to {clock.NextThrowAt:0.0} s" : "")}");
                 break;
             case ThrowStep.Throw:
             {

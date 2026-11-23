@@ -557,9 +557,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// cart as a lever of the armed ride comes up, it is that lever whatever the aim (the seated window: E throws it and never gets out),
     /// and for <see cref="SeatedSwitchRules.GraceSeconds"/> after the window closes it is nothing (<see cref="SeatedSwitchRules.InGrace"/>).
     /// Before the lever window, ride 4's leap offered from the seat is what it looks at, whatever the aim (<see cref="RailEncounterController.LeapOfferFor"/>).
-    /// After both (and the window's grace), a move car to car along the rolling train (plan 14) is what it looks at, whatever the aim
-    /// (<see cref="RailController.MoveOfferFor"/>: the car the seat's yaw points to), and for <see cref="TrainMoveRules.MoveCooldown"/> after a move's
-    /// press it is nothing (<see cref="RailController.InMoveGrace"/>), so a mashed key never becomes a get-out at speed.
+    /// After both (and the window's grace), for <see cref="TrainMoveRules.MoveCooldown"/> after a move's press it is nothing
+    /// (<see cref="RailController.InMoveGrace"/>), so a mashed key never becomes a get-out at speed. Then the ray is asked first (the final review's
+    /// I1): what it finds within reach that offers this body something other than a move (<see cref="FirstOffered"/>: the own wagon's "Revive {name}"
+    /// or "Get out", a neighbouring car's revive, a crew member) is what it looks at; only when it finds nothing is a move car to car along the
+    /// rolling train (plan 14) what it looks at, whatever the aim (<see cref="RailController.MoveOfferFor"/>: the car the seat's yaw points to).
     /// </summary>
     private void TickView()
     {
@@ -573,6 +575,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             var lever = leap == null ? enc?.SeatedLeverFor(this) : null;
             _lookingAtWindowLever = lever != null;
             _lookingAtMove = false;
+            _lookingByRay = false;
             if (leap != null) LookingAt = leap;
             else if (lever != null)
             {
@@ -580,15 +583,21 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 _switchWindow.Offered();
             }
             else if (_switchWindow.NotOffered(Seated, Time.GetTicksMsec() / 1000.0)) LookingAt = null;
-            else if (rails?.MoveOfferFor(this) is IInteractable move) { LookingAt = move; _lookingAtMove = true; }
             else if (rails?.InMoveGrace(this) == true) LookingAt = null;
-            else LookingAt = FirstOffered();
+            else if (FirstOffered() is { } seen) { LookingAt = seen; _lookingByRay = true; } // the ray first: a revive or a get-out within reach wins over the move (I1)
+            else if (rails?.MoveOfferFor(this) is IInteractable move)
+            {
+                LookingAt = move;
+                _lookingAtMove = rails.PlainPromptOf(move, this) is ""; // the car the yaw points to with a revive of its own offers that, not the move
+            }
+            else LookingAt = null;
         }
         else
         {
             LookingAt = null;
             _lookingAtWindowLever = false;
             _lookingAtMove = false;
+            _lookingByRay = false;
             _switchWindow.NotPlayed(); // downed or not played mid-window: no grace starts when it is played and up again
         }
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
@@ -598,20 +607,22 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private const int LookThrough = 6;
 
     /// <summary>
-    /// What the interact ray offers: the first thing it hits whose prompt is not empty. A thing to use that offers nothing now (a coupled
-    /// wagon of the train with nobody to revive, layer 8) is looked through to the next hit, so it never hides a cage's, a spare's or a
-    /// lever's prompt behind it (plan 14). Anything else the ray hits first ends the look. The ray's exceptions are cleared again.
+    /// What the interact ray offers: the first thing it hits whose prompt is not empty, a car of the train's read without its move
+    /// (<see cref="RailController.PlainPromptOf"/>: a move is offered by the seat's yaw, not the ray; the final review's I1). A thing to use that
+    /// offers nothing now (a coupled wagon of the train with nobody to revive, layer 8) is looked through to the next hit, so it never hides a
+    /// cage's, a spare's or a lever's prompt behind it (plan 14). Anything else the ray hits first ends the look. The ray's exceptions are cleared again.
     /// </summary>
     private IInteractable? FirstOffered()
     {
         IInteractable? found = null;
         var passed = 0;
         GodotObject? first = null;
+        var rails = RailController.Instance is { } line && IsInstanceValid(line) ? line : null;
         while (_interactRay.IsColliding())
         {
             var hit = _interactRay.GetCollider();
             if (hit is not IInteractable thing) break;
-            if (thing.Prompt != "") { found = thing; break; }
+            if ((rails?.PlainPromptOf(thing, this) ?? thing.Prompt) != "") { found = thing; break; }
             if (hit is not CollisionObject3D body || ++passed > LookThrough) break;
             first ??= hit;
             _interactRay.AddException(body);
@@ -625,6 +636,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     /// <summary>How many things offering nothing the last look passed through to reach what it offers, and the first of them (test hooks: --test-crew's look through a wagon).</summary>
     internal int LookedThrough { get; private set; }
+    /// <summary>What it looks at is the move car to car the seat's yaw offers, not what the ray found (test hook: the final review's I1).</summary>
+    internal bool LookingAtMove => _lookingAtMove;
+    /// <summary>What it looks at is what the interact ray found (<see cref="FirstOffered"/>; test hook: the final review's I1).</summary>
+    internal bool LookingByRay => _lookingByRay;
+    private bool _lookingByRay;
     internal GodotObject? LookedThroughFirst { get; private set; }
 
     /// <summary>
@@ -1119,10 +1135,19 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     private bool ClearLine(Vector3 target)
     {
-        var space = GetWorld3D().DirectSpaceState;
-        var q = PhysicsRayQueryParameters3D.Create(GlobalPosition + Vector3.Up * 1.2f, target + Vector3.Up * 1.2f, collisionMask: 1);
-        return space.IntersectRay(q).Count == 0;
+        // one ray kept for it (the final review's M5: the seat answer asks every tick): a query's parameters and its result dictionary allocate
+        if (_lineRay == null)
+        {
+            _lineRay = new RayCast3D { Name = "LineRay", TopLevel = true, Enabled = false, CollisionMask = 1, ExcludeParent = true };
+            AddChild(_lineRay);
+        }
+        var from = GlobalPosition + Vector3.Up * 1.2f;
+        _lineRay.GlobalTransform = new Transform3D(Basis.Identity, from);
+        _lineRay.TargetPosition = target + Vector3.Up * 1.2f - from;
+        _lineRay.ForceRaycastUpdate();
+        return !_lineRay.IsColliding();
     }
+    private RayCast3D? _lineRay;
 
     /// <summary>Soft push away from other party members (they do not collide with each other).</summary>
     private Vector3 Separation()
@@ -1295,8 +1320,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             var ready = AbilityRules.WhyCannotUse(State, a, Party.ArrowCount) == null;
             var range = a.Kind switch
             {
-                AbilityKind.WeaponAttack => w.IsRanged ? 14f : w.Range + 0.4f,
-                AbilityKind.Projectile => 14f,
+                AbilityKind.WeaponAttack => w.IsRanged ? CompanionBrain.ShotRange : w.Range + 0.4f,
+                AbilityKind.Projectile => CompanionBrain.ShotRange,
                 AbilityKind.MeleeStrike => w.Range + 0.4f,
                 AbilityKind.Nova => a.Radius,
                 _ => 999f,
@@ -1306,26 +1331,51 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         }
     }
 
-    private readonly List<AbilityView> _shotViews = new();
+    /// <summary>
+    /// It knows a shot the brain fires at one enemy (<see cref="CompanionBrain.KnowsShot"/>: a ranged weapon or a projectile, never a nova). Read
+    /// from each known ability's kind (<see cref="CompanionBrain.IsShotKind"/>), which no upgrade changes: no allocation (the final review's M5).
+    /// </summary>
+    internal bool Shooter
+    {
+        get
+        {
+            var ranged = State.WeaponProfile.IsRanged;
+            for (var i = 0; i < State.KnownAbilities.Count; i++)
+                if (Party.GetAbility(State.KnownAbilities[i]) is var a && CompanionBrain.IsShotKind(a.Kind, a.Attack != null, ranged)) return true;
+            return false;
+        }
+    }
 
-    /// <summary>It knows a shot the brain fires at one enemy (<see cref="CompanionBrain.KnowsShot"/>: a ranged weapon or a projectile, never a nova).</summary>
-    internal bool Shooter { get { FillAbilityViews(_shotViews); return CompanionBrain.KnowsShot(_shotViews); } }
-
-    /// <summary>A blade (<see cref="CompanionBrain.IsBlade"/>): no shot of its own and a blow to strike with; the one an answer sends climbing.</summary>
-    internal bool Blade { get { FillAbilityViews(_shotViews); return CompanionBrain.IsBlade(_shotViews); } }
+    /// <summary>A blade (<see cref="CompanionBrain.IsBlade"/>): no shot of its own and a blow to strike with; the one an answer sends climbing. No allocation.</summary>
+    internal bool Blade
+    {
+        get
+        {
+            if (Shooter) return false;
+            var ranged = State.WeaponProfile.IsRanged;
+            for (var i = 0; i < State.KnownAbilities.Count; i++)
+                if (CompanionBrain.IsBlowKind(Party.GetAbility(State.KnownAbilities[i]).Kind, ranged)) return true;
+            return false;
+        }
+    }
 
     /// <summary>
-    /// The brain would fire at <paramref name="e"/> alone now (<see cref="CompanionBrain.HasShot"/>, with the view <see cref="Think"/> builds of it):
-    /// a shot with its arrows in the bag in range, and the line clear.
+    /// The brain would fire at <paramref name="e"/> alone now (<see cref="CompanionBrain.HasShot"/>, as the view <see cref="Think"/> builds of it
+    /// reads): a shot (<see cref="CompanionBrain.IsShotKind"/>) with its arrows in the bag, the boarder within <see cref="CompanionBrain.ShotRange"/>,
+    /// and the line clear. A shot is never a blow, so the boarder's car does not change its reach. No allocation (the final review's M5: the seat
+    /// answer asks it every tick, and for every candidate while a boarded wagon has nobody answering it).
     /// </summary>
     internal bool HasShotAt(Enemy e)
     {
-        if (!IsInstanceValid(e) || !e.IsAlive) return false;
-        FillAbilityViews(_shotViews);
-        var boarder = BoarderCar(e) >= 0;
-        var reaches = boarder && BlowReaches(e);
-        var view = new EnemyView(0, e.GlobalPosition.DistanceTo(GlobalPosition), e.IsHostile, ClearLine(e.GlobalPosition), e.Hp / Math.Max(1f, e.MaxHp), CarBoarder: reaches, OtherCarBoarder: boarder && !reaches);
-        return CompanionBrain.HasShot(_shotViews, view);
+        if (!IsInstanceValid(e) || !e.IsAlive || e.GlobalPosition.DistanceTo(GlobalPosition) > CompanionBrain.ShotRange) return false;
+        var ranged = State.WeaponProfile.IsRanged;
+        var shot = false;
+        for (var i = 0; i < State.KnownAbilities.Count && !shot; i++)
+        {
+            var a = Party.GetAbility(State.KnownAbilities[i]);
+            shot = CompanionBrain.IsShotKind(a.Kind, a.Attack != null, ranged) && AbilityRules.ArrowCost(State, a) <= Party.ArrowCount;
+        }
+        return shot && ClearLine(e.GlobalPosition);
     }
 
     /// <summary>Test hook (plan 14's --test-boarders): this companion is marked pumping while it sits in the cart, as the cart's pump picks it.</summary>

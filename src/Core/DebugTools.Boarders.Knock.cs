@@ -21,8 +21,65 @@ namespace DungeonCrawler.Core;
 //    Through 3b the cart's own pump picks nobody (PumperCap 0; Task 5, the Task 4 re-review's Minor): a shooter pumps only by the flow's
 //    DebugPump, so a natural pump can never take a shooter out of the seat answer and redden the hand-off check.
 //  - Pass 4: DebugKill of a W1 hound drops it beside the lane.
+//  - The final review's I1 (the look asks the ray first): (b) before the first move, at speed in the cart, the lead looks back (the seat's
+//    150 degree turn) toward W1's rim with a W1 crew member put down by the test (W1's move is offered all the while): W1 offers "Revive {name}",
+//    not the climb, and the grip's press revives them (no move taken, the lead still in the cart). From seat 0 the ray's 3 m never meets W1
+//    (it looks 30 degrees off it, printed): W1 is what the look offers as the car its yaw points to, with its revive first. (a) After the first move (and Task 3 review M1's check), stop
+//    2's crew seated in W2 by the test's hook, the lead climbs back to W2, one of them is put down, and seated in W2 at speed, looking at them,
+//    the lead is offered "Revive {name}" by what its ray found (W2 itself; a move offered by its yaw all the while) and the press revives
+//    them; then it climbs forward to W1.
+//  - The final review's M8: after the lever window, rolling, the player takes a cart companion (party.Possess); the old lead, left in W1, goes
+//    back into the cart's free hero seat by itself within the cooldown, the hop and 1 s.
 public partial class DebugTools
 {
+    private Npc? _bdDowned;
+    private Adventurer? _bdOldLead;
+
+    /// <summary>
+    /// I1's revive from a seat at speed: the lead looks at <see cref="_bdDowned"/> (aimed each frame) in <paramref name="car"/>'s wagon; true
+    /// once it was offered "Revive {name}" by what its look found, a move offered by its yaw all the while, and the grip's press revived it.
+    /// </summary>
+    private bool BdSeatRevive(RailController rc, PartyController party, Adventurer me, TrainWagon car, float t, string where, bool byRay, Action<string> Fail)
+    {
+        var npc = _bdDowned!;
+        // seated crew are not on the ray's layer: the look finds their wagon. From its own seat the lead looks down at them; from another car
+        // at the nearest point of the wagon's rim (0.2 m in), which the ray's 3 m reaches where the bench does not
+        var aimAt = me.Cart == car ? npc.GlobalPosition + Vector3.Up * 0.3f : BdRimNearest(car, me.Camera.GlobalPosition);
+        BarricadeAim(me, aimAt);
+        var aimOff = Mathf.RadToDeg((-me.Camera.GlobalTransform.Basis.Z).AngleTo(aimAt - me.Camera.GlobalPosition));
+        if (t < 0.3f) return false;
+        var want = $"Revive {npc.NpcName}";
+        var looking = me.LookingAt;
+        var said = looking?.Prompt ?? "";
+        var offer = rc.MoveOfferFor(me);
+        var dist = me.Camera.GlobalPosition.DistanceTo(npc.GlobalPosition);
+        var rim = me.Camera.GlobalPosition.DistanceTo(BdRimNearest(car, me.Camera.GlobalPosition));
+        if (rc.State.V < TrainMoveRules.GetOutBelow + 0.5f || rc.State.Mode != CartMode.Rolling) { Fail($"{where}: the train is not at speed (v {rc.State.V:0.00})"); return false; }
+        if (!ReferenceEquals(looking, car) || said != want || me.LookingAtMove || byRay && !me.LookingByRay || offer == null)
+        {
+            if (t > 2f) Fail($"{where}: looking at {(looking as Node)?.Name ?? "nothing"} (the move's {me.LookingAtMove}, by the ray {me.LookingByRay}), offered \"{said}\", not \"{want}\"; a move offered {offer != null}; {npc.NpcName} {dist:0.00} m from the eye, the wagon's rim {rim:0.00} m; the aim {aimOff:0.0} degrees off it at yaw {Mathf.RadToDeg(me.SeatYaw):0}");
+            return false;
+        }
+        var movesBefore = rc.MovesTaken;
+        var car0 = rc.CarOf(me);
+        GD.Print($"[boarders] I1 {where}: at speed (v {rc.State.V:0.00}, yaw {Mathf.RadToDeg(me.SeatYaw):0}), a move to {(offer is TrainWagon ow ? $"W{ow.Number}" : "the cart")} offered by the yaw, the look found {(looking as Node)?.Name} {(me.LookingByRay ? $"by the ray (looked through {me.LookedThrough})" : "as the car the yaw points to (the ray found nothing)")} (its rim {rim:0.00} m from the eye, {npc.NpcName} {dist:0.00} m): \"{said}\"");
+        party.VrUse(true);
+        party.VrUse(false);
+        GD.Print($"[boarders] I1 {where}: the press: {npc.NpcName} down {npc.Downed}, moves taken {rc.MovesTaken - movesBefore}, the lead in car {rc.CarOf(me)}");
+        if (npc.Downed || rc.MovesTaken != movesBefore || rc.CarOf(me) != car0 || rc.Hopping(me)) { Fail($"{where}: the press did not revive {npc.NpcName} (or it moved the lead)"); return false; }
+        _bdDowned = null;
+        return true;
+    }
+
+    /// <summary>The point of <paramref name="wagon"/>'s rim (its tub's top, 0.2 m in) nearest <paramref name="eye"/>.</summary>
+    private static Vector3 BdRimNearest(TrainWagon wagon, Vector3 eye)
+    {
+        var local = wagon.GlobalTransform.AffineInverse() * eye;
+        var x = Mathf.Clamp(local.X, -MineCart.TubWidth / 2f + 0.2f, MineCart.TubWidth / 2f - 0.2f);
+        var z = Mathf.Clamp(local.Z, -MineCart.TubLength / 2f + 0.2f, MineCart.TubLength / 2f - 0.2f);
+        return wagon.GlobalTransform * new Vector3(x, MineCart.TubBottom + MineCart.TubHeight, z);
+    }
+
     /// <summary>Task 3 review M1 (a): in the first seated lever window of an armed ride, the lead's move is refused and none is offered.</summary>
     private void BdLeverWindow(RailController rc, RailEncounterController enc, PartyController party, Adventurer me, Action<string> Fail)
     {
@@ -55,6 +112,23 @@ public partial class DebugTools
             case 0:
                 foreach (var a in party.Adventurers) if (IsInstanceValid(a) && a.Control == ControlKind.Companion) a.DebugHoldFire = true;
                 me.SeatYaw = BdBack;
+                Next(3);
+                break;
+            case 3:
+            {
+                // I1 (b): from the cart, a W1 crew member down, the lead looking back at them
+                if (t < 0.3f) break;
+                if (rc.CarOf(me) != 0) { Fail($"the lead is in car {rc.CarOf(me)}, not the cart"); return; }
+                _bdDowned = W(1).Riders.Values.OfType<Npc>().Where(n => n.Crew && !n.Dead).OrderBy(n => n.Seat).FirstOrDefault();
+                if (_bdDowned == null) { Fail("no crew in W1"); return; }
+                _bdDowned.GoDown();
+                GD.Print($"[boarders] I1 (b): {_bdDowned.NpcName} (W1 seat {_bdDowned.Seat}) put down by the test; the lead in the cart seat {me.Seat}");
+                Next(4);
+                break;
+            }
+            case 4:
+                if (!BdSeatRevive(rc, party, me, W(1), t, "(b) from the cart", byRay: false, Fail)) break;
+                me.SeatYaw = BdBack;
                 Next(1);
                 break;
             case 1:
@@ -77,10 +151,60 @@ public partial class DebugTools
                 var prompt = W(1).Prompt;
                 GD.Print($"[boarders] at speed (v {rc.State.V:0.00}), {t:0.00} s after the press (in the grace {rc.InMoveGrace(me)}): W1's own rider's prompt \"{prompt}\"");
                 if (rc.InMoveGrace(me) || prompt != "") { Fail($"W1's own rider is offered \"{prompt}\" at speed"); return; }
+                Next(5);
+                break;
+            }
+            case 5:
+            {
+                // I1 (a): stop 2's crew in W2, the lead climbs back to it
+                if (ObjectiveController.Instance is not CrewRescueController ctrl || ctrl.DebugSeatCrew(2, 2) is not { Count: 2 } crew || crew.Any(c => c.Wagon != 2)) { Fail("stop 2's crew are not the two seated in W2"); return; }
+                GD.Print($"[boarders] I1 (a): stop 2's cage opened by the test's hook: [{string.Join(", ", crew.Select(c => $"{c.Npc.NpcName} W{c.Wagon} seat {c.Seat}"))}]");
+                me.SeatYaw = BdBack;
+                Next(6);
+                break;
+            }
+            case 6:
+            {
+                if (t < 0.15f) break;
+                if (rc.MoveOfferFor(me) != W(2) || !ReferenceEquals(me.LookingAt, W(2)) || W(2).Prompt != "Climb back to wagon 2") { if (t > 1.6f) Fail($"no \"Climb back to wagon 2\" offered from W1 (prompt \"{W(2).Prompt}\")"); break; }
+                party.VrUse(true);
+                party.VrUse(false);
+                if (!rc.Hopping(me)) { Fail($"the press took no move to W2 (refused: {rc.LastMoveRefused ?? "-"})"); return; }
+                Next(7);
+                break;
+            }
+            case 7:
+            {
+                if (rc.Hopping(me) || t < TrainMoveRules.MoveCooldown + 0.1f) break;
+                if (rc.CarOf(me) != 2) { Fail($"the lead landed in car {rc.CarOf(me)}, not W2"); return; }
+                _bdDowned = W(2).Riders.Values.OfType<Npc>().Where(n => n.Crew && !n.Dead).OrderBy(n => n.Seat).FirstOrDefault();
+                if (_bdDowned == null) { Fail("no crew in W2"); return; }
+                _bdDowned.GoDown();
+                GD.Print($"[boarders] I1 (a): {_bdDowned.NpcName} (W2 seat {_bdDowned.Seat}) put down by the test; the lead in W2 seat {me.Seat}");
+                Next(8);
+                break;
+            }
+            case 8:
+                if (!BdSeatRevive(rc, party, me, W(2), t, "(a) seated in W2", byRay: true, Fail)) break;
+                me.SeatYaw = BdForward;
+                Next(9);
+                break;
+            case 9:
+            {
+                if (t < 0.15f) break;
+                if (rc.MoveOfferFor(me) != W(1) || !ReferenceEquals(me.LookingAt, W(1)) || W(1).Prompt != "Climb forward to wagon 1") { if (t > 1.6f) Fail($"no \"Climb forward to wagon 1\" offered from W2 (prompt \"{W(1).Prompt}\")"); break; }
+                party.VrUse(true);
+                party.VrUse(false);
+                if (!rc.Hopping(me)) { Fail($"the press took no move to W1 (refused: {rc.LastMoveRefused ?? "-"})"); return; }
+                Next(19);
+                break;
+            }
+            case 19:
+                if (rc.Hopping(me)) break;
+                if (rc.CarOf(me) != 1) { Fail($"the lead landed in car {rc.CarOf(me)}, not W1"); return; }
                 me.SeatYaw = BdForward; // the seat turns at most 150 degrees either way: W1's rim spot (back right) is reached turning right from forward
                 Next(10);
                 break;
-            }
 
             // pass 1: three melee blows of the lead's knock a W1 hound off: grip 1, 2, 3
             case 10:
@@ -358,8 +482,36 @@ public partial class DebugTools
                 break;
             }
             case 50:
+            {
                 if (!_bdLeverChecked) { if (t > 120f) Fail("no seated lever window was met"); break; }
-                GD.Print($"[boarders] RESULT ok ({_bdVariant}): three melee blows knocked a W1 hound off (grip 1, 2, 3), alive beside the lane; one spell knocked one off; W3 answered from a seat with a shot (no move), then with the shooters down {_bdMate?.State.Name} climbed to W3 one move per cooldown, ended its hound and moved back 5 s after; a killed hound dropped beside the lane; no Get out at speed; the lever window refused a move; knock-offs {enc.KnockOffs}");
+                // M8: possessed away from in W1, the old lead goes back to the cart by itself (a hero seat of it is free: the lead's)
+                if (rc.State.Mode != CartMode.Rolling || rc.MovesRefused || rc.Hopping(me)) { if (t > 120f) Fail("no rolling stretch with moves allowed after the lever window"); break; }
+                if (rc.CarOf(me) != 1) { Fail($"the lead is in car {rc.CarOf(me)}, not W1, before the possession check"); return; }
+                var next = party.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && a.Control == ControlKind.Companion && rc.CarOf(a) == 0 && !a.Downed);
+                if (next == null || !rc.HeroSeatFree()) { Fail($"no cart companion to take over, or no free hero seat in the cart (free {rc.HeroSeatFree()})"); return; }
+                _bdOldLead = me;
+                party.AllowPossession = true;
+                party.Possess(Array.IndexOf(party.Adventurers, next));
+                party.AllowPossession = false;
+                GD.Print($"[boarders] M8: the player takes {next.State.Name} (car {rc.CarOf(next)}); {me.State.Name} is left in W1 as a companion ({me.Control}); strays [{string.Join(", ", enc.StraysNow)}]");
+                if (party.Local != next || me.Control != ControlKind.Companion) { Fail("the possession did not take"); return; }
+                Next(51);
+                break;
+            }
+            case 51:
+            {
+                var old = _bdOldLead!;
+                if (rc.CarOf(old) != 0 || rc.Hopping(old))
+                {
+                    if (t > TrainMoveRules.MoveCooldown + TrainMoveRules.HopSeconds + 1f) Fail($"{old.State.Name}, left in W1, did not go back to the cart by itself within {TrainMoveRules.MoveCooldown + TrainMoveRules.HopSeconds + 1f:0.0} s (in car {rc.CarOf(old)}, strays [{string.Join(", ", enc.StraysNow)}], moves refused {rc.MovesRefused})");
+                    break;
+                }
+                GD.Print($"[boarders] M8: {old.State.Name} is back in the cart seat {old.Seat} by itself {t:0.00} s after the player took another hero");
+                Next(52);
+                break;
+            }
+            case 52:
+                GD.Print($"[boarders] RESULT ok ({_bdVariant}): three melee blows knocked a W1 hound off (grip 1, 2, 3), alive beside the lane; one spell knocked one off; W3 answered from a seat with a shot (no move), then with the shooters down {_bdMate?.State.Name} climbed to W3 one move per cooldown, ended its hound and moved back 5 s after; a killed hound dropped beside the lane; no Get out at speed; the lever window refused a move; at speed a downed crew member was offered and revived from the cart (W1) and from W2's own seat with a move offered all the while (the final review's I1); the lead possessed away from in W1 went back to the cart by itself (M8); knock-offs {enc.KnockOffs}");
                 _done = true;
                 GetTree().Quit(0);
                 break;

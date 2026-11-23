@@ -213,6 +213,20 @@ public static class CompanionBrain
     /// </summary>
     public static bool IsShot(AbilityView a) => !a.Melee && (a.Ability.Kind == AbilityKind.WeaponAttack || a.Ability.Kind == AbilityKind.Projectile && a.Ability.Attack != null);
 
+    /// <summary>How far a shot reaches in the view the brain is handed (<c>Adventurer.FillAbilityViews</c>: a ranged weapon's swing, a projectile).</summary>
+    public const float ShotRange = 14f;
+
+    /// <summary>
+    /// <see cref="IsShot"/> read from an ability's kind with no view built (the final review's M5: the seat answer asks every tick): a ranged
+    /// weapon's swing, or a projectile with an attack. The view's Melee is a melee strike or the swing of a weapon that is not ranged.
+    /// </summary>
+    public static bool IsShotKind(AbilityKind kind, bool hasAttack, bool rangedWeapon)
+        => kind == AbilityKind.WeaponAttack ? rangedWeapon : kind == AbilityKind.Projectile && hasAttack;
+
+    /// <summary><see cref="IsBlow"/> read from an ability's kind with no view built (as <see cref="IsShotKind"/>): a melee strike, or a swing of a weapon that is not ranged.</summary>
+    public static bool IsBlowKind(AbilityKind kind, bool rangedWeapon)
+        => kind == AbilityKind.MeleeStrike || kind == AbilityKind.WeaponAttack && !rangedWeapon;
+
     /// <summary>
     /// The brain would fire at <paramref name="e"/> alone now (plan 14, Ruling 15 as amended: the seat answer's "clear shot"): it sees it and a
     /// shot (<see cref="IsShot"/>) with its arrows in the bag reaches it (<see cref="RangeFor"/>), a cooldown aside.

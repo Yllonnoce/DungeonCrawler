@@ -18,7 +18,9 @@ namespace DungeonCrawler.Core;
 // (rc.MoveOfferFor, the lead looking back 120 degrees; its control on the ride before the bridge is offered) and a forced rc.Move is refused; every party cell is gone within 6 s of the arrival at stop 4 (GoneBridges
 // holds them, their Deck_ shapes disabled; the flow says how long before or after the arrival the last went); a following rc.Restore(3)
 // stands it whole. =brake: the lead brakes from 2.0 s after the collapse starts (past the reaction time, BridgeRules.ReactionTime): "Don't
-// stop" is called before the take, the take comes 1.5 s or more after the call by a press made 1.5 s or more after it, rc.Falls rises by 1 with every rider fallen within 1 s, the wipe rises at stop 3 with the bridge whole, and the
+// stop" is called before the take, the take comes 1.5 s or more after the call by a press made 1.5 s or more after it, rc.Falls rises by 1 with every rider fallen within 1 s
+// (plan 14's final review M2: a companion rides W1 into the first pass's take, seated by rc.DebugSeat at the departure; its look rides down with
+// a WagonDrop body and the lead's with the CartDrop: "[cavern] M2: at the take ..."), the wipe rises at stop 3 with the bridge whole, and the
 // next departure, unbraked, reaches stop 4. =stall: the train is caught (rc.DebugStall) once the collapse has started (its rear 6 m or more on
 // the bridge), nobody braking: the bridge is held by the stall guard, never takes the train, and the watchdog frees it to stop 4. =runaway:
 // the runaway is real, the split left straight, the lead pumps: the runaway goes down with the bridge with its front within 8 m of the
@@ -64,6 +66,9 @@ public partial class DebugTools
     private float _cvClock, _cvTime;
     private bool _cvListening, _cvWiped, _cvHoldChecked, _cvBraking, _cvStalled, _cvMoveControl;
     private RailController? _cvHooked, _cvWipeRc;
+    /// <summary>=brake's first pass: the companion seated in W1 for the take (the final review's M2), and where its look rode down.</summary>
+    private Adventurer? _cvWagonRider, _cvTakeLead;
+    private string? _cvWagonLook;
     private readonly List<Adventurer> _cvRiders = new();
     private readonly HashSet<string> _cvMayFall = new();
     private float _cvRearOnT = float.NaN, _cvCollapseT = float.NaN, _cvCallT = float.NaN, _cvBrakeCallT = float.NaN, _cvTakeT = float.NaN;
@@ -145,6 +150,17 @@ public partial class DebugTools
             _cvFallenAtWreck = _cvRiders.Count(a => a.State.Fallen);
             foreach (var a in _cvRiders) _cvMayFall.Add(a.State.Name);
             if (CavernShooting && _cvPass == 1 && _cvVariant == "brake") _cvTakeView = TakeView(rc); // where the side view stands, as the take comes
+            if (_cvWagonRider is { } w && Main.Instance.Builder.FloorRoot is { } floor)
+            {
+                // M2: the wagon rider's look rides down with a wagon's drop, the cart's riders' with the cart's
+                var look = $"{w.State.Name}FallLook";
+                var drop = floor.GetChildren().OfType<RigidBody3D>().FirstOrDefault(b => b.GetNodeOrNull(look) != null);
+                var lead = _cvTakeLead; // the take may pass the player's control on as the riders fall
+                var leadDrop = lead == null ? null : floor.GetChildren().OfType<RigidBody3D>().FirstOrDefault(b => b.GetNodeOrNull($"{lead.State.Name}FallLook") != null);
+                _cvWagonLook = $"{w.State.Name}'s look (it rode W1) rides down with {drop?.Name ?? "nothing"}, the lead's with {leadDrop?.Name ?? "nothing"}";
+                GD.Print($"[cavern] M2: at the take {_cvWagonLook}");
+                if (drop == null || !drop.Name.ToString().StartsWith("WagonDrop", StringComparison.Ordinal) || leadDrop == null || !leadDrop.Name.ToString().StartsWith("CartDrop", StringComparison.Ordinal)) _cvWagonLook = $"FAIL: {_cvWagonLook}";
+            }
         };
     }
 
@@ -214,8 +230,17 @@ public partial class DebugTools
             {
                 if (rc.State.Mode != CartMode.Rolling || enc.ArmedRide != 4) { if (_cvClock > 15f) Fail($"ride 4 did not depart (mode {rc.State.Mode}, armed {enc.ArmedRide})"); break; }
                 if (v == "runaway") party.ForcedMoveInput = new Vector2(0, -1); // the stick forward: the lead pumps
+                _cvWagonRider = null;
+                _cvWagonLook = null;
+                if (v == "brake" && _cvPass == 1)
+                {
+                    // plan 14's final review M2: a companion rides W1 into the take, and its look must ride down with W1's drop
+                    _cvWagonRider = party.Active.LastOrDefault(a => a != me && a.Cart == rc.Cart && !a.Downed);
+                    _cvTakeLead = me;
+                    if (_cvWagonRider == null || !rc.DebugSeat(_cvWagonRider, 1)) { Fail("no companion could be seated in W1 for the take"); return; }
+                }
                 _cvRiders.Clear();
-                _cvRiders.AddRange(party.Active.Where(a => a.Cart == rc.Cart));
+                _cvRiders.AddRange(party.Active.Where(a => rc.CarOf(a) >= 0));
                 _cvFallsBefore = rc.Falls;
                 _cvGroundBefore = rc.GroundFree;
                 _cvRearOnT = _cvCollapseT = _cvCallT = _cvBrakeCallT = _cvTakeT = _cvArriveT = _cvAllGoneT = _cvEarliestTakeT = _cvRunawayT = float.NaN;
@@ -383,6 +408,8 @@ public partial class DebugTools
                 {
                     if (CavernShooting && _cvPass == 1 && !CvTakeShots(rc, enc)) return; // windowed: the take seen first, held (Task 6)
                     if (TakeJudged(rc, enc, party, Fail) is not { } said) return;
+                    if (_cvWagonLook == null || _cvWagonLook.StartsWith("FAIL", StringComparison.Ordinal)) { Fail($"the wagon rider's fall was not seen with its wagon ({_cvWagonLook ?? "never judged"})"); return; }
+                    said += $"; {_cvWagonLook}";
                     _cvTakeSummary = $"the lead braked {CvBrakeAfter:0.0} s after the collapse started (its call at t={_cvCallT - _cvRearOnT:0.00} s after the rear came on, \"Don't stop\" at t={_cvBrakeCallT - _cvRearOnT:0.00}); {said}";
                     _cvStep = 6; _cvClock = 0f;
                     return;
