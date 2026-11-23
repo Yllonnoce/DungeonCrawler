@@ -10,13 +10,15 @@ namespace DungeonCrawler.Core;
 // ---- --test-boarders[=move|reach|knock|throw|lone|pause|groups] (plan 14, Tasks 3-7) ------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo; every enemy is culled as it appears but the hounds the flow puts on wagons
 // (RailEncounterController.DebugBoard), and the flow keeps the party's HP up. The variants are plan 14's (Ruling 22): =move (Task 3), =reach
-// and =knock (Task 4) are built; throw, lone, pause and groups are later tasks' and, like an unknown name, print an ERROR and fail.
-// =reach and =knock are restored at stop 1 with its cage opened by the test's hook (DebugSeatCrew: its crew sit in W1 at once).
+// and =knock (Task 4), =throw (the default), =lone and =pause (Task 5) are built, one partial file each (DebugTools.Boarders.{Variant}.cs);
+// groups is a later task's and, like an unknown name, prints an ERROR and fails.
+// =reach and =knock are restored at stop 1 with its cage opened by the test's hook (DebugSeatCrew: its crew sit in W1 at once); =throw and =lone
+// at stop 1 with its crew seated in W3 (=throw) or W4 (=lone); =pause at stop 2 with stop 2's crew seated in W1. Each rides the next ride.
 // Prints [boarders] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testBoarders;
-    private string _bdVariant = "move";
+    private string _bdVariant = "throw";
     private int _bdStep, _bdPhase;
     private float _bdClock, _bdPhaseT;
     private bool _bdListening, _bdLeadUnderBeam, _bdSecondPressed;
@@ -41,17 +43,28 @@ public partial class DebugTools
     private readonly List<(float At, int From, int To)> _bdAnswerHops = new();
     private readonly List<Adventurer> _bdShootersDown = new(); // pass 3b: the seat answerers made to pump, in turn
     private float _bdHandoffAt = -1f;
+    // =throw, =lone and =pause (Task 5)
+    private readonly List<string> _bdThrowSaid = new(); // the log's throw lines and silent calls
+    private readonly List<string> _bdThrowProps = new(); // PropEvts "wagon:{k} thrown:{id}"
+    private readonly List<(string Id, string Name, int Wagon, ulong Frame, ulong HiddenFrame)> _bdThrownCrew = new();
+    private ulong _bdLandFrame, _bdMarkFrame, _bdClimbFrame;
+    private int _bdThrowsBase;
+    private int _bdLogMark;
+    private readonly Dictionary<int, string> _bdSeatOf = new(); // a wagon's crew by bench seat
     /// <summary>A wagon's track curvature (1/m) from which the reach sample counts as "in a bend" (a radius of 25 m or less); under 0.01 is the straight.</summary>
     private const float BdBendK = 0.04f;
 
     /// <summary>The variants plan 14 names for this flow (Ruling 22), and the ones built so far.</summary>
     private static readonly string[] BoardersVariants = { "move", "reach", "knock", "throw", "lone", "pause", "groups" };
-    private static readonly string[] BoardersBuilt = { "move", "reach", "knock" };
+    private static readonly string[] BoardersBuilt = { "move", "reach", "knock", "throw", "lone", "pause" };
+
+    /// <summary>The stop a variant is restored at (it rides the ride after it), and the wagon its stop's crew are seated in (0: the first free seats).</summary>
+    private static (int Stop, int CrewWagon) BdStart(string v) => v switch { "move" => (0, 0), "throw" => (1, 3), "lone" => (1, 4), "pause" => (2, 1), _ => (1, 0) };
 
     private void RunBoardersTest()
     {
         var v = _bdVariant;
-        void Fail(string why) { GD.Print($"[boarders] RESULT FAIL ({v}): {why}"); if (Main.Instance?.Party is { } p) { p.AllowPossession = true; p.ForcedMoveInput = null; } _done = true; GetTree().Quit(1); }
+        void Fail(string why) { GD.Print($"[boarders] RESULT FAIL ({v}): {why}"); if (Main.Instance?.Party is { } p) { p.AllowPossession = true; p.ForcedMoveInput = null; } PumperCap = null; _done = true; GetTree().Quit(1); }
         if (!BoardersBuilt.Contains(v))
         {
             GD.PrintErr($"[boarders] ERROR: --test-boarders={v} is {(BoardersVariants.Contains(v) ? "not built yet" : "not a variant")} (the variants: {string.Join(", ", BoardersVariants)}; built: {string.Join(", ", BoardersBuilt)})");
@@ -75,14 +88,16 @@ public partial class DebugTools
         {
             case 0 when _bdClock >= 1.5f:
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
-                rc.Restore(v == "move" ? 0 : 1);
+                var (startStop, crewWagon) = BdStart(v);
+                rc.Restore(startStop);
                 GD.Print($"[boarders] floor 12 ({v}): restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Number))}]; lethality {TierRules.Lethality}");
                 if (rc.Train.Count != 4) { Fail($"the train has {rc.Train.Count} wagons, not 4"); return; }
                 if (v != "move")
                 {
-                    // stop 1's cage holds the cart while locked (CageHoldRules): opened by the test's hook, its crew seated in W1 at once
-                    if (ObjectiveController.Instance is not CrewRescueController ctrl || ctrl.DebugSeatCrew(1) is not { Count: > 0 } crew) { Fail("stop 1's crew could not be seated"); return; }
-                    GD.Print($"[boarders] stop 1's cage opened by the test's hook: [{string.Join(", ", crew.Select(c => $"{c.Npc.NpcName} W{c.Wagon} seat {c.Seat}"))}]");
+                    // the stop's cage holds the cart while locked (CageHoldRules): opened by the test's hook, its crew seated at once (in W1, or the variant's wagon)
+                    if (ObjectiveController.Instance is not CrewRescueController ctrl || ctrl.DebugSeatCrew(startStop, crewWagon) is not { Count: > 0 } crew) { Fail($"stop {startStop}'s crew could not be seated"); return; }
+                    GD.Print($"[boarders] stop {startStop}'s cage opened by the test's hook: [{string.Join(", ", crew.Select(c => $"{c.Npc.NpcName} W{c.Wagon} seat {c.Seat}"))}]");
+                    if (crewWagon > 0 && (crew.Count != 2 || crew.Any(c => c.Wagon != crewWagon))) { Fail($"stop {startStop}'s crew are not the two in W{crewWagon}"); return; }
                 }
                 {
                     // the server's reach for a use of a wagon (fix round 1, I3): measured to its tub, as a cart's; a point 4.1 m end-on from
@@ -113,7 +128,7 @@ public partial class DebugTools
             }
             case 3:
             {
-                var ride = v == "move" ? 1 : 2;
+                var ride = BdStart(v).Stop + 1;
                 if (rc.State.Mode != CartMode.Rolling || enc.ArmedRide != ride || rc.State.V < 1f || _bdClock < 1f) { if (_bdClock > 20f) Fail($"ride {ride} did not depart (mode {rc.State.Mode}, armed {enc.ArmedRide})"); break; }
                 GD.Print($"[boarders] rolling on ride {ride} at S={rc.State.S:0.0} (v {rc.State.V:0.00}); moves refused {rc.MovesRefused}");
                 _bdStep++; _bdClock = 0f; _bdPhase = 0; _bdPhaseT = 0f;
@@ -122,6 +137,9 @@ public partial class DebugTools
             case 4:
                 if (v == "reach") BoardersReach(rc, enc, party, me, Fail);
                 else if (v == "knock") BoardersKnock(rc, enc, party, me, Fail);
+                else if (v == "throw") BoardersThrow(main, rc, enc, party, me, Fail);
+                else if (v == "lone") BoardersLone(rc, enc, party, me, Fail);
+                else if (v == "pause") BoardersPause(rc, enc, party, me, Fail);
                 else BoardersMove(rc, enc, party, me, Fail);
                 break;
         }
@@ -140,9 +158,17 @@ public partial class DebugTools
         };
         EventBus.Instance.Message += text =>
         {
-            if (_done || !_testBoarders || !text.Contains(" climbs ", StringComparison.Ordinal)) return;
-            _bdSaid.Add(text);
+            if (_done || !_testBoarders) return;
+            if (text.Contains(" is thrown from the wagon!", StringComparison.Ordinal) || text.StartsWith("It's at the prisoners", StringComparison.Ordinal)) _bdThrowSaid.Add(text);
+            else if (!text.Contains(" climbs ", StringComparison.Ordinal)) return;
+            else { _bdSaid.Add(text); _bdClimbFrame = Engine.GetPhysicsFrames(); } // a landing's line, logged in the rail controller's tick
             GD.Print($"[boarders] logged: \"{text}\"");
+        };
+        EventBus.Instance.PropChanged += (r, what) =>
+        {
+            if (_done || !_testBoarders || !what.StartsWith("thrown:", StringComparison.Ordinal)) return;
+            _bdThrowProps.Add($"{r} {what}");
+            GD.Print($"[boarders] prop: {r} \"{what}\"");
         };
     }
 

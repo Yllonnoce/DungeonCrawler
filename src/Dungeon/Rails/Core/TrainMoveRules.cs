@@ -70,6 +70,14 @@ public static class TrainMoveRules
     public static float ThrowBound(int moves) => (moves - 1) * MoveCooldown + HopSeconds + 2f;
 
     /// <summary>
+    /// The seat a companion answering a boarded wagon lands in there (Task 5, Task 4 review M2): its hero place when free; when a downed hero holds
+    /// it, the first free crew bench seat (4, then 5), so a hero down in seat 0 never keeps the answer out; else none (it waits one car short). A
+    /// player's move is unchanged: it lands only in a free hero place.
+    /// </summary>
+    public static int? AnswerSeat(bool heroPlaceFree, bool heroPlaceDowned, bool seat4Free, bool seat5Free)
+        => heroPlaceFree ? TrainRules.HeroPlace : !heroPlaceDowned ? null : seat4Free ? TrainRules.CrewSeats[0] : seat5Free ? TrainRules.CrewSeats[1] : null;
+
+    /// <summary>
     /// A companion's next move toward <paramref name="toCar"/> (Task 4): the target that way from <paramref name="fromCar"/>, never past
     /// <paramref name="toCar"/> (null while every free place short of it is taken: it waits rather than overshoot its wagon).
     /// </summary>

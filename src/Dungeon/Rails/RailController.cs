@@ -644,7 +644,7 @@ public partial class RailController : Node
     private static bool HoldsRiders => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.HoldsRiders();
 
     /// <summary>A hero seat (0-3) of the cart's book is free. No allocation.</summary>
-    private bool HeroSeatFree()
+    internal bool HeroSeatFree()
     {
         for (var i = 0; i < CartSeats.HeroSeats; i++) if (Cart.Seats.OccupantOf(i) == null) return true;
         return false;

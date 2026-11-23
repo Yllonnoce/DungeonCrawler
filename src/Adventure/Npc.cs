@@ -359,6 +359,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     {
         var dt = (float)delta;
         if (!Net.NetSession.IsServer) { Greet(); GreetInTavern(); } // every player's own screen: a dedicated server has nobody to greet
+        TickHide(dt);
         if (Net.NetSession.IsClient) { ClientTick(dt); return; }
         BleedOut(dt);
         if (Seated)
@@ -428,6 +429,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             if (Mode == NpcMode.Quest) CheckStairs();
             Hazard(dt);
         }
+        if (Thrown && _hideLeft > 0f && !IsOnFloor()) planar = new Vector3(v.X, 0f, v.Z); // thrown: it keeps its outward way until it lands
         v.X = planar.X;
         v.Z = planar.Z;
         Velocity = v;
@@ -850,6 +852,50 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         LeaveRide();
         EventBus.Instance.Log(Crew ? $"{NpcName} is gone." : $"{NpcName} is dead.");
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Died);
+    }
+
+    /// <summary>Thrown from a wagon by a boarder (plan 14 Task 5): dead at once, gone (hidden and <see cref="Fled"/>) <see cref="Dungeon.Rails.BoarderRules.ThrownHide"/> later. A save writes it as fled from the throw on.</summary>
+    public bool Thrown { get; private set; }
+    /// <summary>Seconds until the body is hidden (a throw's tumble, or a client's copy told of one), or 0 when none is pending.</summary>
+    private float _hideLeft;
+
+    /// <summary>
+    /// Thrown from a wagon by a boarder alone with the prisoners (plan 14 Task 5, Ruling 17), server and solo: the death with no corpse. Dead and out
+    /// of the escort at once, the death clip; unseated (its seat's book freed, the usual seat message) and set down at <paramref name="at"/> beside
+    /// the lane with <paramref name="velocity"/> (outward and up), it tumbles; <see cref="Dungeon.Rails.BoarderRules.ThrownHide"/> later it is hidden
+    /// and <see cref="Fled"/> (gone, not a corpse), so a save, a load and a client keep it gone. Logs nothing: the controller logs.
+    /// </summary>
+    public void Throw(Vector3 at, Vector3 velocity)
+    {
+        if (Dead) return;
+        Dead = true;
+        Thrown = true;
+        Escorting = false;
+        CollisionLayer = 0;
+        _label.Text = $"{NpcName} (dead)";
+        _model?.Play("Death", force: true);
+        GetOut(at, velocity); // LeaveSeat keeps it on no layer (dead)
+        HideAfter(Dungeon.Rails.BoarderRules.ThrownHide);
+        EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Died);
+    }
+
+    /// <summary>The body is hidden <paramref name="seconds"/> from now (a throw's tumble; a client's copy on the server's word that it was thrown).</summary>
+    public void HideAfter(float seconds)
+    {
+        if (!Visible) return;
+        _hideLeft = Math.Max(seconds, 1e-4f);
+    }
+
+    /// <summary>A pending hide counts down; at nought the body is hidden, and a thrown one (on the server or solo) is <see cref="Fled"/> from then on.</summary>
+    private void TickHide(float dt)
+    {
+        if (_hideLeft <= 0f) return;
+        _hideLeft -= dt;
+        if (_hideLeft > 0f) return;
+        _hideLeft = 0f;
+        Visible = false;
+        Velocity = Vector3.Zero;
+        if (Thrown && !Net.NetSession.IsClient) Fled = true; // gone, not a corpse, as a load restores a fled one
     }
 
     /// <summary>The NPC turns on the party: no death, no fate; they simply are not a person any more. <paramref name="fled"/>: they ran to the enemy instead, and stay gone (not dead) across a save or on a client.</summary>

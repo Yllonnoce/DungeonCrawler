@@ -18,6 +18,8 @@ namespace DungeonCrawler.Core;
 //    nobody moves, and its shots knock the hound off by the grip. 3b, with every companion that has a shot held down, a fresh W3 hound is
 //    answered by the nearest cart blade climbing one move per cooldown (passing the lead's W1); it reaches W3, strikes the hound (its hit
 //    counted toward the grip) until it is knocked off or killed, and 5 s after W3 is clear moves back toward the cart; the shooters stand again.
+//    Through 3b the cart's own pump picks nobody (PumperCap 0; Task 5, the Task 4 re-review's Minor): a shooter pumps only by the flow's
+//    DebugPump, so a natural pump can never take a shooter out of the seat answer and redden the hand-off check.
 //  - Pass 4: DebugKill of a W1 hound drops it beside the lane.
 public partial class DebugTools
 {
@@ -229,6 +231,7 @@ public partial class DebugTools
                 if (enc.AnswersNow.Any(a => a.Wagon == 3)) { if (t > 2f) Fail("pass 3a: the seat answer did not end with W3 clear"); break; }
                 if (BdRideLeft(rc) < 90f || rc.State.Mode != CartMode.Rolling || rc.MovesRefused) { if (t > 60f) Fail("pass 3b: no ride with 90 m left"); break; }
                 _bdShootersDown.Clear();
+                PumperCap = 0; // the cart's own pump picks nobody (Task 4 re-review 2): only DebugPump makes a shooter pump, so 3b measures the hand-off alone
                 _bdHound = enc.DebugBoard(3);
                 if (_bdHound == null) { Fail("pass 3b: no hound could be put on W3"); return; }
                 _bdMate = party.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && a.Control == ControlKind.Companion && rc.CarOf(a) == 0 && a.Blade);
@@ -323,6 +326,7 @@ public partial class DebugTools
                 if (hop.To >= hop.From || after < TrainMoveRules.AnswerBack - 2f * tick || after > TrainMoveRules.AnswerBack + 0.6f) { Fail("pass 3: the move back was not toward the cart 5 s after W3 went clear"); return; }
                 mate.DebugHoldFire = true;
                 foreach (var a in _bdShootersDown) a.DebugPump = false;
+                PumperCap = null;
                 GD.Print($"[boarders] pass 3b: the shooters' pumps let go [{string.Join(", ", _bdShootersDown.Select(a => a.State.Name))}] (the cart's pump picks its pumpers afresh next tick)");
                 Next(40);
                 break;

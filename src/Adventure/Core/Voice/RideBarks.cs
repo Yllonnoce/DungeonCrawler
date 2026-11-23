@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now; the cavern's bridge going behind the train, a brake on it, the slag line's drop) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now; the cavern's bridge going behind the train, a brake on it, the slag line's drop, a boarder alone with the prisoners in a wagon) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,13 +11,14 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, the split's three calls, and the cavern's three (the bridge going, a brake on it, the slag line's drop).</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, the split's three calls, the cavern's three (the bridge going, a brake on it, the slag line's drop), and a boarder alone with the prisoners (plan 14: never naming the wagon, the log does).</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
         BarkTrigger.Crevasse, BarkTrigger.Barricade, BarkTrigger.SwitchBack, BarkTrigger.SwitchBackNow, BarkTrigger.Runaway,
         BarkTrigger.SplitWait, BarkTrigger.SplitNotYet, BarkTrigger.SplitNow,
         BarkTrigger.BridgeGoing, BarkTrigger.BridgeBrake, BarkTrigger.SlagDrop,
+        BarkTrigger.BoarderThrow,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -253,5 +254,16 @@ public static class RideBarks
             Ranger: new[] { "Leap back.", "Their deck's falling. Jump." },
             Mage: new[] { "The slag line falls! Leap back!", "Jump back across, now!" },
             Generic: new[] { "The slag line's going — leap back!", "Leap back to the cart!", "Jump back, now!" }),
+
+        [BarkTrigger.BoarderThrow] = new Bank(
+            Brand: new[] { "It's at the prisoners! Get back there!", "Hound in with the crew! Move!", "It'll throw them off! Get to them!" },
+            Sable: new[] { "It's at the prisoners, darling! Go!", "Hound in with the crew, loves! Get back there!", "It'll toss them off, love! Somebody move!" },
+            Wren: new[] { "Hound. With the crew.", "Prisoners. Get back there.", "It'll throw them. Go." },
+            Ilex: new[] { "The hound is among the prisoners! Make haste!", "It means to hurl them off! Get back there!", "The prisoners are unguarded! Attend to them!" },
+            Warrior: new[] { "It's at the prisoners!", "Get back to the crew!" },
+            Rogue: new[] { "Hound on the crew! Quick!", "It's at the prisoners! Move!" },
+            Ranger: new[] { "Crew. Hound.", "Get back there." },
+            Mage: new[] { "The hound is at the prisoners!", "Get back to the crew!" },
+            Generic: new[] { "It's at the prisoners!", "Get back to the crew!", "It'll throw them off!" }),
     };
 }

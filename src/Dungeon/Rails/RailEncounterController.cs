@@ -196,6 +196,7 @@ public partial class RailEncounterController : Node
         ClearSwitchyard();
         ClearBarricades();
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
+        ClearThrows(); // the wagons' throw clocks go with the ride
         ClearKiln(payOff: !loaded); // the golem goes like a rider (its corpse stays); a thrown spur lever sends it off the spur first
         var why = wrecked ? "the train is wrecked" : loaded ? "the cart is restored" : "the ride is over";
         foreach (var cart in _carts) Free(cart, why, haul: !wrecked && !loaded);
@@ -316,6 +317,7 @@ public partial class RailEncounterController : Node
         TickGolem(dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
         TickAnswers(); // a boarded, crewed wagon with no hero up is answered: by a seated shot, else a companion climbing to it (and back)
+        TickThrows(dt); // a boarder alone with the prisoners is called out, glows and throws them off (plan 14 Task 5)
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null && _rideRunaway == null)
         {

@@ -43,6 +43,26 @@ public static class BoarderRules
     /// <summary>A hit counts toward the grip: a party member struck it (a player, a companion, a remote player), not thorns or a burn's tick.</summary>
     public static bool Counts(int byMember) => byMember >= 0;
 
+    // ---- a boarder alone with the prisoners (plan 14 Task 5, spec A.4, Rulings 16-17) ----------------------------------------------
+
+    /// <summary>A boarder alone in a wagon throws its first prisoner off after this long counted alone (<see cref="ThrowClock"/>).</summary>
+    public const float ThrowFirst = 6f;
+    /// <summary>And one more after each of these.</summary>
+    public const float ThrowEvery = 4f;
+    /// <summary>It crouches over the crew with a glow (the existing hazard warning) this long before each throw.</summary>
+    public const float ThrowGlow = 1.5f;
+    /// <summary>A thrown prisoner tumbles beside the lane this long, then is gone (hidden, never a corpse).</summary>
+    public const float ThrownHide = 1.2f;
+
+    /// <summary>
+    /// A wagon is alone (A.4): a boarder aboard, at least one crew member seated in it, no hero UP in it (a downed hero does not count), and the
+    /// train rolling.
+    /// </summary>
+    public static bool Alone(bool boarderAboard, int crewAboard, int upHeroesAboard, bool rolling) => boarderAboard && crewAboard > 0 && upHeroesAboard == 0 && rolling;
+
+    /// <summary>The crew seat a throw empties: the rear bench seat 5 first, then 4; null when neither holds a crew member.</summary>
+    public static int? ThrowSeat(bool seat4Taken, bool seat5Taken) => seat5Taken ? 5 : seat4Taken ? 4 : null;
+
     /// <summary>A wagon needs an answer (Ruling 15): a boarder aboard, crew seated in it, and no hero up in it.</summary>
     public static bool NeedsAnswer(bool boarderAboard, int crewAboard, int upHeroesAboard) => boarderAboard && crewAboard > 0 && upHeroesAboard == 0;
 

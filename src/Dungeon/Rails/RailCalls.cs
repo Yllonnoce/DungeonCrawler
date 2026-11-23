@@ -31,4 +31,26 @@ public static class RailCalls
         Called?.Invoke(trigger, said);
         return said;
     }
+
+    /// <summary>
+    /// Call <paramref name="trigger"/> from the train (plan 14 Task 5, Ruling 16): the hero, companion or player, seated in a car of the train
+    /// (<see cref="RailController.CarOf"/>), up, and nearest <paramref name="near"/> speaks it; with nobody to speak, or no line said,
+    /// <paramref name="logIfSilent"/> is logged. Returns the speaker's name when a line was said, else null.
+    /// </summary>
+    public static string? SayNearest(PartyController party, Node3D near, BarkTrigger trigger, string logIfSilent)
+    {
+        Adventurer? speaker = null;
+        var best = float.MaxValue;
+        if (RailController.Instance is { } rails && GodotObject.IsInstanceValid(rails) && GodotObject.IsInstanceValid(near))
+            foreach (var hero in party.Adventurers)
+            {
+                if (!GodotObject.IsInstanceValid(hero) || hero.Downed || hero.Parked || rails.CarOf(hero) < 0) continue;
+                var d = hero.GlobalPosition.DistanceSquaredTo(near.GlobalPosition);
+                if (d < best) { best = d; speaker = hero; }
+            }
+        var said = speaker != null && AdventureDirector.Instance?.CallOut(speaker.State, trigger) == true ? speaker.State.Name : null;
+        if (said == null) EventBus.Instance.Log(logIfSilent);
+        Called?.Invoke(trigger, said);
+        return said;
+    }
 }

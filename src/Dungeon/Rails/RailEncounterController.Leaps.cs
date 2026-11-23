@@ -400,6 +400,7 @@ public partial class RailEncounterController
         h.DeathDrop = () => Beside(h.GlobalPosition);
         h.BoardTarget = NearestCrew(w, h.GlobalPosition);
         _leaps.Add(new Leap { Hound = h, Phase = LeapPhase.Aboard, Dest = w, Spot = 0, ToCart = WireId(w), SentAt = NetSession.Instance?.Now ?? 0 });
+        _debugBoarders.RemoveWhere(e => !IsInstanceValid(e)); // the hounds freed since (Task 4 review M7)
         _debugBoarders.Add(h);
         GD.Print($"[rails] test: a hound boards wagon {wagon}");
         return h;

@@ -22,6 +22,8 @@ public enum BarkTrigger
     SplitWait, SplitNotYet, SplitNow,
     // ride 4's cavern: the bridge going behind the train, a brake on it, the slag line's drop (plan 13; stock only: RideBarks)
     BridgeGoing, BridgeBrake, SlagDrop,
+    // a boarder alone in a wagon with the prisoners: the call before it throws them off (plan 14 Task 5; stock only: RideBarks)
+    BoarderThrow,
 }
 
 public sealed class VoicedCharacter

@@ -755,6 +755,49 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     public bool OnInteract(Npc npc, PartyController party, Adventurer actor) => false;
 
+    // ---- a boarder throws a prisoner off (plan 14 Task 5, Rulings 16-17) ---------------------------------------------
+
+    /// <summary>A thrown prisoner leaves the wagon's rim side this fast (m/s), and this fast up: outward and up, as a derail's riders tumble.</summary>
+    private const float ThrowOut = 2.5f, ThrowUp = 3.5f;
+
+    /// <summary>Prisoners thrown off a wagon on this floor build (tests read it).</summary>
+    internal int Thrown { get; private set; }
+
+    /// <summary>
+    /// A boarder alone with the prisoners throws <paramref name="npc"/> off <paramref name="wagon"/> (server and solo): unseated (its seat's book
+    /// freed, the usual seat message), set down beside the lane by the wagon's rim (<see cref="RailController.StandBesideLane"/>), thrown outward
+    /// and up, dead (<see cref="Npc.Throw"/>: gone <see cref="BoarderRules.ThrownHide"/> later, hidden and fled, never a corpse). It is lost at
+    /// once (<c>LostCrew</c> holds the dead), the log says "{name} is thrown from the wagon!", and clients hear <c>PropEvt wagon:{k} "thrown:{id}"</c>.
+    /// </summary>
+    internal bool ThrowCrew(Npc npc, TrainWagon wagon)
+    {
+        if (NetSession.IsClient || _rails == null || !IsInstanceValid(_rails) || !IsInstanceValid(npc) || npc.Dead || !IsInstanceValid(wagon)) return false;
+        var rim = wagon.BoarderSpotTransform().Origin;
+        var outward = new Vector3(rim.X - wagon.GlobalPosition.X, 0f, rim.Z - wagon.GlobalPosition.Z);
+        outward = outward.LengthSquared() > 1e-6f ? outward.Normalized() : wagon.GlobalTransform.Basis.X;
+        var at = _rails.StandBesideLane(rim + outward * 1.5f);
+        npc.Throw(at, outward * ThrowOut + Vector3.Up * ThrowUp);
+        _home.Remove(npc.Id);
+        Thrown++;
+        EventBus.Instance.Log($"{npc.NpcName} is thrown from the wagon!");
+        EventBus.Instance.RaisePropChanged(wagon.NetRef, $"thrown:{npc.Id}");
+        Evaluate(); // lost now, not at the next tick
+        RefreshHud();
+        return true;
+    }
+
+    /// <summary>
+    /// Client: the server threw crew member <paramref name="id"/> off a wagon (its <c>PropEvt</c>): this copy, dead by the snapshots, is hidden
+    /// after <see cref="BoarderRules.ThrownHide"/> as the server's is. False when there is no such crew member here.
+    /// </summary>
+    public bool ShowThrown(string id)
+    {
+        var npc = _crew.FirstOrDefault(c => IsInstanceValid(c) && c.Id == id);
+        if (npc == null) return false;
+        npc.HideAfter(BoarderRules.ThrownHide);
+        return true;
+    }
+
     // ---- save -------------------------------------------------------------------------------------
 
     public override ObjectiveStateDto Capture()
@@ -926,10 +969,10 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     /// <summary>
     /// Test hook (server and solo): the stop's cage opened if it is locked (as a key would) and its living crew seated at once in the first
-    /// empty seats of the train (<see cref="TrainRules.SeatOrder"/>), with no walk (a flow that restores the cart away from the cage).
-    /// Returns who sat where (empty when nobody could), or null when there is no such cage or this is a client.
+    /// empty seats of the train (<see cref="TrainRules.SeatOrder"/>; only wagon <paramref name="wagon"/>'s when it is given), with no walk (a flow
+    /// that restores the cart away from the cage). Returns who sat where (empty when nobody could), or null when there is no such cage or this is a client.
     /// </summary>
-    internal List<(Npc Npc, int Wagon, int Seat)>? DebugSeatCrew(int stop)
+    internal List<(Npc Npc, int Wagon, int Seat)>? DebugSeatCrew(int stop, int wagon = 0)
     {
         if (NetSession.IsClient || _rails == null || !IsInstanceValid(_rails) || Main.Instance?.Party is not { } party) return null;
         if (_cages.FirstOrDefault(c => c.Stop == stop) is not { } cage) return null;
@@ -942,10 +985,10 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             if (_bookings.Remove(npc, out var booked)) StopWalking(npc, booked); // its own seat counts as free again
             foreach (var (k, seat) in order)
             {
-                if (_rails.WagonAt(k) is not { } wagon || !SeatFree(k, seat)) continue;
+                if (wagon > 0 && k != wagon || _rails.WagonAt(k) is not { } w || !SeatFree(k, seat)) continue;
                 if (npc.Seated) npc.GetOut(npc.GlobalPosition);
-                if (!wagon.Seats.Put(npc.RiderId, seat)) continue;
-                npc.SitIn(wagon, seat);
+                if (!w.Seats.Put(npc.RiderId, seat)) continue;
+                npc.SitIn(w, seat);
                 seated.Add((npc, k, seat));
                 break;
             }

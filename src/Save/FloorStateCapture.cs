@@ -49,7 +49,7 @@ public static class FloorStateCapture
                 case LootDrop { QuestId: not null }:
                     break; // quest items are tracked by TakenQuestItems
                 case Npc npc:
-                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Fled = npc.Fled, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
+                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Fled = npc.Fled || npc.Thrown, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
                     break;
                 case LootDrop drop when !drop.IsQueuedForDeletion():
                     dto.Items.Add(new WorldItemDto { Item = SaveMapper.ToDto(drop.Item), Coins = drop.Coins, DroppedByParty = drop.DroppedByParty, X = drop.GlobalPosition.X, Y = drop.GlobalPosition.Y, Z = drop.GlobalPosition.Z });

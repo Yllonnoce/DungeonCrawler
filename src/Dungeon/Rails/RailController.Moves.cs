@@ -58,23 +58,43 @@ public partial class RailController
     public int CarCarrying(Node? carrier) => carrier == null ? -1 : CarNumberOf(carrier);
 
     /// <summary>
-    /// A companion answering a boarded wagon (Task 4, Ruling 15): the car its next move toward car <paramref name="toCar"/> goes to
-    /// (<see cref="TrainMoveRules.AnswerStep"/> on this peer's book of free places), or null when there is none that way.
+    /// A companion answering a boarded wagon (Task 4, Ruling 15): the car number its next move toward car <paramref name="toCar"/> goes to
+    /// (<see cref="TrainMoveRules.AnswerStep"/> on this peer's book of free places, <paramref name="toCar"/>'s counted as the answer's landing
+    /// counts it: <see cref="AnswerSeatIn"/>), or null when there is none that way.
     /// </summary>
-    internal ICartBody? AnswerStepFor(Adventurer hero, int toCar)
+    internal int? AnswerStepFor(Adventurer hero, int toCar)
     {
         var from = IsInstanceValid(hero) ? CarOf(hero) : -1;
         if (from < 0 || from == toCar) return null;
-        return TrainMoveRules.AnswerStep(from, toCar, PlacesFree()) is int to ? CarBody(to) : null;
+        return TrainMoveRules.AnswerStep(from, toCar, PlacesFree(answerTo: toCar)) is int to && CarBody(to) != null ? to : null;
     }
 
-    /// <summary>The hero places free now, by car: [0] a hero seat of the cart, [k] Wk's seat 0 (a wagon lost reads taken). No allocation.</summary>
-    private IReadOnlyList<bool> PlacesFree()
+    /// <summary>The train's car <paramref name="car"/> (0 the party's cart, k the coupled wagon Wk), or null (the answer's step names it by number).</summary>
+    internal ICartBody? CarAt(int car) => CarBody(car);
+
+    /// <summary>
+    /// The hero places free now, by car: [0] a hero seat of the cart, [k] Wk's seat 0 (a wagon lost reads taken); car <paramref name="answerTo"/>,
+    /// the wagon an answering companion is bound for, reads free while the answer's landing has a seat there (<see cref="AnswerSeatIn"/>: a crew
+    /// bench seat when a downed hero holds its hero place; Task 5, Task 4 review M2). No allocation.
+    /// </summary>
+    private IReadOnlyList<bool> PlacesFree(int answerTo = -1)
     {
         _placeFree.Clear();
         _placeFree.Add(HeroSeatFree());
-        for (var k = 1; k <= _wagons.Count; k++) _placeFree.Add(CarBody(k) is TrainWagon wagon && wagon.HeroPlaceFree);
+        for (var k = 1; k <= _wagons.Count; k++)
+            _placeFree.Add(CarBody(k) is TrainWagon wagon && (wagon.HeroPlaceFree || k == answerTo && AnswerSeatIn(wagon) != null));
         return _placeFree;
+    }
+
+    /// <summary>
+    /// The seat an answering companion lands in on <paramref name="wagon"/> (<see cref="TrainMoveRules.AnswerSeat"/>): its hero place when free;
+    /// when a downed hero sits there, a free crew bench seat (4, then 5); else null. A player's move never lands anywhere but the hero place.
+    /// </summary>
+    internal int? AnswerSeatIn(TrainWagon wagon)
+    {
+        var holder = wagon.Seats.OccupantOf(TrainRules.HeroPlace);
+        var downed = holder is int id && wagon.Riders.TryGetValue(id, out var rider) && rider is Adventurer { Downed: true };
+        return TrainMoveRules.AnswerSeat(holder == null, downed, wagon.Seats.OccupantOf(TrainRules.CrewSeats[0]) == null, wagon.Seats.OccupantOf(TrainRules.CrewSeats[1]) == null);
     }
 
     private double SincePress(Adventurer hero) => _movePressedAt.TryGetValue(hero.Index, out var at) ? _now - at : double.PositiveInfinity;
@@ -156,8 +176,11 @@ public partial class RailController
     /// <summary>The server (and single player) takes <paramref name="body"/>'s move to <paramref name="target"/> (Ruling 10). False on a client.</summary>
     public bool MoveAccepts(Adventurer body, Node target) => WhyMoveRefused(body, target) == null;
 
-    /// <summary>Why the server (or single player) would refuse <paramref name="body"/>'s move to <paramref name="target"/> now, or null when it takes it.</summary>
-    public string? WhyMoveRefused(Adventurer body, object target)
+    /// <summary>
+    /// Why the server (or single player) would refuse <paramref name="body"/>'s move to <paramref name="target"/> now, or null when it takes it.
+    /// <paramref name="answerTo"/>: the wagon a companion's answer is bound for, whose place it judges as the answer's landing (<see cref="AnswerSeatIn"/>).
+    /// </summary>
+    public string? WhyMoveRefused(Adventurer body, object target, int answerTo = -1)
     {
         if (NetSession.IsClient) return "a client judges no move";
         if (!Current || !IsInstanceValid(body)) return "no line";
@@ -168,7 +191,7 @@ public partial class RailController
         var inTrain = from >= 0;
         var refused = MovesRefused;
         var since = _moveAcceptedAt.TryGetValue(body.Index, out var at) ? _now - at : double.PositiveInfinity;
-        int? serverTarget = inTrain && from != to ? TrainMoveRules.Target(from, Math.Sign(to - from), PlacesFree()) : null;
+        int? serverTarget = inTrain && from != to ? TrainMoveRules.Target(from, Math.Sign(to - from), PlacesFree(answerTo)) : null;
         if (TrainMoveRules.Accepted(up, inTrain, refused, since, to, serverTarget) && !HopUnderWay(body)) return null;
         if (!up) return "down";
         if (!inTrain) return "not in the train";
@@ -176,21 +199,23 @@ public partial class RailController
         if (refused) return State.Mode != CartMode.Rolling ? "the train is not rolling" : HoldsRiders ? "the train is on the live bridge" : "a lever window is open";
         if (HopUnderWay(body)) return "a hop under way";
         if (since < TrainMoveRules.MoveCooldown - TrainMoveRules.AcceptSlack) return $"{since:0.00} s after the last";
-        return PlacesFree()[to] ? $"the nearest free place that way is car {serverTarget?.ToString() ?? "none"}" : "the place is booked";
+        return PlacesFree(answerTo)[to] ? $"the nearest free place that way is car {serverTarget?.ToString() ?? "none"}" : "the place is booked";
     }
 
     /// <summary>
     /// <paramref name="hero"/> climbs to <paramref name="target"/> (server and solo; taken by <see cref="WhyMoveRefused"/>): the place is booked in
     /// its seat book (the cart's first free hero seat, a wagon's seat 0), the hop starts (it lands in <see cref="TickMoves"/>) and the jump's cue
-    /// plays where the body sits. <paramref name="why"/> says who asked (a press, a companion's answer, a test). True when it was taken.
+    /// plays where the body sits. <paramref name="why"/> says who asked (a press, a companion's answer, a test). <paramref name="answerTo"/>: a
+    /// companion's answer bound for that wagon, which may land on a crew bench seat of it when a downed hero holds its hero place
+    /// (<see cref="AnswerSeatIn"/>; Task 5, Task 4 review M2). True when it was taken.
     /// </summary>
-    public bool Move(Adventurer hero, ICartBody target, string why)
+    public bool Move(Adventurer hero, ICartBody target, string why, int answerTo = -1)
     {
         if (NetSession.IsClient) return false;
         var name = IsInstanceValid(hero) ? hero.State.Name : "?";
         var from = IsInstanceValid(hero) ? CarOf(hero) : -1;
         var to = CarNumberOf(target);
-        if (WhyMoveRefused(hero, target) is { } no)
+        if (WhyMoveRefused(hero, target, answerTo) is { } no)
         {
             LastMoveRefused = no;
             MovesRefusedCount++;
@@ -205,15 +230,15 @@ public partial class RailController
         }
         else
         {
-            if (!target.Seats.Put(hero.RiderId, TrainRules.HeroPlace)) return false;
-            seat = TrainRules.HeroPlace;
+            seat = to == answerTo && target is TrainWagon wagon && AnswerSeatIn(wagon) is int landing ? landing : TrainRules.HeroPlace;
+            if (!target.Seats.Put(hero.RiderId, seat)) return false;
         }
         _moveAcceptedAt[hero.Index] = _now;
         _hops.Add(new Hop(hero, target, seat, from, to, _now, why));
         MovesTaken++;
         LastMoveRefused = null;
         RideAudio.At("cart_jump", hero.GlobalPosition);
-        GD.Print($"[rails] move: {name} {(to > from ? "back" : "forward")} from car {from} to car {to} ({why}) at S={State.S:0.0}");
+        GD.Print($"[rails] move: {name} {(to > from ? "back" : "forward")} from car {from} to car {to}{(seat != TrainRules.HeroPlace && to > 0 ? $" seat {seat} (a downed hero holds its place)" : "")} ({why}) at S={State.S:0.0}");
         return true;
     }
 

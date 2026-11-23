@@ -16,8 +16,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <item>Only with nobody having a shot does an answerer move: the nearest blade or hero bot climbs toward the wagon one car at a time
 /// (<see cref="TrainMoveRules.AnswerStep"/> through <see cref="RailController.Move"/>), at most one move per <see cref="TrainMoveRules.MoveCooldown"/>,
 /// never while a hop of its own is under way or while <see cref="RailController.MovesRefused"/>, and only while its wagon still has a boarder.
-/// There it fights from the seat by its own brain. Once its wagon has had no boarder for <see cref="TrainMoveRules.AnswerBack"/> it climbs back
-/// toward the cart, while the cart has a free hero seat (with none it stays where it sits).</item>
+/// There it fights from the seat by its own brain; when a downed hero holds that wagon's hero place it lands on a free crew bench seat of it
+/// (<see cref="RailController.AnswerSeatIn"/>; Task 5, Task 4 review M2), and with both bench seats held by crew it waits one car short. Once
+/// its wagon has had no boarder for <see cref="TrainMoveRules.AnswerBack"/> it climbs back toward the cart, while the cart has a free hero seat (with none it stays where it sits).</item>
 /// </list>
 /// <see cref="DebugHoldAnswers"/> stops all of it.
 /// </summary>
@@ -77,12 +78,6 @@ public partial class RailEncounterController
         foreach (var rider in wagon.Riders.Values)
             if (rider is Adventurer { Downed: false, Parked: false } hero && IsInstanceValid(hero)) n++;
         return n;
-    }
-
-    private bool CartHeroSeatFree()
-    {
-        for (var i = 0; i < CartSeats.HeroSeats; i++) if (_rails.Cart.Seats.OccupantOf(i) == null) return true;
-        return false;
     }
 
     private bool Answering(Adventurer hero)
@@ -198,7 +193,7 @@ public partial class RailEncounterController
         if (!a.Returning && a.ClearSince >= 0 && _now - a.ClearSince >= TrainMoveRules.AnswerBack)
         {
             if (car == 0) return false; // the boarder went before it left the cart
-            if (!CartHeroSeatFree()) { GD.Print($"[rails] answer: {name} stays in car {car}: the cart has no free hero seat"); return false; }
+            if (!_rails.HeroSeatFree()) { GD.Print($"[rails] answer: {name} stays in car {car}: the cart has no free hero seat"); return false; }
             a.Returning = true;
             GD.Print($"[rails] answer: {name} goes back to the cart (wagon {a.Wagon} clear {_now - a.ClearSince:0.0} s)");
         }
@@ -207,15 +202,15 @@ public partial class RailEncounterController
             GD.Print($"[rails] answer: {name} is back in the cart after {a.Route.Count} move(s) [{string.Join(" > ", a.Route)}]");
             return false;
         }
-        if (a.Returning && !CartHeroSeatFree()) { GD.Print($"[rails] answer: {name} stays in car {car}: the cart has no free hero seat"); return false; }
+        if (a.Returning && !_rails.HeroSeatFree()) { GD.Print($"[rails] answer: {name} stays in car {car}: the cart has no free hero seat"); return false; }
         if (!a.Returning && boarder == null) return true; // the wagon is clear: it advances no further (fix round 1, review M1)
         var toward = a.Returning ? 0 : a.Wagon;
         if (car == toward || _rails.MovesRefused || _now - a.LastMove < TrainMoveRules.MoveCooldown) return true;
-        if (_rails.AnswerStepFor(hero, toward) is not { } step) return true; // every place that way short of where it goes is taken: it waits
-        if (_rails.Move(hero, step, "answer"))
+        if (_rails.AnswerStepFor(hero, toward) is not int step || _rails.CarAt(step) is not { } to) return true; // every place that way short of where it goes is taken: it waits
+        if (_rails.Move(hero, to, "answer", answerTo: a.Returning ? -1 : a.Wagon)) // its own wagon's downed hero never keeps it out (Task 5, Task 4 review M2)
         {
             a.LastMove = _now;
-            a.Route.Add(_rails.CarCarrying(step as Node));
+            a.Route.Add(step);
         }
         return true;
     }

@@ -576,6 +576,9 @@ public partial class ClientWorld : Node
             case (Dungeon.Rails.MineCart spare, "used"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: true); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.MineCart spare, "restored"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: false); break;
             case (Dungeon.Rails.PlatformCage c, "opened"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowCageOpen(c.Stop); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.TrainWagon, var what) when what.StartsWith("thrown:", StringComparison.Ordinal): // a boarder threw a prisoner off (plan 14 Task 5)
+                if ((Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowThrown(what["thrown:".Length..]) == true) Trace.Add("rail-prop");
+                break;
             case (Adventure.Objectives.OrcKeyring, "taken"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowKeysTaken(); Trace.Add("rail-prop"); break;
         }
         Dungeon.Rails.RideAudio.OnProp(pe.Ref, pe.What); // a rail prop's sound (RideSound.PropCue; none for any other): the live event only, never a prop state's catch-up
