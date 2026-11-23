@@ -35,8 +35,8 @@ public partial class DebugTools
     // the crossing pass (fix round 1, (e))
     private int _bdXPass, _bdXStep, _bdXMark;
     private float _bdXClock;
-    /// <summary>A hound lands at least this long before the golem's burst (fix round 1, (d); plan 15 Task 4, the coordinator's ruling: 1.5 → 0.5 s, measured 0.68 and 0.60 s with r5_hounds at S 1097.0).</summary>
-    private const float BdGolemMargin = 0.5f;
+    /// <summary>A hound lands at least this long before the golem's burst (fix round 1, (d); plan 15 Task 4, the coordinator's rulings: 1.5 → 0.5 s, then 0.4 s in fix round 1, for 0.2 s of headroom on the 0.60-0.68 s measured with r5_hounds at S 1097.0).</summary>
+    private const float BdGolemMargin = 0.4f;
     // a miss's take-off (Task 8 fix round 1): each hound riding a slag cart with its flat distance to the nearest coupled car's body (the
     // party's cart or a coupled wagon), read every frame, so the frame before a miss starts gives its take-off distance
     private readonly Dictionary<string, float> _leapNearest = new();

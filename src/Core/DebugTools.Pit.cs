@@ -224,7 +224,7 @@ public partial class DebugTools
                 var how = _ptVariant switch
                 {
                     "stall" => "caught 25 m before the lever, 8 m before it, 3 m short of the points and 5 m past them, the watchdog set the train at the window's start, then at the last call's mark (the last call still heard), then at the points (taken straight), then ground it into the pit",
-                    "late" => "the lead's press on the tick the front reached the points and again 1 m past them each too late (\"Too late to throw it.\"), the lever left straight",
+                    "late" => "the lead's press on the tick the front reached the points and again 1 m past them each judged too late by the server's late rule (LateFor: TooLate) and a local press there moving nothing, the lever left straight (no message is told in solo: \"Too late to throw it.\" is the server's to a remote presser)",
                     _ => "nobody pressed",
                 };
                 var earlyM = (enc.PitSwitch?.LeverS ?? float.NaN) - _ptEarlyFront;

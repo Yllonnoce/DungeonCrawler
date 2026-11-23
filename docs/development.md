@@ -3566,7 +3566,7 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - **Ride 5's lava pit** (plan 15 Task 4), an **owner's feel call**: a party pumping hard past ride 5's pit outruns `r5_hounds`: the
   golem's burst at S 1125.1 frees their cart with the hounds still aboard, in view. `r5_hounds` stands at S 1097.0, the first S with the
   train's rear home past `r5_switch_back` on its spawn tick; ridden unpumped its hounds land only 0.60–0.68 s before the burst (the flows'
-  margin is 0.5 s), and the pumped estimate is below zero.
+  margin is 0.4 s, 0.2 s of headroom), and the pumped estimate is below zero.
 - **The chaser:**
   - it does not take crew on foot;
   - held short of a hole whose far side its limit cannot clear, it waits at the near lip; behind a train held at the end of the line it would wait there for good (its riders may get out).

@@ -70,7 +70,7 @@
 #                                     the train (hopping ride 5's pit and the fallen
 #                                     trestle) and halts within 3 m of its last body (chase-done on both sides; no relief cart was sent online); the first client leaves
 #                                     seated once the chaser has gone; the server then wrecks the cart at the end of the line by a test
-#                                     hook: past the exit bridge's start no spare takes over and its riders are set down inside (the
+#                                     hook: past the exit bridge's start no spare takes over and its riders, if any rode, are set down inside (the
 #                                     joiner sees Wrecked and no takeover); the test restores the cart at stop 4 (not a rise) and wrecks it
 #                                     there: the joiner sees a spare's takeover (stop 3's; wrecked again
 #                                     3 s later, stop 2's, where ride 3 with the heap leaves; only the end's wreck is in earshot); it boards that cart
@@ -170,7 +170,10 @@ if [ "${RIDE:-}" = 1 ]; then
   # Ruling 42: the end-of-line wreck lies past the exit bridge's start (B.2): no spare took over and the riders were set down inside, the joiner
   # seeing Wrecked and no takeover; then the test's restore at stop 4 (not a rise: the wipe-rise watch reads none of it) and the wreck there with
   # a spare (stop 3's), from which the old steps run
-  if ! grep -q "\[net-server\] ride: wreck at the end of the line: past the exit bridge's start, no spare took over; [0-9]* hero(es) set down inside .*(ok)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: $(grep -m1 "\[net-server\] ride: wreck at the end of the line" "$TMP/server.log"))"; exit 1; fi
+  # fix round 1 (I1): either one hero or more rode and every one was set down inside ("(ok)"), or nobody rode and the line says so; never
+  # "0 … (ok)" (a hero seated for the set-down is Task 8's)
+  if ! grep -q "\[net-server\] ride: wreck at the end of the line: past the exit bridge's start, no spare took over; [1-9][0-9]* hero(es) set down inside (of [1-9][0-9]* riding; .*(ok)$" "$TMP/server.log" \
+     && ! grep -q "\[net-server\] ride: wreck at the end of the line: past the exit bridge's start, no spare took over; nobody riding: no hero in the train to set down (.*(nobody riding)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: $(grep -m1 "\[net-server\] ride: wreck at the end of the line" "$TMP/server.log"))"; exit 1; fi
   if ! grep -q "\[net\] ride: wreck at the end of the line: the cart showed Wrecked here and no spare took over" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner did not see the end-of-line wreck with no takeover)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: test restore at stop [0-9]* (not a rise)" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never restored the cart at the kiln's stop after the inside wreck)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: wreck: .* took over" "$TMP/server.log" || grep -q "\[net-server\] ride: wreck: .* did NOT take over" "$TMP/server.log" || ! grep -q "\[net\] ride: wreck: the cart showed Wrecked here" "$TMP/joiner.log" || ! grep -q "\[net\] ride: wreck-spare:" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: no spare took over, or the joiner did not see the Wrecked state and then the takeover)"; exit 1; fi
