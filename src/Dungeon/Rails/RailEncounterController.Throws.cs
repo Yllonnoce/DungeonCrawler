@@ -16,7 +16,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <item>An alone stretch begins: the seated up hero of the train nearest the wagon calls it (<see cref="RailCalls.SayNearest"/>,
 /// <see cref="BarkTrigger.BoarderThrow"/>); with nobody to speak the log reads "It's at the prisoners — wagon {k}!".</item>
 /// <item><see cref="BoarderRules.ThrowGlow"/> before each throw the hound crouches over the crew with the hazard warning's glow
-/// (<see cref="TelegraphFx.HandGlow"/>, as the leap's crouch).</item>
+/// (<see cref="TelegraphFx.HandGlow"/>), told to clients as the telegraph <see cref="TelegraphRules.BoarderThrow"/> (the kiln golem's path).</item>
 /// <item>At <see cref="BoarderRules.ThrowFirst"/>, and each <see cref="BoarderRules.ThrowEvery"/> after, it throws one crew member off, the
 /// rear bench seat first (<see cref="BoarderRules.ThrowSeat"/>), through <see cref="CrewRescueController.ThrowCrew"/>.</item>
 /// </list>
@@ -72,6 +72,7 @@ public partial class RailEncounterController
             }
             case ThrowStep.Glow:
                 TelegraphFx.HandGlow(hound, BoarderRules.ThrowGlow); // the crouch over the crew: the hazard warning's glow, as the leap's
+                EventBus.Instance.RaiseEnemyTelegraph(hound, TelegraphRules.BoarderThrow); // clients glow it too (EnemyStateMsg, as the kiln golem's fist: Enemy.ClientTelegraph)
                 ThrowLog.Add((k, step, Engine.GetPhysicsFrames(), clock.Running, clock.Paused, hound.Name));
                 GD.Print($"[rails] t={_now:0.00} {hound.Name} crouches over the crew of wagon {k} ({clock.Running:0.0} s alone)");
                 break;

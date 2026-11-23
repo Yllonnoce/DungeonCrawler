@@ -374,7 +374,12 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             return;
         }
         var v = Velocity;
-        v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;
+        // a throw's launch (plan 14 Task 5 fix round 1): IsOnFloor is the last MoveAndSlide's, and a seated body made none, so one that stood on
+        // the ground before it sat would read "on the floor" on its first tick out and lose the throw; for ThrowLaunch it flies whatever it says
+        var launching = _launchLeft > 0f;
+        if (launching) _launchLeft -= dt;
+        var grounded = IsOnFloor() && !launching;
+        v.Y = grounded ? 0f : v.Y - _gravity * dt;
         var planar = Vector3.Zero;
         var party = Main.Instance?.Party;
         var speed = WalkSpeed;
@@ -429,7 +434,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             if (Mode == NpcMode.Quest) CheckStairs();
             Hazard(dt);
         }
-        if (Thrown && _hideLeft > 0f && !IsOnFloor()) planar = new Vector3(v.X, 0f, v.Z); // thrown: it keeps its outward way until it lands
+        if (Thrown && _hideLeft > 0f && !grounded) planar = new Vector3(v.X, 0f, v.Z); // thrown: it keeps its outward way until it lands
         v.X = planar.X;
         v.Z = planar.Z;
         Velocity = v;
@@ -858,11 +863,14 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public bool Thrown { get; private set; }
     /// <summary>Seconds until the body is hidden (a throw's tumble, or a client's copy told of one), or 0 when none is pending.</summary>
     private float _hideLeft;
+    /// <summary>A throw's body flies this long whatever <c>IsOnFloor</c> says (its last value is from before it sat): long enough to leave the ground.</summary>
+    public const float ThrowLaunch = 0.1f;
+    private float _launchLeft;
 
     /// <summary>
     /// Thrown from a wagon by a boarder alone with the prisoners (plan 14 Task 5, Ruling 17), server and solo: the death with no corpse. Dead and out
-    /// of the escort at once, the death clip; unseated (its seat's book freed, the usual seat message) and set down at <paramref name="at"/> beside
-    /// the lane with <paramref name="velocity"/> (outward and up), it tumbles; <see cref="Dungeon.Rails.BoarderRules.ThrownHide"/> later it is hidden
+    /// of the escort at once, the death clip; unseated (its seat's book freed, the usual seat message) at <paramref name="at"/> (over the wagon's rim)
+    /// with <paramref name="velocity"/>, it flies (for <see cref="ThrowLaunch"/> whatever its stale floor state says) and lands beside the lane; <see cref="Dungeon.Rails.BoarderRules.ThrownHide"/> later it is hidden
     /// and <see cref="Fled"/> (gone, not a corpse), so a save, a load and a client keep it gone. Logs nothing: the controller logs.
     /// </summary>
     public void Throw(Vector3 at, Vector3 velocity)
@@ -875,6 +883,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         _label.Text = $"{NpcName} (dead)";
         _model?.Play("Death", force: true);
         GetOut(at, velocity); // LeaveSeat keeps it on no layer (dead)
+        _launchLeft = ThrowLaunch;
         HideAfter(Dungeon.Rails.BoarderRules.ThrownHide);
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Died);
     }

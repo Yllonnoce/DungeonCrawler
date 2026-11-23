@@ -51,6 +51,8 @@ public partial class DebugTools
     private int _bdThrowsBase;
     private int _bdLogMark;
     private readonly Dictionary<int, string> _bdSeatOf = new(); // a wagon's crew by bench seat
+    private readonly HashSet<string> _bdWalked = new(); // =throw: the crew seen on foot before the ride (they walked to their seats)
+    private readonly List<(Enemies.Enemy Hound, ulong Frame)> _bdTelegraphs = new(); // the throw's glow told as a telegraph
     /// <summary>A wagon's track curvature (1/m) from which the reach sample counts as "in a bend" (a radius of 25 m or less); under 0.01 is the straight.</summary>
     private const float BdBendK = 0.04f;
 
@@ -83,6 +85,8 @@ public partial class DebugTools
         if (v != "move") foreach (var a in party.Adventurers) if (IsInstanceValid(a) && !a.Parked && !a.Downed) a.State.Hp = a.State.Stats[Characters.Stat.MaxHp]; // the hounds bite: nobody goes down
         enc.RunawayClock = 0f; // no traffic runaway on the party line
         if (party.Local is not { } me) { Fail("no human"); return; }
+        if (v == "throw" && _bdStep is >= 1 and <= 3 && ObjectiveController.Instance is CrewRescueController walkers) // who of stop 1's crew stood on the ground
+            foreach (var c in walkers.Crew) if (IsInstanceValid(c) && c.Freed && !c.Dead && !c.Seated) _bdWalked.Add(c.Id);
 
         switch (_bdStep)
         {
@@ -92,7 +96,16 @@ public partial class DebugTools
                 rc.Restore(startStop);
                 GD.Print($"[boarders] floor 12 ({v}): restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Number))}]; lethality {TierRules.Lethality}");
                 if (rc.Train.Count != 4) { Fail($"the train has {rc.Train.Count} wagons, not 4"); return; }
-                if (v != "move")
+                if (v == "throw")
+                {
+                    // fix round 1 (I1): stop 1's crew walk out of the opened cage to their seats in W3, as in play (they stand on the ground first)
+                    if (ObjectiveController.Instance is not CrewRescueController walk) { Fail("no crew controller"); return; }
+                    walk.DebugBoardWagon = 3;
+                    if (!walk.DebugOpen(startStop)) { Fail($"stop {startStop}'s cage could not be opened"); return; }
+                    _bdWalked.Clear();
+                    GD.Print($"[boarders] stop {startStop}'s cage opened by the test's hook: its crew walk to W3");
+                }
+                else if (v != "move")
                 {
                     // the stop's cage holds the cart while locked (CageHoldRules): opened by the test's hook, its crew seated at once (in W1, or the variant's wagon)
                     if (ObjectiveController.Instance is not CrewRescueController ctrl || ctrl.DebugSeatCrew(startStop, crewWagon) is not { Count: > 0 } crew) { Fail($"stop {startStop}'s crew could not be seated"); return; }
@@ -163,6 +176,11 @@ public partial class DebugTools
             else if (!text.Contains(" climbs ", StringComparison.Ordinal)) return;
             else { _bdSaid.Add(text); _bdClimbFrame = Engine.GetPhysicsFrames(); } // a landing's line, logged in the rail controller's tick
             GD.Print($"[boarders] logged: \"{text}\"");
+        };
+        EventBus.Instance.EnemyTelegraph += (e, state) =>
+        {
+            if (_done || !_testBoarders || state != Enemies.TelegraphRules.BoarderThrow) return;
+            _bdTelegraphs.Add((e, Engine.GetPhysicsFrames()));
         };
         EventBus.Instance.PropChanged += (r, what) =>
         {

@@ -23,6 +23,11 @@ public static class TelegraphRules
     public const string RailSlam = "RailSlam";
     /// <summary>How long the golem's fist glows before the slam.</summary>
     public const float RailSlamWindup = 1.5f;
+    /// <summary>
+    /// A wagon boarder alone with the prisoners crouches over them with the glow before it throws one off (plan 14 Task 5, fix round 1 I2): the
+    /// telegraph's state name on the wire, so a client's copy glows too (<c>BoarderRules.ThrowGlow</c> long).
+    /// </summary>
+    public const string BoarderThrow = "BoarderThrow";
 
     public static float Delay(Signature s) => s == Signature.Charge ? ChargeDelay : s == Signature.Volley ? VolleyDelay : s == Signature.Summon ? SummonDelay : SlamDelay;
     /// <summary>The clip speed that puts its strike frame at the end of the wind-up.</summary>

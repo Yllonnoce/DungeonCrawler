@@ -623,11 +623,14 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         }
     }
 
+    /// <summary>Test hook: freed crew book seats only in this wagon while it is set (0: the train's first free seats).</summary>
+    internal int DebugBoardWagon { get; set; }
+
     /// <summary>The first seat of <paramref name="order"/> in a coupled wagon that nobody sits in or has booked, or null.</summary>
     private (int Wagon, int Seat)? FirstFreeSeat(IReadOnlyList<(int Wagon, int Seat)> order)
     {
         foreach (var p in order)
-            if (SeatFree(p.Wagon, p.Seat)) return p;
+            if ((DebugBoardWagon <= 0 || p.Wagon == DebugBoardWagon) && SeatFree(p.Wagon, p.Seat)) return p;
         return null;
     }
 
@@ -757,26 +760,41 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     // ---- a boarder throws a prisoner off (plan 14 Task 5, Rulings 16-17) ---------------------------------------------
 
-    /// <summary>A thrown prisoner leaves the wagon's rim side this fast (m/s), and this fast up: outward and up, as a derail's riders tumble.</summary>
-    private const float ThrowOut = 2.5f, ThrowUp = 3.5f;
+    /// <summary>A thrown prisoner flies this long from over the wagon's rim to its set-down spot beside the enemy lane (fix round 1, I1 and M1).</summary>
+    private const float ThrowFlight = 0.9f;
+    /// <summary>Its set-down spot is at least this far, and at most this far, from where it leaves the wagon (flat metres).</summary>
+    private const float ThrowMin = 1.5f, ThrowMax = 4.5f;
 
     /// <summary>Prisoners thrown off a wagon on this floor build (tests read it).</summary>
     internal int Thrown { get; private set; }
 
+    /// <summary>Each throw's launch (tests read it), by crew id: where it left (over the rim), the set-down spot it was aimed at, its velocity, and the wagon's pose then.</summary>
+    internal readonly Dictionary<string, (Vector3 Seat, Vector3 From, Vector3 To, Vector3 Velocity, Transform3D Wagon)> ThrowLaunches = new();
+
     /// <summary>
     /// A boarder alone with the prisoners throws <paramref name="npc"/> off <paramref name="wagon"/> (server and solo): unseated (its seat's book
-    /// freed, the usual seat message), set down beside the lane by the wagon's rim (<see cref="RailController.StandBesideLane"/>), thrown outward
-    /// and up, dead (<see cref="Npc.Throw"/>: gone <see cref="BoarderRules.ThrownHide"/> later, hidden and fled, never a corpse). It is lost at
-    /// once (<c>LostCrew</c> holds the dead), the log says "{name} is thrown from the wagon!", and clients hear <c>PropEvt wagon:{k} "thrown:{id}"</c>.
+    /// freed, the usual seat message) from over the rim above its seat, and thrown on an arc of <see cref="ThrowFlight"/> to a set-down spot on the
+    /// enemy lane's side (<see cref="RailController.SetAsideBesideEnemyLane"/>, Ruling 16 as ruled in fix round 1, M1), dead (<see cref="Npc.Throw"/>:
+    /// gone <see cref="BoarderRules.ThrownHide"/> later, hidden and fled, never a corpse). It is lost at once (<c>LostCrew</c> holds the dead), the log
+    /// says "{name} is thrown from the wagon!", and clients hear <c>PropEvt wagon:{k} "thrown:{id}"</c>. No rng: the arc is the spot's.
     /// </summary>
     internal bool ThrowCrew(Npc npc, TrainWagon wagon)
     {
         if (NetSession.IsClient || _rails == null || !IsInstanceValid(_rails) || !IsInstanceValid(npc) || npc.Dead || !IsInstanceValid(wagon)) return false;
-        var rim = wagon.BoarderSpotTransform().Origin;
-        var outward = new Vector3(rim.X - wagon.GlobalPosition.X, 0f, rim.Z - wagon.GlobalPosition.Z);
-        outward = outward.LengthSquared() > 1e-6f ? outward.Normalized() : wagon.GlobalTransform.Basis.X;
-        var at = _rails.StandBesideLane(rim + outward * 1.5f);
-        npc.Throw(at, outward * ThrowOut + Vector3.Up * ThrowUp);
+        // it leaves from over the rim above its seat (the tub is solid to it: layer 4), clear of the box
+        var seatAt = wagon.SeatTransform(npc.Seat).Origin;
+        var seat = wagon.GlobalTransform.AffineInverse() * seatAt;
+        var from = wagon.GlobalTransform * new Vector3(seat.X, MineCart.TubBottom + MineCart.TubHeight + 0.05f, seat.Z);
+        var to = _rails.SetAsideBesideEnemyLane(wagon.GlobalPosition) + Vector3.Up * 0.05f;
+        var flat = new Vector3(to.X - from.X, 0f, to.Z - from.Z);
+        if (flat.Length() < 0.1f) flat = wagon.GlobalTransform.Basis.X; // straight over the side (never met: the spot is off the lanes)
+        var d = Mathf.Clamp(flat.Length(), ThrowMin, ThrowMax);
+        flat = flat.Normalized() * d;
+        to = new Vector3(from.X + flat.X, to.Y, from.Z + flat.Z);
+        var g = (float)ProjectSettings.GetSetting("physics/3d/default_gravity", 9.8f).AsDouble();
+        var velocity = flat / ThrowFlight + Vector3.Up * ((to.Y - from.Y) / ThrowFlight + 0.5f * g * ThrowFlight); // lands on `to` after ThrowFlight
+        ThrowLaunches[npc.Id] = (seatAt, from, to, velocity, wagon.GlobalTransform);
+        npc.Throw(from, velocity);
         _home.Remove(npc.Id);
         Thrown++;
         EventBus.Instance.Log($"{npc.NpcName} is thrown from the wagon!");

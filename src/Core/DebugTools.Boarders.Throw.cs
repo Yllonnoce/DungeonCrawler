@@ -8,17 +8,21 @@ using Godot;
 namespace DungeonCrawler.Core;
 
 // ---- --test-boarders=throw (plan 14, Task 5; the default): see DebugTools.Boarders.cs for the flow as a whole ----------------------------
-// Restored at stop 1 with its two crew seated in W3, rolling on ride 2 with every hero in the cart, the lead included. Nobody answers
+// Restored at stop 1; its cage is opened and its two crew walk out of it to their seats in W3 as in play (fix round 1, I1: they stand on the
+// ground first, CrewRescueController.DebugBoardWagon only picks the wagon), rolling on ride 2 with every hero in the cart, the lead included. Nobody answers
 // (DebugHoldAnswers), the companions hold fire (DebugHoldFire) and the hounds never drop below 1 HP (DebugBoard holdHp), so the throw clock alone
 // is measured, in physics frames from the hound's landing.
 //  - Part 1: a hound is put on W3. The call comes within 0.1 s of the landing (the nearest seated hero's line, or the log's "It's at the
 //    prisoners — wagon 3!"); the glows at 4.5 ± 0.1 s and 8.5 ± 0.1 s; the throws at 6.0 ± 0.1 s (seat 5's crew member) and 10.0 ± 0.1 s (seat
-//    4's), none of it paused. Each thrown crew member is dead, unseated, hidden 1.2 s (72 ticks, ± 2) after its throw and Fled from then, lost
+//    4's), none of it paused, each glow told as the BoarderThrow telegraph in its tick (fix round 1, I2). Each thrown crew member flies from over
+//    the rim, rises above its seat and lies down more than 1 m out on the enemy lane's side (fix round 1, I1 and M1), is dead, unseated, hidden
+//    1.2 s (72 ticks, ± 2) after its throw and Fled from then, lost
 //    (LostCrew), logged "{name} is thrown from the wagon!", and sent as PropEvt wagon:3 "thrown:{id}". W3 with no crew left: its clock is back at 0.
 //  - Part 2 (Task 4 review M2): stop 2's crew are seated in W2 (both bench seats), a shooter companion is seated in W2's place and downed
 //    (Mangled), the other shooters pump (DebugPump: no seat answer) and the cart's own pump is held (PumperCap 0); a hound is put on W2 and the
 //    answers run. The cart's blade answers by climbing: it waits one car short (both bench seats crew, the place a downed hero's) until the 6 s
-//    throw empties seat 5, then lands on W2 seat 5 (within a cooldown and a hop); no second throw comes.
+//    throw empties seat 5, then lands on W2 seat 5 (within a cooldown and a hop); no second throw comes. Fix round 1: from that bench seat its
+//    blows end W2's hound (its fire let go, the hound's HP no longer held), printed with the bench seat's distance to the rim spot.
 //  - Part 3: a save and a load: every thrown crew member is still dead, fled, hidden and unseated (no body), and lost.
 public partial class DebugTools
 {
@@ -56,14 +60,45 @@ public partial class DebugTools
             if (!npc.Dead || npc.Seated) { Fail($"the thrown {c.Name} is dead {npc.Dead}, seated {npc.Seated}"); return false; }
             if (!npc.Visible) _bdThrownCrew[i] = c with { HiddenFrame = Engine.GetPhysicsFrames() };
             else if (npc.Fled) { Fail($"the thrown {c.Name} is Fled while still shown"); return false; }
+            else
+            {
+                // its flight while shown (fix round 1, I1): the highest it rose, and where it first lay on the ground
+                var f = _bdFlight.TryGetValue(c.Id, out var seen) ? seen : (MaxY: float.MinValue, Land: (Vector3?)null, Air: false);
+                var p = npc.GlobalPosition;
+                var onFloor = npc.IsOnFloor(); // read only once it has been seen in the air: its first frames still hold the floor state from before it sat
+                _bdFlight[c.Id] = (Mathf.Max(f.MaxY, p.Y), f.Land ?? (f.Air && onFloor ? p : null), f.Air || !onFloor);
+            }
         }
         return true;
     }
 
-    /// <summary>The judgement of each thrown crew member once hidden: dead, fled, unseated, hidden 1.2 s after its throw, lost, logged and sent.</summary>
+    /// <summary>Each thrown crew member's flight as the flow saw it while shown: the highest it rose and where it first lay on the ground.</summary>
+    private readonly Dictionary<string, (float MaxY, Vector3? Land, bool Air)> _bdFlight = new();
+
+    /// <summary>
+    /// The judgement of each thrown crew member once hidden: dead, fled, unseated, hidden 1.2 s after its throw, lost, logged and sent; and (fix
+    /// round 1, I1 and M1) its flight: it rose above its seat and above the rim it left from, and lay down more than 1 m out from the wagon, on the
+    /// enemy lane's side (nearer the enemy lane than the party lane, by the cells it landed on).
+    /// </summary>
     private bool BdThrownOk(CrewRescueController ctrl, Action<string> Fail)
     {
         var lost = ctrl.Capture().LostCrew ?? new List<string>();
+        foreach (var c in _bdThrownCrew)
+        {
+            if (!ctrl.ThrowLaunches.TryGetValue(c.Id, out var launch) || !_bdFlight.TryGetValue(c.Id, out var flight) || flight.Land is not { } land) { Fail($"the thrown {c.Name}'s flight was not seen to land"); return false; }
+            var wagon = launch.Wagon;
+            var lateral = Mathf.Abs((land - wagon.Origin).Dot(wagon.Basis.X.Normalized()));
+            var flat = new Vector2(land.X - wagon.Origin.X, land.Z - wagon.Origin.Z).Length();
+            var layout = Main.Instance.Builder.Layout!;
+            var cell = DungeonBuilder.WorldToCell(land);
+            static int Near(IReadOnlyList<Dungeon.Generation.GridPos> lane, Dungeon.Generation.GridPos at) { var best = int.MaxValue; foreach (var l in lane) best = Math.Min(best, Math.Abs(l.X - at.X) + Math.Abs(l.Y - at.Y)); return best; }
+            var toEnemy = Near(layout.Rail!.Enemy, cell);
+            var toParty = Near(layout.Rail!.Party, cell);
+            GD.Print($"[boarders] thrown: {c.Name}'s flight: seat y {launch.Seat.Y:0.00}, off the rim at y {launch.From.Y:0.00} at {launch.Velocity.Length():0.0} m/s (up {launch.Velocity.Y:0.0}), rose to y {flight.MaxY:0.00} ({flight.MaxY - launch.Seat.Y:+0.00;-0.00} m over its seat), lay down at {cell} {lateral:0.0} m out from the wagon's line ({flat:0.0} m from it), {toEnemy} cell(s) from the enemy lane and {toParty} from the party lane");
+            if (flight.MaxY <= launch.From.Y + 0.05f || flight.MaxY <= launch.Seat.Y) { Fail($"the thrown {c.Name} never rose (top y {flight.MaxY:0.00}, launched at {launch.From.Y:0.00}, seat {launch.Seat.Y:0.00})"); return false; }
+            if (lateral < 1f) { Fail($"the thrown {c.Name} lay down {lateral:0.0} m out from the wagon, not more than 1 m"); return false; }
+            if (toEnemy > toParty) { Fail($"the thrown {c.Name} lay down on the party lane's side"); return false; }
+        }
         foreach (var c in _bdThrownCrew)
         {
             var npc = ctrl.Crew.First(n => IsInstanceValid(n) && n.Id == c.Id);
@@ -89,11 +124,17 @@ public partial class DebugTools
         switch (_bdPhase)
         {
             case 0:
+            {
+                var walked = W(3).Riders.Values.OfType<Npc>().Where(n => n.Crew && !n.Dead).ToList();
+                GD.Print($"[boarders] throw: W3's crew walked to their seats from the cage: [{string.Join(", ", walked.Select(n => $"{n.NpcName} seat {n.Seat} {(_bdWalked.Contains(n.Id) ? "seen on the ground" : "never seen on foot")}"))}]");
+                if (walked.Count != 2 || walked.Any(n => !_bdWalked.Contains(n.Id))) { Fail("W3's two crew did not walk to their seats on the ground"); return; }
+                ctrl.DebugBoardWagon = 0;
                 enc.DebugHoldAnswers = true;
                 foreach (var a in party.Adventurers) if (IsInstanceValid(a) && a.Control == ControlKind.Companion) a.DebugHoldFire = true;
                 GD.Print($"[boarders] throw: stops at S=[{string.Join(", ", rc.StopS.Select(s => s.ToString("0.0")))}]; ride 2 has {BdRideLeft(rc):0} m left; W3 crew [{string.Join(", ", W(3).Riders.Values.OfType<Npc>().Select(n => $"{n.NpcName} seat {n.Seat}"))}]");
                 Next(1);
                 break;
+            }
 
             // part 1: the call, the glows and the throws, measured from the landing
             case 1:
@@ -136,6 +177,11 @@ public partial class DebugTools
                 GD.Print($"[boarders] throw: called by {caller} ({(caller == "the log" ? "\"It's at the prisoners — wagon 3!\" logged" : "a seated hero of the train")} {called}); thrown seat 5's {seats[0]} then seat 4's {seats[1]}; throws {enc.Throws - _bdThrowsBase}");
                 if (!called || enc.Throws - _bdThrowsBase != 2) { Fail("the call was not made by a seated hero or the log, or the throws were not two"); return; }
                 if (!BdThrownOk(ctrl, Fail)) return;
+                // fix round 1 (I2): each glow is told as the BoarderThrow telegraph in its own tick (clients glow it from the EnemyStateMsg)
+                var told = _bdTelegraphs.Where(x => x.Hound == _bdHound).Select(x => x.Frame).ToList();
+                var glows = log.Where(e => e.Step == ThrowStep.Glow).Select(e => e.Frame).ToList();
+                GD.Print($"[boarders] throw: the glows' telegraph \"{Enemies.TelegraphRules.BoarderThrow}\" told at ticks [{string.Join(", ", told)}], the glows at [{string.Join(", ", glows)}]");
+                if (!told.SequenceEqual(glows)) { Fail("the throw's glow was not told as its telegraph at each glow"); return; }
                 var clock = enc.ThrowClockOf(3);
                 if (clock == null || clock.Alone || clock.Running != 0f) { Fail($"W3 with no crew left is still counted (alone {clock?.Alone}, {clock?.Running:0.00} s)"); return; }
                 enc.DebugKill(_bdHound!);
@@ -202,6 +248,34 @@ public partial class DebugTools
                 var after = (Engine.GetPhysicsFrames() - _bdMarkFrame) / BdTps;
                 GD.Print($"[boarders] the downed place: {blade.State.Name} lands in W2 seat {blade.Seat} {after:0.00} s after the throw freed it (the place still {_bdMate2!.State.Name}'s, downed {_bdMate2.Downed}); W2 alone {enc.ThrowClockOf(2)?.Alone}");
                 if (blade.Seat != TrainRules.CrewSeats[1] || W(2).Seats.OccupantOf(TrainRules.HeroPlace) != _bdMate2.RiderId) { Fail($"{blade.State.Name} sits in W2 seat {blade.Seat}, not the freed seat 5 beside the downed {_bdMate2.State.Name}"); return; }
+                // fix round 1: from the bench its blows reach its own wagon's boarder. Its fire is let go and the hound's HP no longer held; the others
+                // still hold theirs (the downed one cannot, the shooter pumps), so every hit is the bench blade's
+                blade.DebugHoldFire = false;
+                _bdHound!.DebugHoldHp = false;
+                _bdKnockBase = enc.KnockOffs;
+                Next(13);
+                break;
+            }
+            case 13:
+            {
+                var blade = _bdMate!;
+                var h = _bdHound!;
+                var seat = W(2).SeatTransform(blade.Seat).Origin;
+                var spot = W(2).BoarderSpotTransform().Origin;
+                if (IsInstanceValid(h) && h.IsAlive && h.Carrier == W(2))
+                {
+                    _bdOwnMin = Mathf.Min(_bdOwnMin, seat.DistanceTo(spot));
+                    _bdBodyMin = Mathf.Min(_bdBodyMin, blade.GlobalPosition.DistanceTo(h.GlobalPosition));
+                    _bdBodyMax = Mathf.Max(_bdBodyMax, blade.GlobalPosition.DistanceTo(h.GlobalPosition));
+                }
+                var hits = _bdHurt.TryGetValue(h, out var l) ? l.Where(x => x.By >= 0).ToList() : new();
+                var gone = !IsInstanceValid(h) || !h.IsAlive || h.Carrier != W(2);
+                if (!gone && t < 8f) break;
+                var by = BdMember(party, blade);
+                var fate = !IsInstanceValid(h) || !h.IsAlive ? "killed" : enc.KnockOffs > _bdKnockBase ? "knocked off" : h.Carrier == W(2) ? "still aboard" : "gone";
+                GD.Print($"[boarders] bench reach: {blade.State.Name} in W2 seat {blade.Seat}: the seat to W2's rim spot {_bdOwnMin:0.00} m (seat 4's {W(2).SeatTransform(TrainRules.CrewSeats[0]).Origin.DistanceTo(spot):0.00} m), the bodies {_bdBodyMin:0.00}–{_bdBodyMax:0.00} m (WagonReach {BoarderRules.WagonReach:0.0} m); its hits on W2's hound {hits.Count(x => x.By == by)} [{string.Join(", ", hits.Select(x => $"{x.Kind} by {party.Members[x.By].Name} grip {x.Grip}"))}]; the hound {fate} {t:0.00} s on");
+                if (hits.Count == 0 || hits.Any(x => x.By != by) || fate is "still aboard" or "gone") { Fail($"from W2's bench seat {blade.Seat} {blade.State.Name} did not end its own wagon's hound by its blows (seat to spot {_bdOwnMin:0.00} m, WagonReach {BoarderRules.WagonReach} m)"); return; }
+                blade.DebugHoldFire = true;
                 Next(12);
                 break;
             }
