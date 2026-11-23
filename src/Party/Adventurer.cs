@@ -1188,7 +1188,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         // enemies are identified by their index in this list (instance ids do not fit an int)
         var enemies = new List<EnemyView>();
         var byId = new List<Enemy>();
-        int? leadTargetId = null;
+        int? leadTargetId = null, answerTargetId = null;
         if (root != null)
             foreach (var e in root.GetChildren().OfType<Enemy>())
             {
@@ -1198,6 +1198,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 var id = byId.Count;
                 byId.Add(e);
                 if (Party.LeadTarget == e) leadTargetId = id;
+                if (AnswerTarget == e) answerTargetId = id;
                 // a train boarder (Ruling 13): its own car's (or any, on foot) is struck out to BoarderReach; another car's never by a blade
                 var boarder = BoarderCar(e) >= 0;
                 var reaches = boarder && BlowReaches(e);
@@ -1244,6 +1245,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             Enemies = enemies,
             Abilities = abilities,
             LeadTargetId = leadTargetId,
+            AnswerTargetId = answerTargetId,
             PartyMissingShield = alive.Any(m => !m.Effects.Has(StatusKind.Shield)),
             PartyMissingHaste = alive.Any(m => !m.Effects.Has(StatusKind.Haste)),
             PartyWounded = alive.Any(m => m.Hp < m.Stats[Stat.MaxHp] * 0.7f) && enemies.Count > 0,
@@ -1287,6 +1289,42 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 Attack(_action.Heavy, false);
                 break;
         }
+    }
+
+    /// <summary>
+    /// The wagon boarder this companion answers from its seat (plan 14, Ruling 15 as amended; set by the rail encounter controller, server and
+    /// solo): its brain targets it while it can strike it. Null when it answers none.
+    /// </summary>
+    internal Enemy? AnswerTarget { get; set; }
+
+    /// <summary>A shot or a spell this body knows: a ranged weapon's swing, a projectile or a nova (what a companion may take another car's boarder with).</summary>
+    internal bool Shooter
+    {
+        get
+        {
+            foreach (var id in State.KnownAbilities)
+                if (ShotRange(Party.GetAbilityFor(State, id)) > 0f) return true;
+            return false;
+        }
+    }
+
+    /// <summary>How far ability <paramref name="a"/> reaches as a shot or a spell (as <see cref="Think"/> hands the brain its ranges), or 0 for a blade or a buff.</summary>
+    private float ShotRange(AbilityProfile a) => a.Kind switch
+    {
+        AbilityKind.WeaponAttack when State.WeaponProfile.IsRanged => 14f,
+        AbilityKind.Projectile when a.Attack != null => 14f,
+        AbilityKind.Nova when a.Attack != null => a.Radius,
+        _ => 0f,
+    };
+
+    /// <summary>A clear shot at <paramref name="e"/> now, the brain's own test for a ranged target (<see cref="CompanionBrain.CanStrike"/>): a shot or spell in range, and the line clear.</summary>
+    internal bool HasShotAt(Enemy e)
+    {
+        if (!IsInstanceValid(e) || !e.IsAlive) return false;
+        var d = e.GlobalPosition.DistanceTo(GlobalPosition);
+        foreach (var id in State.KnownAbilities)
+            if (ShotRange(Party.GetAbilityFor(State, id)) is > 0f and var range && d <= range) return ClearLine(e.GlobalPosition);
+        return false;
     }
 
     /// <summary>Test hook (plan 14's --test-boarders): this companion's brain chooses no attack, so a flow counts one striker's blows; <see cref="DebugStrikeAt"/> still strikes.</summary>
@@ -1784,14 +1822,21 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (!any && IsLocal) EventBus.Instance.Log("Nothing is close enough.");
     }
 
-    /// <summary>A perfect blow with a cleaving item: every other living enemy within 2.5 m takes <paramref name="amount"/>.</summary>
-    private void Cleave(Enemy struck, float amount, AttackProfile attack)
+    /// <summary>A perfect blow with a cleaving item carries this far from the struck enemy.</summary>
+    private const float CleaveRadius = 2.5f;
+
+    /// <summary>Test hook: the cleave a perfect blow on <paramref name="struck"/> would carry, of <paramref name="amount"/>, out to <paramref name="radius"/>.</summary>
+    internal void DebugCleave(Enemy struck, float amount, float radius) => Cleave(struck, amount, State.WeaponProfile.ToAttack(), radius);
+
+    /// <summary>A perfect blow with a cleaving item: every other living enemy within <see cref="CleaveRadius"/> takes <paramref name="amount"/>, but another car's boarder from a seat in the train.</summary>
+    private void Cleave(Enemy struck, float amount, AttackProfile attack, float radius = CleaveRadius)
     {
         if (amount <= 0f || Main.Instance.Builder.FloorRoot is not { } root) return;
         var splash = attack with { MinDamage = amount, MaxDamage = amount, OnHit = Array.Empty<StatusApplication>() };
         foreach (var other in root.GetChildren().OfType<Enemy>().ToArray())
         {
-            if (other == struck || !other.IsAlive || other.GlobalPosition.DistanceTo(struck.GlobalPosition) > 2.5f) continue;
+            if (other == struck || !other.IsAlive || other.GlobalPosition.DistanceTo(struck.GlobalPosition) > radius) continue;
+            if (!BlowReaches(other)) continue; // a carried blow is still a seated blade's: never into another car's boarder (Ruling 13)
             var r = other.ReceiveAttack(State.Stats, splash, new HitContext { DefenderStunned = true }, Party.Rng, State.Name);
             if (r.Hit) EventBus.Instance.Log($"{State.Name}'s blow carries into {other.DisplayName} for {r.Amount:0}.");
         }
@@ -1910,7 +1955,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private void ShatterChain(Enemy from, int count, AttackProfile attack, CharacterState m)
     {
         var next = GetTree().GetNodesInGroup("enemies").OfType<Enemy>()
-            .Where(o => o != from && IsInstanceValid(o) && o.IsAlive && o.Effects.Has(StatusKind.Frost) && o.GlobalPosition.DistanceTo(from.GlobalPosition) <= Adventure.Fortune.FortuneRules.ShatterChainRadius)
+            .Where(o => o != from && IsInstanceValid(o) && o.IsAlive && o.Effects.Has(StatusKind.Frost) && o.GlobalPosition.DistanceTo(from.GlobalPosition) <= Adventure.Fortune.FortuneRules.ShatterChainRadius
+                && BlowReaches(o)) // a chained blow is still a seated blade's: never into another car's boarder (Ruling 13)
             .OrderBy(o => o.GlobalPosition.DistanceSquaredTo(from.GlobalPosition)).Take(count).ToArray();
         foreach (var other in next)
         {

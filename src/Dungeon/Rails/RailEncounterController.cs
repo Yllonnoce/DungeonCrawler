@@ -315,7 +315,7 @@ public partial class RailEncounterController : Node
         TickSetPieces(Main.Instance.Party, dt);
         TickGolem(dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
-        TickAnswers(dt); // companions climb to a boarded, crewed wagon with no hero up, and back
+        TickAnswers(); // a boarded, crewed wagon with no hero up is answered: by a seated shot, else a companion climbing to it (and back)
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null && _rideRunaway == null)
         {

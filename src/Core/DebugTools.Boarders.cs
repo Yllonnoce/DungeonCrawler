@@ -32,12 +32,13 @@ namespace DungeonCrawler.Core;
 // =reach and =knock are restored at stop 1 with its cage opened by the test's hook (DebugSeatCrew: its crew sit in W1 at once).
 // =reach (Task 4, Ruling 13): restored at stop 1; on ride 2 the lead sits in W2 (rc.DebugSeat) and hounds that never drop below 1 HP are put on W1,
 // W2 and W3; companions hold fire and nobody answers (DebugHoldAnswers).
-//  - The reach: from the lead's body in W2's seat 0 to each hound, every frame, on the straight and in bends: printed as "[boarders] reach: W2 seat 0
+//  - The reach: from W2's seat 0 to each rim spot, read off the wagons' poses every frame (the bodies' own spread printed beside it), on the straight and in bends: printed as "[boarders] reach: W2 seat 0
 //    to its own spot ... m (straight), ... m (in a bend); to W1's spot ... m, to W3's ... m" (the nearest each neighbour came); BoarderRules.WagonReach
 //    must be at least the larger own distance + 0.15 and under TrainRules.Spacing.
 //  - The lead's forced blows: every melee attack its class has (the weapon's light, heavy and perfect swing, each melee strike ability), aimed at
 //    each hound in turn, refilled before each: W1's and W3's hounds never lose HP or grip and take no hit at all; W2's takes the blows that land (a
 //    W2 hound knocked off by its grip is replaced by a fresh one).
+//  - A carried blow (fix round 1, review M6): a cleave off W2's hound (Adventurer.DebugCleave), widened past both neighbours' hounds, takes neither.
 //  - From the cart: a blade companion seated in the cart strikes at W1's hound three times (Adventurer.DebugStrikeAt): it never lands. Then
 //    the same companion, seated in W3, strikes at W2's hound (nearer than WagonReach) three times: it never lands either (the own-car rule).
 // =knock (Task 4, Rulings 14-15): restored at stop 1, rolling on ride 2; the lead climbs back into W1 by the grip's press.
@@ -45,9 +46,11 @@ namespace DungeonCrawler.Core;
 //    window of an armed ride (ride 3's, the flow rides on to it) the lead's move is refused ("a lever window is open") and none is offered.
 //  - Pass 1: the lead lands three melee blows on a W1 hound held above 1 HP: grip 1, 2, then knocked off after 3 hits, standing beside the lane
 //    alive, not carried, aggro on. Pass 2: a caster companion's spell knocks a fresh W1 hound off with its one hit.
-//  - Pass 3 (with 100 m of the ride left): stops 2-3's crew are seated (DebugSeatCrew: W2, W3; stop 1's sit in W1) and a hound put on W3; the nearest cart
-//    companion answers (the only one let fight), one move per cooldown (passing the lead's W1), reaches W3 and strikes the hound (its hit counted
-//    toward the grip) until it is knocked off or killed, and 5 s after W3 is clear moves back toward the cart.
+//  - Pass 3 (with 100 m of the ride left): stops 2-3's crew are seated (DebugSeatCrew: W2, W3; stop 1's sit in W1). Ruling 15 as amended in
+//    fix round 1: 3a, a hound held above 1 HP on W3 is answered from its seat by a cart companion with a clear shot (the only one let fight):
+//    nobody moves, and its shots knock the hound off by the grip. 3b, with every companion that has a shot held down, a fresh W3 hound is
+//    answered by the nearest cart blade climbing one move per cooldown (passing the lead's W1); it reaches W3, strikes the hound (its hit
+//    counted toward the grip) until it is knocked off or killed, and 5 s after W3 is clear moves back toward the cart; the shooters stand again.
 //  - Pass 4: DebugKill of a W1 hound drops it beside the lane.
 // Prints [boarders] lines and a RESULT.
 public partial class DebugTools
@@ -71,10 +74,12 @@ public partial class DebugTools
     private int _bdBlow, _bdKnockBase, _bdSwings;
     private float _bdBlowAt, _bdHp1, _bdHp3, _bdClearAt = -1f;
     private float _bdOwnStraight = -1f, _bdOwnBend = -1f, _bdToW1 = float.MaxValue, _bdToW3 = float.MaxValue, _bdMaxBend;
+    private float _bdOwnMin = float.MaxValue, _bdBodyMin = float.MaxValue, _bdBodyMax = -1f;
     private Adventurer? _bdMate;
     private Enemies.Enemy? _bdHound;
     private bool _bdLeverChecked, _bdWasHopping;
     private readonly List<(float At, int From, int To)> _bdAnswerHops = new();
+    private readonly List<Adventurer> _bdShootersDown = new();
     /// <summary>A wagon's track curvature (1/m) from which the reach sample counts as "in a bend" (a radius of 25 m or less); under 0.01 is the straight.</summary>
     private const float BdBendK = 0.04f;
 
@@ -481,20 +486,30 @@ public partial class DebugTools
         party.Attack(Array.IndexOf(party.Adventurers, me), d.Heavy, d.Perfect);
     }
 
-    /// <summary>The lead's body to each hound this frame: its own (W2's) on the straight and in bends, the neighbours' nearest.</summary>
+    /// <summary>
+    /// W2's seat 0 to each rim spot this frame, read off the wagons' own poses as they stand now (fix round 1, review M5): where a seated body
+    /// and a boarder are both posed when a blow is judged in the physics tick. Its own (W2's) on the straight and in bends, the neighbours'
+    /// nearest. The bodies themselves are also sampled (the lead's body to its own hound): in a rendered frame one of the two may already be
+    /// posed for the frame while the other still stands where the physics tick left it, which is the 0.02 m spread a run measured.
+    /// </summary>
     private void BdSampleReach(RailController rc, Adventurer me)
     {
-        if (rc.WagonAt(2) is not { } w2) return;
+        if (rc.WagonAt(2) is not { } w2 || rc.WagonAt(1) is not { } w1 || rc.WagonAt(3) is not { } w3) return;
         var k = Mathf.Abs(w2.Curvature);
         _bdMaxBend = Mathf.Max(_bdMaxBend, k);
+        var seat = w2.SeatTransform(TrainRules.HeroPlace).Origin;
+        var own = seat.DistanceTo(w2.BoarderSpotTransform().Origin);
+        if (k < 0.01f) _bdOwnStraight = Mathf.Max(_bdOwnStraight, own);
+        else if (k >= BdBendK) _bdOwnBend = Mathf.Max(_bdOwnBend, own);
+        _bdOwnMin = Mathf.Min(_bdOwnMin, own);
+        _bdToW1 = Mathf.Min(_bdToW1, seat.DistanceTo(w1.BoarderSpotTransform().Origin));
+        _bdToW3 = Mathf.Min(_bdToW3, seat.DistanceTo(w3.BoarderSpotTransform().Origin));
         if (_bdH2 is { } h2 && IsInstanceValid(h2) && h2.Carrier == w2 && rc.CarOf(me) == 2)
         {
-            var own = me.GlobalPosition.DistanceTo(h2.GlobalPosition);
-            if (k < 0.01f) _bdOwnStraight = Mathf.Max(_bdOwnStraight, own);
-            else if (k >= BdBendK) _bdOwnBend = Mathf.Max(_bdOwnBend, own);
+            var bodies = me.GlobalPosition.DistanceTo(h2.GlobalPosition);
+            _bdBodyMin = Mathf.Min(_bdBodyMin, bodies);
+            _bdBodyMax = Mathf.Max(_bdBodyMax, bodies);
         }
-        if (_bdH1 is { } h1 && IsInstanceValid(h1) && h1.Carrier == rc.WagonAt(1)) _bdToW1 = Mathf.Min(_bdToW1, me.GlobalPosition.DistanceTo(h1.GlobalPosition));
-        if (_bdH3 is { } h3 && IsInstanceValid(h3) && h3.Carrier == rc.WagonAt(3)) _bdToW3 = Mathf.Min(_bdToW3, me.GlobalPosition.DistanceTo(h3.GlobalPosition));
     }
 
     private void BoardersReach(RailController rc, RailEncounterController enc, PartyController party, Adventurer me, Action<string> Fail)
@@ -566,6 +581,15 @@ public partial class DebugTools
                 GD.Print($"[boarders] reach: the lead's {_bdBlows.Count} blows landed {w2Hits} time(s) on W2's hound(s) ({_bdW2Hounds.Count} boarded, knock-offs {enc.KnockOffs}); W1's hound hits {w1}, hp {hp1:0}/{_bdHp1:0}, grip {g1}; W3's hits {w3}, hp {hp3:0}/{_bdHp3:0}, grip {g3}");
                 if (w2Hits == 0) { Fail("no blow of the lead's in W2 landed on W2's own hound"); return; }
                 if (w1 != 0 || w3 != 0 || hp1 < _bdHp1 || hp3 < _bdHp3 || g1 != 0 || g3 != 0) { Fail("a blow from W2 landed on W1's or W3's hound"); return; }
+                {
+                    // a carried blow (fix round 1, review M6): a cleave off W2's hound, its reach widened past both neighbours' hounds, takes neither
+                    var h2 = _bdH2!;
+                    float d1 = h2.GlobalPosition.DistanceTo(_bdH1.GlobalPosition), d3 = h2.GlobalPosition.DistanceTo(_bdH3.GlobalPosition);
+                    var radius = Mathf.Max(d1, d3) + 0.3f;
+                    me.DebugCleave(h2, 10f, radius);
+                    GD.Print($"[boarders] reach: a cleave off W2's hound out to {radius:0.00} m (W1's hound {d1:0.00} m from it, W3's {d3:0.00} m): W1's hits {BdHits(_bdH1)}, hp {_bdH1.Hp:0}/{_bdHp1:0}; W3's hits {BdHits(_bdH3)}, hp {_bdH3.Hp:0}/{_bdHp3:0}");
+                    if (BdHits(_bdH1) != 0 || BdHits(_bdH3) != 0 || _bdH1.Hp < _bdHp1 || _bdH3.Hp < _bdHp3) { Fail("a cleave off W2's hound carried into W1's or W3's"); return; }
+                }
                 _bdMate = party.Adventurers.Where(a => IsInstanceValid(a) && a != me && a.Control == ControlKind.Companion && a.Cart == rc.Cart && !a.Downed && BdBlade(a))
                     .OrderBy(a => a.GlobalPosition.DistanceTo(_bdH1.GlobalPosition)).FirstOrDefault();
                 if (_bdMate == null) { Fail("no melee companion seated in the cart"); return; }
@@ -631,11 +655,13 @@ public partial class DebugTools
                 // the reach: a bend measured (ride on until one is), then the line and the constant's bounds
                 if (_bdOwnBend < 0f || _bdOwnStraight < 0f) { if (t > 40f) Fail($"no {(_bdOwnBend < 0f ? "bend" : "straight")} sample of W2's own spot on ride 2 (the sharpest bend {_bdMaxBend:0.000}/m)"); break; }
                 GD.Print($"[boarders] reach: W2 seat 0 to its own spot {_bdOwnStraight:0.00} m (straight), {_bdOwnBend:0.00} m (in a bend); to W1's spot {_bdToW1:0.00} m, to W3's {_bdToW3:0.00} m (the sharpest bend {_bdMaxBend:0.000}/m)");
+                GD.Print($"[boarders] reach: the own spot read off W2's pose spans {_bdOwnMin:0.000}..{Mathf.Max(_bdOwnStraight, _bdOwnBend):0.000} m; the bodies sampled in the rendered frame (the lead to W2's hound) span {_bdBodyMin:0.000}..{_bdBodyMax:0.000} m");
                 var need = Mathf.Max(_bdOwnStraight, _bdOwnBend) + 0.15f;
                 GD.Print($"[boarders] reach: BoarderRules.WagonReach {BoarderRules.WagonReach:0.00} m: the own spot + 0.15 is {need:0.000} m, the car spacing {TrainRules.Spacing:0.00} m");
                 if (BoarderRules.WagonReach < need - 1e-3f || BoarderRules.WagonReach >= TrainRules.Spacing) { Fail($"WagonReach {BoarderRules.WagonReach:0.00} is not in [{need:0.000}, {TrainRules.Spacing:0.00})"); return; }
+                if (_bdBodyMax < 0f || _bdBodyMax > BoarderRules.WagonReach) { Fail($"the lead's body and W2's hound sampled {_bdBodyMax:0.000} m apart, past WagonReach {BoarderRules.WagonReach:0.00} (or never sampled)"); return; }
                 foreach (var h in _bdW2Hounds.Append(_bdH1!).Append(_bdH3!)) if (IsInstanceValid(h) && h.IsAlive) enc.DebugKill(h);
-                GD.Print($"[boarders] RESULT ok ({_bdVariant}): from W2 the lead's {_bdBlows.Count} blows landed only on W2's hound ({_bdW2Hounds.Sum(h => BdHits(h, lead))} hit(s)); W1's and W3's took none; a cart companion's strikes at W1's never landed; the own spot {Mathf.Max(_bdOwnStraight, _bdOwnBend):0.00} m within WagonReach {BoarderRules.WagonReach:0.00} m");
+                GD.Print($"[boarders] RESULT ok ({_bdVariant}): from W2 the lead's {_bdBlows.Count} blows landed only on W2's hound ({_bdW2Hounds.Sum(h => BdHits(h, lead))} hit(s)); W1's and W3's took none; a cart companion's strikes at W1's never landed; the own spot {Mathf.Max(_bdOwnStraight, _bdOwnBend):0.00} m (the bodies {_bdBodyMin:0.00}..{_bdBodyMax:0.00} m) within WagonReach {BoarderRules.WagonReach:0.00} m; a cleave off W2's hound took neither neighbour");
                 _done = true;
                 GetTree().Quit(0);
                 break;
@@ -807,7 +833,8 @@ public partial class DebugTools
                 break;
             }
 
-            // pass 3: crew in W3 and a hound on it: the nearest cart companion answers
+            // pass 3: crew in W3 and a hound on it. 3a: a cart companion with a shot answers from its seat (nobody moves); 3b: with every
+            // shooter held down, the nearest blade climbs to it (Ruling 15 as amended in fix round 1)
             case 30:
             {
                 if (BdRideLeft(rc) < 100f || rc.State.Mode != CartMode.Rolling || rc.MovesRefused) { if (t > 60f) Fail("pass 3: no ride with 100 m left"); break; }
@@ -818,8 +845,57 @@ public partial class DebugTools
                 var inW3 = W(3).Riders.Values.Count(r => r is Npc { Crew: true, Dead: false });
                 GD.Print($"[boarders] pass 3: crew seated [{string.Join(", ", seated)}]; {inW3} in W3; the lead in car {rc.CarOf(me)}; the cart's companions [{string.Join(", ", party.Adventurers.Where(a => IsInstanceValid(a) && a.Control == ControlKind.Companion).Select(a => $"{a.State.Name} car {rc.CarOf(a)}"))}]");
                 if (inW3 == 0) { Fail("pass 3: no crew in W3"); return; }
+                GD.Print($"[boarders] pass 3a: the cart's companions [{string.Join(", ", party.Adventurers.Where(a => IsInstanceValid(a) && a.Control == ControlKind.Companion).Select(a => $"{a.State.Name} {(a.Shooter ? "a shooter" : "a blade")}"))}]");
+                _bdHound = enc.DebugBoard(3, holdHp: true);
+                if (_bdHound == null) { Fail("pass 3a: no hound could be put on W3"); return; }
+                _bdKnockBase = enc.KnockOffs;
+                _bdMovesBefore = rc.MovesTaken;
+                _bdMate = null;
+                Next(36);
+                break;
+            }
+            case 36:
+            {
+                // 3a: answered from a seat with a clear shot; its hits take the grip and nobody moves
+                var h = _bdHound!;
+                if (_bdMate == null)
+                {
+                    var answer = enc.AnswersNow.FirstOrDefault(a => a.Wagon == 3);
+                    if (answer.Name == null) { if (t > 1f) Fail("pass 3a: nobody answered W3"); break; }
+                    _bdMate = party.Adventurers.First(a => IsInstanceValid(a) && a.State.Name == answer.Name);
+                    GD.Print($"[boarders] pass 3a: {_bdMate.State.Name} answers W3 {(answer.FromSeat ? "from its seat" : "by moving")} in car {rc.CarOf(_bdMate)}, {_bdMate.GlobalPosition.DistanceTo(h.GlobalPosition):0.0} m from the hound (a shot: {_bdMate.HasShotAt(h)})");
+                    if (!answer.FromSeat || !_bdMate.Shooter || rc.CarOf(_bdMate) != 0) { Fail("pass 3a: W3 was not answered from a cart seat by a companion with a shot"); return; }
+                    _bdMate.DebugHoldFire = false; // the only one let fight
+                    break;
+                }
+                if (rc.MovesTaken != _bdMovesBefore || rc.CarOf(_bdMate) != 0) { Fail($"pass 3a: a move was taken while W3 was answered from a seat ({_bdMate.State.Name} in car {rc.CarOf(_bdMate)})"); return; }
+                if (!Gone(h, W(3))) { if (t > 10f) Fail($"pass 3a: {_bdMate.State.Name}'s shots did not knock W3's hound off within 10 s (its hits {BdHits(h, BdMember(party, _bdMate))}, grip {enc.GripOf(h)})"); break; }
+                var hits = _bdHurt.TryGetValue(h, out var l) ? l.Where(x => x.By >= 0).ToList() : new();
+                GD.Print($"[boarders] pass 3a: W3's hound knocked off={enc.KnockOffs > _bdKnockBase} by {_bdMate.State.Name}'s shots [{string.Join(", ", hits.Select(x => $"{x.Kind} grip {x.Grip}"))}] {t:0.00} s on; no move taken");
+                if (enc.KnockOffs <= _bdKnockBase || hits.Count == 0 || hits.Any(x => x.By != BdMember(party, _bdMate) || x.Kind == Combat.AttackKind.Melee)) { Fail("pass 3a: the hound was not knocked off by the seated answerer's shots"); return; }
+                if (IsInstanceValid(h) && h.IsAlive) h.Kill();
+                _bdMate.DebugHoldFire = true;
+                Next(37);
+                break;
+            }
+            case 37:
+            {
+                // 3b: every companion with a shot held down (as =move holds the lead down): a blade must climb
+                if (t < 0.5f) break;
+                if (enc.AnswersNow.Any(a => a.Wagon == 3)) { if (t > 2f) Fail("pass 3a: the seat answer did not end with W3 clear"); break; }
+                if (BdRideLeft(rc) < 90f || rc.State.Mode != CartMode.Rolling || rc.MovesRefused) { if (t > 60f) Fail("pass 3b: no ride with 90 m left"); break; }
+                _bdShootersDown.Clear();
+                foreach (var a in party.Adventurers)
+                    if (IsInstanceValid(a) && a.Control == ControlKind.Companion && !a.Downed && a.Shooter)
+                    {
+                        a.State.Mangled = true;
+                        a.State.Hp = 0;
+                        party.OnMemberDowned(a.Index);
+                        _bdShootersDown.Add(a);
+                    }
+                GD.Print($"[boarders] pass 3b: the shooters held down [{string.Join(", ", _bdShootersDown.Select(a => a.State.Name))}]");
                 _bdHound = enc.DebugBoard(3);
-                if (_bdHound == null) { Fail("pass 3: no hound could be put on W3"); return; }
+                if (_bdHound == null) { Fail("pass 3b: no hound could be put on W3"); return; }
                 _bdKnockBase = enc.KnockOffs;
                 _bdMate = null;
                 _bdAnswerHops.Clear();
@@ -835,7 +911,7 @@ public partial class DebugTools
                 _bdMate = party.Adventurers.First(a => IsInstanceValid(a) && a.State.Name == answer.Name);
                 var nearest = party.Adventurers.Where(a => IsInstanceValid(a) && a.Control == ControlKind.Companion && !a.Downed && rc.CarOf(a) >= 0).Min(a => Math.Abs(rc.CarOf(a) - 3));
                 GD.Print($"[boarders] pass 3: {_bdMate.State.Name} answers W3 from car {rc.CarOf(_bdMate)} ({t:0.00} s after the hound boarded); the nearest companion is {nearest} car(s) away");
-                if (_bdMate.Control != ControlKind.Companion || Math.Abs(rc.CarOf(_bdMate) - 3) != nearest || rc.CarOf(_bdMate) != 0) { Fail("pass 3: the answerer is not the nearest cart companion"); return; }
+                if (_bdMate.Control != ControlKind.Companion || answer.FromSeat || _bdMate.Shooter || Math.Abs(rc.CarOf(_bdMate) - 3) != nearest || rc.CarOf(_bdMate) != 0) { Fail("pass 3b: the answerer is not the nearest cart blade, moving"); return; }
                 _bdMate.DebugHoldFire = false; // the only one let fight: the hit that counts is the answerer's
                 Next(32);
                 break;
@@ -885,6 +961,8 @@ public partial class DebugTools
                 GD.Print($"[boarders] pass 3: {mate.State.Name} moves back {hop.From}>{hop.To} {after:0.00} s after W3 went clear (AnswerBack {TrainMoveRules.AnswerBack} s)");
                 if (hop.To >= hop.From || after < TrainMoveRules.AnswerBack - 2f * tick || after > TrainMoveRules.AnswerBack + 0.6f) { Fail("pass 3: the move back was not toward the cart 5 s after W3 went clear"); return; }
                 mate.DebugHoldFire = true;
+                foreach (var a in _bdShootersDown) { a.State.Mangled = false; a.Revive(); a.State.Hp = a.State.Stats[Characters.Stat.MaxHp]; }
+                GD.Print($"[boarders] pass 3b: the shooters stand again [{string.Join(", ", _bdShootersDown.Select(a => $"{a.State.Name} downed {a.Downed}"))}]");
                 Next(40);
                 break;
             }
@@ -916,7 +994,7 @@ public partial class DebugTools
             }
             case 50:
                 if (!_bdLeverChecked) { if (t > 120f) Fail("no seated lever window was met"); break; }
-                GD.Print($"[boarders] RESULT ok ({_bdVariant}): three melee blows knocked a W1 hound off (grip 1, 2, 3), alive beside the lane; one spell knocked one off; {_bdMate?.State.Name} answered W3 one move per cooldown, ended its hound and moved back 5 s after; a killed hound dropped beside the lane; no Get out at speed; the lever window refused a move; knock-offs {enc.KnockOffs}");
+                GD.Print($"[boarders] RESULT ok ({_bdVariant}): three melee blows knocked a W1 hound off (grip 1, 2, 3), alive beside the lane; one spell knocked one off; W3 answered from a seat with a shot (no move), then with the shooters down {_bdMate?.State.Name} climbed to W3 one move per cooldown, ended its hound and moved back 5 s after; a killed hound dropped beside the lane; no Get out at speed; the lever window refused a move; knock-offs {enc.KnockOffs}");
                 _done = true;
                 GetTree().Quit(0);
                 break;

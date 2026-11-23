@@ -31,6 +31,11 @@ public sealed record CompanionContext
     public IReadOnlyList<EnemyView> Enemies { get; init; } = Array.Empty<EnemyView>();
     public IReadOnlyList<AbilityView> Abilities { get; init; } = Array.Empty<AbilityView>();
     public int? LeadTargetId { get; init; }
+    /// <summary>
+    /// A wagon's boarder this companion answers from its seat (plan 14, Ruling 15 as amended): it targets it, in any stance, while it can strike
+    /// it (<see cref="CompanionBrain.CanStrike"/>); null when it answers none.
+    /// </summary>
+    public int? AnswerTargetId { get; init; }
     public bool PartyMissingShield { get; init; } = true;
     public bool PartyMissingHaste { get; init; } = true;
     public bool PartyWounded { get; init; }
@@ -102,6 +107,8 @@ public static class CompanionBrain
         var cos = (aimX * toX + aimZ * toZ) / (aimLen * toLen);
         return cos >= MathF.Cos(BoarderSwingCone * MathF.PI / 180f) - 1e-6f;
     }
+    /// <summary>The boarder a companion answers from its seat counts as this much nearer: it comes before anything else it could strike.</summary>
+    public const float AnswerPull = 100f;
     /// <summary>A boarder biting crew, that this companion can strike from where it is, counts as this much nearer: it comes first.</summary>
     public const float CrewBiterPull = 10f;
 
@@ -164,14 +171,15 @@ public static class CompanionBrain
         {
             if (e.HpFraction <= 0) continue;
             if (e.OtherCarBoarder && !reachesOtherCars) continue; // another car's boarder: never a blade's target (Ruling 13); a shot or a spell may take it
-            var allowed = ctx.Stance switch
+            var answering = e.Id == ctx.AnswerTargetId && CanStrike(ctx, e); // the wagon it answers from its seat: its target whatever the stance
+            var allowed = answering || ctx.Stance switch
             {
                 Stance.Aggressive => e.Visible && e.Distance <= ctx.EngageRadius,
                 Stance.Hold => e.Distance <= 3f || (e.CarBoarder && e.Distance <= BoarderReach), // what it can strike without a step: its own car's boarder too
                 _ => (e.Hostile && e.Distance <= ctx.EngageRadius) || e.Id == ctx.LeadTargetId || e.Distance <= 4f,
             };
             if (!allowed) continue;
-            var score = e.Distance - (e.Id == ctx.LeadTargetId ? 3f : 0f) - (e.Visible ? 1f : 0f) - (e.BitingCrew && CanStrike(ctx, e) ? CrewBiterPull : 0f);
+            var score = e.Distance - (answering ? AnswerPull : 0f) - (e.Id == ctx.LeadTargetId ? 3f : 0f) - (e.Visible ? 1f : 0f) - (e.BitingCrew && CanStrike(ctx, e) ? CrewBiterPull : 0f);
             if (score < bestScore) { bestScore = score; best = e; }
         }
         return best;
