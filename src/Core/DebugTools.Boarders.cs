@@ -82,7 +82,7 @@ public partial class DebugTools
         if (RailController.Instance is not { } rc || RailEncounterController.Instance is not { } enc) { if (_bdClock > 3f) Fail("floor 12 has no line"); return; }
         BoardersListen();
         BdReadGrips(enc);
-        if (v == "groups") BdSpareGroups(enc); // the boarding groups' hounds, as their carts spawn
+        if (v == "groups") { BdSpareGroups(enc); WatchMissTakeOffs(root, rc, enc); } // the boarding groups' hounds, as their carts spawn; a miss's take-off
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) if (e.IsAlive && !enc.IsDebugBoarder(e) && !_bdGroupHounds.Contains(e)) e.Kill(); // the flow owns the plating and the HP
         if (v != "move") foreach (var a in party.Adventurers) if (IsInstanceValid(a) && !a.Parked && !a.Downed) a.State.Hp = a.State.Stats[Characters.Stat.MaxHp]; // the hounds bite: nobody goes down
         enc.RunawayClock = 0f; // no traffic runaway on the party line

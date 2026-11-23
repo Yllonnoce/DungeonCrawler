@@ -100,7 +100,7 @@ if [ "${RIDE:-}" = 1 ]; then
   # the RIDE pass: run it alone (its set-piece clocks fail on a loaded machine: a slow server's floor clock falls behind its own
   # wall clock). One server on the built-in campaign, one client; floor 12 after the client is ready. A test server quits after
   # 120 s unless told (the pass rides the five rides to the end of the line, about 330 s on the client with plan 14's slower train; the
-  # server's own pass ends by 620 s, the clients' by 540 s), and ends anyway once empty. A scripted server deals no objective unless one
+  # server's own pass ends by 560 s, the clients' by 540 s), and ends anyway once empty. A scripted server deals no objective unless one
   # is named: --objective=jailbreak gives floor 12 the campaign's own (the crew in their platform cages, the train's four wagons empty).
   # The pass checks the wire, not the fight: the server keeps the heroes topped up, frees a natural hound alone with crew 1 s after it
   # boards (only ride 2's scripted throw takes a prisoner) and keeps the train's crew above half their hp

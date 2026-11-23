@@ -168,6 +168,7 @@ public partial class DebugTools
         if (_chSection2 && rc == _chRails) return; // the floor is being built again: wait for the new one
         RideWaiveCages(main, rc, "chase");
         ChaseListen(rc, enc);
+        WatchMissTakeOffs(root, rc, enc); // a miss's take-off distance, for ChaseLeapReport (Task 8 fix round 1)
         ChaseMusicPoll();
         if (_chFail != null) { Fail(_chFail); return; }
 
@@ -1482,8 +1483,8 @@ public partial class DebugTools
 
     /// <summary>At the end of ride 4: the line, and the check that the lead never went down on it (the baseline before Task 4's answering).</summary>
     /// <summary>
-    /// Plan 14 Task 6 fix round 1: every hound leap of this floor build onto a body within TrainRules.LeapReach (a miss within it + 1 m, Task 8),
-    /// each printed with its length, and r5_hounds'
+    /// Plan 14 Task 6 fix round 1: every hound leap of this floor build onto a body within TrainRules.LeapReach (a miss: its length printed only,
+    /// its take-off within the reach of the nearest body, Task 8 fix round 1), each printed with its length, and r5_hounds'
     /// two landing 1.5 s or more before the golem's burst at the chase's speed (<see cref="BoardingLeapChecks"/>); r4_hounds' boarding S and its
     /// roll-up (its spawn to its first leap) printed.
     /// </summary>

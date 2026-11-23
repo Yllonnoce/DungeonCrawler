@@ -15,12 +15,12 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// then sits in the new one with its yaw kept, unless it went down or left the train, or the target was uncoupled, meanwhile (the booking is then
 /// dropped and it stays where it sits). E does nothing for <see cref="TrainMoveRules.MoveCooldown"/> after a press on the presser's machine
 /// (<see cref="InMoveGrace"/>); the server takes a press <see cref="TrainMoveRules.AcceptSlack"/> sooner from the last it took for that hero, and
-/// only for the place its own book names (<see cref="MoveAccepts"/>). Nobody moves while <see cref="MovesRefused"/>.
+/// only for the place its own book names (<see cref="WhyMoveRefused"/>). Nobody moves while <see cref="MovesRefused"/>.
 /// </summary>
 public partial class RailController
 {
-    /// <summary>A move under way (server and solo): the hero, the place booked for it, the cars, when it was taken and why.</summary>
-    private sealed record Hop(Adventurer Hero, ICartBody Target, int Seat, int From, int To, double At, string Why);
+    /// <summary>A move under way (server and solo): the hero, the place booked for it, the cars and when it was taken.</summary>
+    private sealed record Hop(Adventurer Hero, ICartBody Target, int Seat, int From, int To, double At);
 
     private readonly List<Hop> _hops = new();
     /// <summary>Each hero's last move press on this machine (physics seconds, <see cref="_now"/>), by party index: the offer's cooldown.</summary>
@@ -173,9 +173,6 @@ public partial class RailController
     internal int MovesRefusedCount { get; private set; }
     internal int WagonPlainUses { get; private set; }
 
-    /// <summary>The server (and single player) takes <paramref name="body"/>'s move to <paramref name="target"/> (Ruling 10). False on a client.</summary>
-    public bool MoveAccepts(Adventurer body, Node target) => WhyMoveRefused(body, target) == null;
-
     /// <summary>
     /// Why the server (or single player) would refuse <paramref name="body"/>'s move to <paramref name="target"/> now, or null when it takes it.
     /// <paramref name="answerTo"/>: the wagon a companion's answer is bound for, whose place it judges as the answer's landing (<see cref="AnswerSeatIn"/>).
@@ -234,7 +231,7 @@ public partial class RailController
             if (!target.Seats.Put(hero.RiderId, seat)) return false;
         }
         _moveAcceptedAt[hero.Index] = _now;
-        _hops.Add(new Hop(hero, target, seat, from, to, _now, why));
+        _hops.Add(new Hop(hero, target, seat, from, to, _now));
         MovesTaken++;
         LastMoveRefused = null;
         RideAudio.At("cart_jump", hero.GlobalPosition);
