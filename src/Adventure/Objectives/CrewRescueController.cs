@@ -115,6 +115,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             if (Equals(_rails.CrewBoardingHolds, (Func<int, bool>)HoldsDeparture)) _rails.CrewBoardingHolds = null;
             if (Equals(_rails.WagonCrewPrompt, (Func<TrainWagon, Adventurer, string>)WagonCrewPrompt)) _rails.WagonCrewPrompt = null;
             if (Equals(_rails.WagonCrewUse, (Action<TrainWagon, Adventurer>)WagonCrewUse)) _rails.WagonCrewUse = null;
+            if (Equals(_rails.WagonRevivable, (Func<TrainWagon, bool>)WagonRevivable)) _rails.WagonRevivable = null;
         }
         base._ExitTree();
     }
@@ -141,6 +142,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         _rails.CrewBoardingHolds = HoldsDeparture;
         _rails.WagonCrewPrompt = WagonCrewPrompt; // every role: a client offers the revive from its copies, as the server takes it
         _rails.WagonCrewUse = WagonCrewUse;
+        _rails.WagonRevivable = WagonRevivable;
         _exitRoom = Layout.Rooms[rail.Stops[^1].Room];
         if (root.GetNodeOrNull<Stairs>("DownStairs") is { } stairs) stairs.LockReason = ObjectiveText.CrewLockReason(Game.Instance?.Adventure?.Campaign?.Antagonist?.Name);
 
@@ -485,6 +487,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// refuse offers nothing, so it never stands in a move's place (plan 15 Task 0, the plan 14 final re-review's N1).
     /// </summary>
     private string WagonCrewPrompt(TrainWagon wagon, Adventurer hero) => PropPromptRules.WagonPrompt(RevivableIn(wagon)?.NpcName);
+
+    /// <summary>The rail controller's <see cref="RailController.WagonRevivable"/>, on every peer: the wagon offers a revive now (<see cref="WagonCrewPrompt"/> would).</summary>
+    private bool WagonRevivable(TrainWagon wagon) => RevivableIn(wagon) != null;
 
     /// <summary>
     /// The rail controller's <see cref="RailController.WagonCrewUse"/> (server and solo): a downed crew member seated in the wagon is revived,

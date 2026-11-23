@@ -174,7 +174,11 @@ public partial class RailNet
         if (moved != null && rider is Adventurer climber) climber.SitIn(cart, m.Seat, keepYaw: true); // a move keeps where the hero looks
         else rider.SitIn(cart, m.Seat);
         if (leapt is { } from && rider is Adventurer leaper) RailEncounterController.LeapCue(leaper, from, leaper.GlobalPosition, shake: false); // the server tells our own screen's shake
-        else if (moved is { } left && rider is Adventurer hopper) RailEncounterController.LeapCue(hopper, left, hopper.GlobalPosition, shake: false); // cart_jump where it left, cart_land where it sits
+        else if (moved is { } left && rider is Adventurer hopper)
+        {
+            RailEncounterController.LeapCue(hopper, left, hopper.GlobalPosition, shake: false); // cart_jump where it left, cart_land where it sits
+            _rails.MoveTakenFor(hopper); // our own plain press the server made a move (a stale revive): the move's grace starts now (M8)
+        }
     }
 
     /// <summary>A body of the party's train here: its cart or one of its wagons.</summary>

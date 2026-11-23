@@ -22,6 +22,12 @@ public static class TrainMoveRules
     public const float AnswerBack = 5f;
     /// <summary>A wagon's rider is offered "Get out" only held, or rolling under this speed (m/s; Ruling 9).</summary>
     public const float GetOutBelow = 1f;
+    /// <summary>
+    /// After a wagon last offered a revive, its own rider is neither offered nor given "Get out" for this long (seconds, on each machine's
+    /// clock): a "Revive" pressed on a screen behind the server lands within a round trip of the server's revive ending, and is refused out
+    /// loud, never taken as a get-out (plan 15 Task 0, fix round 1, M1). A get-out is pressed when it was offered.
+    /// </summary>
+    public const float ReviveGetOutGrace = 1f;
 
     /// <summary>The way a look goes: +1 back past <see cref="BackCone"/>; else −1 (forward) from a wagon, 0 (no move) from the cart.</summary>
     public static int Direction(bool inCart, float lookYawDegrees) => Math.Abs(lookYawDegrees) > BackCone ? +1 : inCart ? 0 : -1;
@@ -57,6 +63,9 @@ public static class TrainMoveRules
 
     /// <summary>A wagon's own rider may get out (offered and taken): held, or rolling under <see cref="GetOutBelow"/> (Ruling 9).</summary>
     public static bool WagonGetOut(bool rolling, float speed) => !rolling || speed < GetOutBelow;
+
+    /// <summary>"Get out" may be offered and taken <paramref name="sinceRevive"/> seconds after the wagon last offered a revive (+∞: never did): <see cref="ReviveGetOutGrace"/> or more.</summary>
+    public static bool GetOutAfterRevive(double sinceRevive) => !(sinceRevive < ReviveGetOutGrace);
 
     /// <summary>The move's prompt: "Climb back to wagon {to}", "Climb forward to wagon {to}" or "Climb forward into the cart".</summary>
     public static string Prompt(int fromCar, int toCar)

@@ -133,6 +133,42 @@ public partial class RailController
         if (IsInstanceValid(hero)) _movePressedAt[hero.Index] = _now;
     }
 
+    private readonly Dictionary<int, double> _plainPressedAt = new();
+
+    /// <summary>
+    /// The hero this machine plays pressed a car of the train from another car as that car's plain use (what its look showed in the move's
+    /// place: a revive), on this machine's clock. Should the deciding machine's state make the press the move (a stale revive), the move's
+    /// grace starts once it is known (<see cref="MoveTakenFor"/>; plan 15 Task 0, fix round 1, M8).
+    /// </summary>
+    public void TrainPlainPressed(Adventurer hero)
+    {
+        if (IsInstanceValid(hero)) _plainPressedAt[hero.Index] = _now;
+    }
+
+    /// <summary>
+    /// A move of <paramref name="hero"/>'s was taken: in solo by <see cref="Move"/> on its press, on a client when the server's seat lands it
+    /// (<c>RailNet.OnSeat</c>). For the hero this machine plays whose last press on the train here was a plain use, not a move (the press became
+    /// the move on the deciding machine's state), E does nothing for <see cref="TrainMoveRules.MoveCooldown"/> from now, as after a move's
+    /// press (<see cref="MovePressed"/>; plan 15 Task 0, fix round 1, M8). A move pressed as one already started it. No allocation.
+    /// </summary>
+    internal void MoveTakenFor(Adventurer hero)
+    {
+        if (!IsInstanceValid(hero) || hero.Control != ControlKind.LocalHuman || !_plainPressedAt.TryGetValue(hero.Index, out var plain)) return;
+        if (_movePressedAt.TryGetValue(hero.Index, out var move) && move >= plain) return;
+        _plainPressedAt.Remove(hero.Index);
+        MovePressed(hero);
+        GD.Print($"[rails] {hero.State.Name}'s plain press became a move: the move's grace starts here");
+    }
+
+    /// <summary>A use of <paramref name="target"/> by <paramref name="hero"/> is a press on a car of the train from another car of it (on this peer's book).</summary>
+    public bool TrainCarFromAnother(Adventurer hero, object target)
+    {
+        if (!Current || !IsInstanceValid(hero)) return false;
+        var from = CarOf(hero);
+        var to = CarNumberOf(target);
+        return from >= 0 && to >= 0 && from != to;
+    }
+
     /// <summary>E does nothing for <paramref name="hero"/> now: seated, within <see cref="TrainMoveRules.MoveCooldown"/> of a move's press on this machine (Ruling 9).</summary>
     public bool InMoveGrace(Adventurer hero) => IsInstanceValid(hero) && hero.Seated && SincePress(hero) < TrainMoveRules.MoveCooldown;
 
@@ -240,6 +276,7 @@ public partial class RailController
         MovesTaken++;
         LastMoveRefused = null;
         RideAudio.At("cart_jump", hero.GlobalPosition);
+        if (why == "press") MoveTakenFor(hero); // a plain press the state here made a move (a stale revive): its grace starts (M8)
         GD.Print($"[rails] move: {name} {(to > from ? "back" : "forward")} from car {from} to car {to}{(seat != TrainRules.HeroPlace && to > 0 ? $" seat {seat} (a downed hero holds its place)" : "")} ({why}) at S={State.S:0.0}");
         return true;
     }

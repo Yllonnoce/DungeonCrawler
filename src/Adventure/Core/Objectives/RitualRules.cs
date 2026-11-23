@@ -25,6 +25,13 @@ public static class RitualRules
     /// </summary>
     public static bool ReviveTaken(bool downed, bool dead, float nearestHostile) => downed && !dead && !(nearestHostile < ReviveClearRadius);
 
+    /// <summary>
+    /// An enemy counts against a revive (its distance is what <see cref="ReviveTaken"/>'s nearest reads): alive and aware of the party. Only
+    /// those two, never the AI state behind them, so a client's enemy copy, which runs no AI and reads its awareness from the server's snapshot,
+    /// counts exactly as the server's (plan 15 Task 0, fix round 1, I1).
+    /// </summary>
+    public static bool CountsAgainstRevive(bool alive, bool aware) => alive && aware;
+
     public static float Duration(int floor) => Math.Clamp(90f + 3f * floor, MinDuration, MaxDuration);
 
     /// <summary>Seconds between waves at this point of the rite (0..1): from 16 down to 8.</summary>

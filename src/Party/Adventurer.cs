@@ -1474,7 +1474,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             return;
         }
         // a move car to car (plan 14): E does nothing for the cooldown from here on this machine, whatever the server makes of the press
-        if (_lookingAtMove && ReferenceEquals(target, LookingAt) && RailController.Instance is { } rails && IsInstanceValid(rails)) rails.MovePressed(this);
+        if (RailController.Instance is { } rails && IsInstanceValid(rails))
+        {
+            if (_lookingAtMove && ReferenceEquals(target, LookingAt)) rails.MovePressed(this);
+            else if (rails.TrainCarFromAnother(this, target)) rails.TrainPlainPressed(this); // a revive in the move's place: should it become the move, its grace starts then (M8)
+        }
         // talking is local (the choice goes over the wire); everything else the server does for us
         if (Net.NetSession.IsClient && target is not Npc)
         {

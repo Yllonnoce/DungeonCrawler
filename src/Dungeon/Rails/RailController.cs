@@ -150,6 +150,8 @@ public partial class RailController : Node
     public Func<TrainWagon, Adventurer, string>? WagonCrewPrompt { get; set; }
     /// <summary>The crew controller's use of a coupled wagon (what <see cref="WagonCrewPrompt"/> offered). Set by the crew controller.</summary>
     public Action<TrainWagon, Adventurer>? WagonCrewUse { get; set; }
+    /// <summary>A coupled wagon offers a revive now, to anyone (what <see cref="WagonCrewPrompt"/> offers is no one's own): each tick on every role (<see cref="StampRevives"/>). Set by the crew controller.</summary>
+    public Func<TrainWagon, bool>? WagonRevivable { get; set; }
 
     /// <summary>
     /// The party's train (plan 14), on every role, once per build of the floor (the crew controller asks, one wagon per cage placed:
@@ -249,7 +251,22 @@ public partial class RailController : Node
         if (!wagon.Coupled) return "";
         var crew = WagonCrewPrompt?.Invoke(wagon, hero) ?? "";
         if (crew.Length > 0 || hero.Cart != wagon) return crew;
-        return WagonGetOutOk(hero) ? "Get out" : "";
+        return WagonGetOutOffered(hero, wagon) ? "Get out" : "";
+    }
+
+    /// <summary>
+    /// "Get out" of <paramref name="wagon"/> is offered to and taken from its own rider <paramref name="hero"/>: <see cref="WagonGetOutOk"/>, and
+    /// <see cref="TrainMoveRules.ReviveGetOutGrace"/> after the wagon last offered a revive here (<see cref="TrainWagon.ReviveSeenAt"/>), so a stale
+    /// "Revive" press never gets its presser out (plan 15 Task 0, fix round 1, M1).
+    /// </summary>
+    private bool WagonGetOutOffered(Adventurer hero, TrainWagon wagon) => WagonGetOutOk(hero) && TrainMoveRules.GetOutAfterRevive(_now - wagon.ReviveSeenAt);
+
+    /// <summary>Each physics tick, every role: a coupled wagon offering a revive now (<see cref="WagonRevivable"/>) is stamped with this machine's clock. No allocation.</summary>
+    private void StampRevives()
+    {
+        if (WagonRevivable is not { } revivable) return;
+        for (var i = 0; i < _wagons.Count; i++)
+            if (_wagons[i] is { Coupled: true } wagon && IsInstanceValid(wagon) && revivable(wagon)) wagon.ReviveSeenAt = _now;
     }
 
     /// <summary>
@@ -279,11 +296,12 @@ public partial class RailController : Node
         {
             var revive = (WagonCrewPrompt?.Invoke(wagon, actor) ?? "").Length > 0;
             if (revive) { WagonPlainUses++; WagonCrewUse?.Invoke(wagon, actor); }
-            else if (actor.Cart == wagon && Current && WagonGetOutOk(actor)) { WagonPlainUses++; GetOutOfWagon(actor, wagon); }
+            else if (actor.Cart == wagon && Current && WagonGetOutOffered(actor, wagon)) { WagonPlainUses++; GetOutOfWagon(actor, wagon); }
             else
             {
                 WagonUsesRefused++;
-                GD.Print($"[rails] a use of W{wagon.Number} by {actor.State.Name} (car {CarOf(actor)}) offers nothing now (no revive taken, no get-out, no move): refused at S={State.S:0.0}");
+                if (!NetSession.IsServer || NetSession.Instance.TestServer) // a mashing client on a live server writes nothing (as the move's refusals there)
+                    GD.Print($"[rails] a use of W{wagon.Number} by {actor.State.Name} (car {CarOf(actor)}) offers nothing now (no revive taken, no get-out, no move): refused at S={State.S:0.0}");
                 WagonCrewUse?.Invoke(wagon, actor); // a downed crew member's revive refused says why ("Not with enemies this close.")
             }
         }
@@ -1058,6 +1076,7 @@ public partial class RailController : Node
     public override void _PhysicsProcess(double delta)
     {
         _now += delta;
+        if (Current) StampRevives();
         if (!NetSession.IsClient && Current) Tick((float)delta);
         else if (NetSession.IsClient && Current) SendRideIntent(delta);
         Flush();

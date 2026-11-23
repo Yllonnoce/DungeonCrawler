@@ -1338,7 +1338,9 @@ The train (plan 14; `Dungeon/Rails/TrainWagon.cs`, `CartTrain.cs`, the numbers i
 platform. Each wagon has one hero place (seat 0, at the cart's seat-0 spot), two crew seats (the bench's 4 and 5,
 `TrainRules.CrewSeats`) and one boarder spot on its rim at the cart's rim height. A coupled wagon is shown and on layer 8; it offers
 "Revive {name}" for a downed crew member seated in it whose revive would be taken (`Npc.ReviveTaken`, the one rule `TryRevive` refuses by:
-`RitualRules.ReviveTaken`, no living hostile within `ReviveClearRadius`, 6 m; plan 15 Task 0) and "Get out" to its own rider only as the move rules allow (its plain prompt,
+`RitualRules.ReviveTaken`, no living enemy aware of the party within `ReviveClearRadius`, 6 m, `RitualRules.CountsAgainstRevive`: alive and
+`!IsUnaware`, which a client reads from the server's snapshot, so every peer offers it alike; every enemy, a client's copies included, and
+the crew live under the floor root; plan 15 Task 0) and "Get out" to its own rider only as the move rules allow (its plain prompt,
 `RailController.WagonPlainPrompt`), and only when that offers nothing the move car to car to a hero in another car (see "Fighting along
 the train" under "The five rides"); else nothing. At speed the look reaches the revive (plan 14's final review I1): a seated hero's view
 asks the ray first and takes what it finds within reach that offers something other than a move, the hero's own wagon included (its
@@ -1720,7 +1722,11 @@ Fighting along the train (plan 14; `RailController.Moves.cs`, `RailEncounterCont
     the reach (W2 from the cart, 4.0–4.7 m) offers the move, not its revive (N2). A wagon press judged by the state it lands in that finds
     no move, no revive taken and no get-out (a "Revive" pressed behind the server: the crew member got up, died, was thrown or an enemy
     came near) is refused out loud (`[rails] a use of W{k} by {name} … refused`, `WagonUsesRefused`, and a downed one's "Not with enemies
-    this close."), never dropped; from another car of the rolling train it is judged as the move (`IsMoveAttempt`). Measured by `--test-boarders=knock` at speed:
+    this close."; printed in solo and on test servers only), never dropped; from another car of the rolling train it is judged as the move
+    (`IsMoveAttempt`), and the presser's machine starts the move's grace when it learns of it (solo in `Move`, a client at the server's seat:
+    `MoveTakenFor`, after `TrainPlainPressed` at the press). A stale "Revive" is never a get-out: a wagon's own rider is neither offered nor
+    given "Get out" for `TrainMoveRules.ReviveGetOutGrace` (1 s, on each machine's clock) after the wagon last offered a revive
+    (`TrainWagon.ReviveSeenAt`, stamped each tick on every role through `WagonRevivable`). Measured by `--test-boarders=knock` at speed:
     from the cart's seat 0, looking back at the seat's 150° (30° off W1, whose rim is 2.35 m off the eye and its bench 3.96 m, past the
     ray's 3 m), W1 offered "Revive {name}" as the yaw's car and the press revived; seated in W2, the ray found W2 itself (0.39 m to its rim)
     and offered its downed crew member's revive with a move to W3 offered by the yaw, and the press revived; nobody downed, every move as
@@ -1864,8 +1870,10 @@ fails. It prints `[boarders]` lines and `[boarders] RESULT ok ({variant}): …`.
   press lands it in W1 and W1's throw clock (alone until then) is reset in the landing's tick, no throw; there a press on W1 from its own
   seat at speed is refused out loud ("Not with enemies this close.", no move, no get-out). N2, after the climb forward to W1: the lead
   climbs into the cart, a companion holds W1's place, a W2 crew member is put down (no enemy near) and from the cart seat 0 (W2 4.0 m off,
-  beyond the 3.5 m reach) the look offers "Climb back to wagon 2", not the revive; in W2 the ray offers the revive and the press takes
-  it. M8: after the lever window the player takes a cart companion,
+  beyond the 3.5 m reach; a bend that brings it within reach is waited out) the look offers "Climb back to wagon 2", not the revive; in W2
+  the ray offers the revive and the press takes it. The climb forward to W1 after it is a stale revive: a W1 crew member put down, the look
+  from W2 shows "Revive {name}" on W1 (by the ray), a hound lands on W1 in the press's frame, and the press is taken as the move to W1 with
+  the move's grace started on the presser's machine. M8: after the lever window the player takes a cart companion,
   and the old lead goes back from W1 into the cart by itself.
 - `=throw` (from stop 1, ride 2; the default): stop 1's crew walk out of their cage to W3 as in play; nobody answers, fire held, the hound
   held above 1 HP, so the clock alone is measured: the call, the glows at 4.5 ± 0.1 and 8.5 ± 0.1 s, the throws at 6.0 ± 0.1 (seat 5) and
