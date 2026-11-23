@@ -12,7 +12,7 @@ namespace DungeonCrawler.Core;
 // The pumps come back (the game's own two) once the cart is 1 m past r5_golem's S, for the trestle and the jump. Held at the last stop, it prints
 // one line per group hound:
 //   [boarders] group {id}: spawned at party S={s}, in reach at S={r}, alongside at S={a}, {hound} leapt at S={l} onto {W{k}|the cart|a miss} (...), its cart freed at S={f} ({why}; ...)
-// and fails unless every hound leapt, each leap within TrainRules.LeapReach (8.6 m) and each r5_hounds hound landing 1.5 s or more before the
+// and fails unless every hound leapt, each landing on a body within TrainRules.LeapReach (8.6 m) (a miss within it + 1 m) and each r5_hounds hound landing 1.5 s or more before the
 // golem's burst (fix round 1); r1_hounds' leap came with the cart 5 m past r1_barricade or more and the front at r1_beam or short of it;
 // r3_hounds' cart was freed by Ruling 19 (its hounds gone, or the crossing) with the front at r3_switch_out's points - 2 m or short of it;
 // r5_hounds' cart was freed by Ruling 19 before the front reached r5_golem's S, or by the golem's burst, and never stood within 3 m of the
@@ -34,6 +34,8 @@ public partial class DebugTools
     private float _bdXClock;
     /// <summary>A hound lands at least this long before the golem's burst (fix round 1, (d)).</summary>
     private const float BdGolemMargin = 1.5f;
+    /// <summary>A miss's flight (it lands beside the nearest body, not on it) is gated at the reach + 1 m: printed always, failed only past this.</summary>
+    private const float BdMissBound = TrainRules.LeapReach + 1f;
 
     /// <summary>The hounds a group's slag cart carries are spared the cull (their spawn and the cull run in the same frame, the spare first).</summary>
     private void BdSpareGroups(RailEncounterController enc)
@@ -158,7 +160,7 @@ public partial class DebugTools
             }
         }
         if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
-        _bdMainOk = $"every group's hounds leapt, each leap within {TrainRules.LeapReach:0.0} m; r1_hounds between r1_barricade + 5 m and r1_beam; r3_hounds' cart freed short of r3_switch_out's points - 2 m; r5_hounds landed {BdGolemMargin:0.0} s or more before the golem's burst and its cart was freed short of the golem or by its burst, 3 m clear of its runner; {throws} throw(s), each after its call and glow";
+        _bdMainOk = $"every group's hounds leapt, each landing on a body within {TrainRules.LeapReach:0.0} m (a miss within {BdMissBound:0.0} m); r1_hounds between r1_barricade + 5 m and r1_beam; r3_hounds' cart freed short of r3_switch_out's points - 2 m; r5_hounds landed {BdGolemMargin:0.0} s or more before the golem's burst and its cart was freed short of the golem or by its burst, 3 m clear of its runner; {throws} throw(s), each after its call and glow";
         GD.Print($"[boarders] groups: the main pass ok: {_bdMainOk}");
         _bdXPass = 1; // the crossing pass (fix round 1, (e))
         _bdXStep = 0;
@@ -228,7 +230,7 @@ public partial class DebugTools
 
     /// <summary>
     /// The floor build's leaps (<see cref="RailEncounterController.SlagLog"/>): each printed with its length, which must be within
-    /// <see cref="TrainRules.LeapReach"/> (fix round 1, (a)); and with the golem out, each r5_hounds hound landing (its leap's start plus
+    /// <see cref="TrainRules.LeapReach"/> for a landing on a body (fix round 1, (a)) and within <see cref="BdMissBound"/> for a miss (Task 8); and with the golem out, each r5_hounds hound landing (its leap's start plus
     /// <see cref="RailEncounterController.LeapSeconds"/>) at least <see cref="BdGolemMargin"/> before the golem's burst ((d)). The failures, or none.
     /// </summary>
     private static List<string> BoardingLeapChecks(RailEncounterController enc, string tag)
@@ -238,8 +240,12 @@ public partial class DebugTools
         foreach (var l in enc.SlagLog.Where(x => x.What.StartsWith("leapt ", StringComparison.Ordinal)))
         {
             var margin = burst.What != null && l.Encounter == "r5_hounds" && l.T <= burst.T ? burst.T - (l.T + RailEncounterController.LeapSeconds) : double.NaN;
-            GD.Print($"[{tag}] leap: {l.Encounter}'s {l.Who} {l.What} at party S={l.PartyS:0.0} (t={l.T:0.00}): {l.Metres:0.0} m (reach {TrainRules.LeapReach:0.0}){(double.IsNaN(margin) ? "" : $"; lands {margin:0.00} s before the golem's burst (t={burst.T:0.00}, party S={burst.PartyS:0.0})")}");
-            if (l.Metres > TrainRules.LeapReach) fails.Add($"{l.Encounter}'s {l.Who} leapt {l.Metres:0.0} m, past {TrainRules.LeapReach:0.0}");
+            // a landing on a body is gated at the reach; a miss lands beside the nearest body wherever that has rolled to in the leap's
+            // 0.6 s, so it is printed and gated only against an absurd flight, the reach + 1 m (plan 14 Task 6 minor, ruled into Task 8)
+            var miss = l.What == "leapt a miss";
+            var bound = miss ? BdMissBound : TrainRules.LeapReach;
+            GD.Print($"[{tag}] leap: {l.Encounter}'s {l.Who} {l.What} at party S={l.PartyS:0.0} (t={l.T:0.00}): {l.Metres:0.0} m ({(miss ? $"a miss, bound {bound:0.0}" : $"reach {bound:0.0}")}){(double.IsNaN(margin) ? "" : $"; lands {margin:0.00} s before the golem's burst (t={burst.T:0.00}, party S={burst.PartyS:0.0})")}");
+            if (l.Metres > bound) fails.Add($"{l.Encounter}'s {l.Who} {(miss ? "missed with a leap of" : "leapt")} {l.Metres:0.0} m, past {bound:0.0}");
             if (!double.IsNaN(margin) && margin < BdGolemMargin) fails.Add($"r5_hounds' {l.Who} landed {margin:0.00} s before the golem's burst, under {BdGolemMargin:0.0} s");
         }
         if (burst.What != null && enc.SlagLog.Any(x => x.Encounter == "r5_hounds" && x.What == "spawned" && x.T <= burst.T))

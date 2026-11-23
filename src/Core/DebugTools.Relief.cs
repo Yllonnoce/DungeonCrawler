@@ -37,8 +37,10 @@ public partial class DebugTools
         void Next() { _relStep++; _relClock = 0f; }
         var party = main.Party;
         var rc = RailController.Instance;
+        // no enemies: each is freed as it appears, never killed, so no XP is paid and nobody levels up mid-test (a level-up raises max HP
+        // after the jump's reading, and the rails variant's run-over check divides by it; plan 14 Task 8: r1_hounds' hound did that)
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
-            if (e.IsAlive) e.Kill();
+            if (!e.IsQueuedForDeletion()) e.QueueFree();
         if (rc == null || !IsInstanceValid(rc)) { if (_relClock > 3f) Fail("no RailController on floor 12"); return; }
         if (party.Local is not { } me) { if (_relClock > 3f) Fail("no local hero"); return; }
 

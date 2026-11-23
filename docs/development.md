@@ -1245,10 +1245,13 @@ the crest (the dip over the top, negative) and at the foot (the sag, positive):
 | no pumpers | 6.00 m/s | -12.7 | +18.0 | -4.5 | +11.1 |
 | 1 pumper | 7.20 m/s | -16.5 | +21.1 | -7.3 | +15.1 |
 | 2 pumpers | 7.80 m/s | -18.2 | +22.8 | -9.4 | +17.3 |
-| 2 pumpers, 3 crew wagons (ride 5) | 6.78 m/s | -14.8 | +20.0 | -5.8 | +13.5 |
+| 2 pumpers, 3 or more wagons (every ride: the long train, plan 14) | 6.78 m/s | -14.8 | +20.0 | -5.8 | +13.5 |
 | ceiling (the test fails over it) | | 20 | 25 | 10.4 | 19 |
 
-The foot is the harder jolt in every row (about 1.1 to 2.3 g). Every flow pumps with the lead, and companions pump too. The figures
+The foot is the harder jolt in every row (about 1.1 to 2.3 g). Every flow pumps with the lead, and companions pump too. Since plan 14 the
+train's four wagons are coupled from the landing, so the "3 or more wagons" row is every ride's from ride 1, not ride 5's alone (the load
+counts three at most, `CartPhysics.MaxLoadWagons`); an unpumped train arrives at 5.22 m/s, under the empty cart's 6.0, so its jolts lie
+under the "no pumpers" row (the test measures no such row). The figures
 go with speed squared over `EaseLength`; on the 0.5 m chords (before the eases kept their pieces) they read -14.6/+16.8/-6.9/+14.5
 unpumped and -19.9/+22.6/-12.1/+18.1 with two pumpers (the test reads the laid points as straight pieces; the engine reads the
 baked curve, 0.2 m and cubic, which rounds each joint a little more). A longer ease would soften them but dips the bed further under each crest
@@ -1257,16 +1260,21 @@ fires at every ramp crest, the climb's included (it never fired on the old smear
 fade, so a headset rider at the default level takes the crest and the foot unmitigated.
 
 Riding (`Dungeon/Rails/RailController.cs`, a node under the floor root; the engine-free rules are in `Dungeon/Rails/Core`):
-the party's cart waits at the first stop. Board it with E (not at the end of the line); companions within 25 m hop in with
-you. The cart leaves 5 s after the first hero boards; it leaves as soon as everyone living is aboard, but never sooner than
-2 s after the countdown began. It rolls to the next stop, where the countdown starts again. It only leaves with a player
+the party's cart waits at the first stop with its four wagons, W1..W4, coupled behind it (plan 14; see "Stops, cages and the crew").
+Board it with E (not at the end of the line); companions within 25 m hop in with you. The cart leaves 5 s after the first hero boards; it leaves as soon as everyone living is aboard, but never sooner than
+2 s after the countdown began, and not while freed crew are still walking to their seats, up to 8 s from its start (see "Running
+to the seats"). It rolls to the next stop, where the countdown starts again. It only leaves with a player
 aboard: a companion on foot whose lead is seated never regroups onto the lead (that would put it in the tub, or ahead of a
 moving cart); while the cart is held at a stop it hops in (and any companion that comes within 3 m of the held cart does),
 and while the cart rolls it holds where it stands. A cart that is held, or arrives, with no player aboard sets its riders
 down beside the lane there and stays. Seated, forward pumps and back brakes; seated companions pump on climbs and when the
-cart is slow. E again gets you out: below 1 m/s you step out beside the lane and your companions follow you, but getting
-out of a moving cart (1 m/s or more) gets you run over once, and you land on the line just behind the cart (the others ride
-on). The "Cart coming!" warning looks 3 s ahead, at 3 m/s at least. Anyone on foot in the cart's path is run over too, as the press does it, by the lethality
+cart is slow. The train's drag counts from the landing: `CartInput.CrewWagons` is the number of coupled wagons (four, of which the
+load counts three, `CartPhysics.MaxLoadWagons`, 5% each), so the train cruises at 6/1.15 = 5.22 m/s unpumped on every ride (6.0 m/s
+for the cart alone), 6.26 m/s with one pumper, and climbs ride 3's ramp at about 2.61 m/s (the spec's recon). E again gets you out:
+below 1 m/s you step out beside the lane and your companions follow you, but getting out of a moving cart (1 m/s or more) gets
+you run over once, and you land on the line just behind the cart (the others ride on). A hero seated in a wagon is offered "Get
+out" only while the train is held or rolls under 1 m/s (`TrainMoveRules.WagonGetOut`), and steps out alone; at speed a wagon
+offers only the move car to car (see "Fighting along the train" under "The five rides"). The "Cart coming!" warning looks 3 s ahead, at 3 m/s at least. Anyone on foot in the cart's path is run over too, as the press does it, by the lethality
 setting: mangled at the default 3, part of max HP below 2.5. Seated heroes are never hit, and a body already down is not
 hit again. Big enemies (scale 1.05 and up, and bosses) are hurt, stunned and knocked aside instead, and dent the plating by
 15. At 0 plating the cart is wrecked: it stops for good and the riders climb out beside the lane, each losing 25% of max
@@ -1301,7 +1309,7 @@ Founders' Strongbox (10, the reward vault, `col_vault`), The Kiln Cages (11, the
 runs the long way round the ring, from the landing to the Cooling Stair beside it (`RailCount` 4, `RailLoop`, `RailBand`
 14): five rides of 206 to 281 m, 1214 m in all, with the cavern span on ride 4.
 
-The eight named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per wagon, two per wagon across four stops)
+The eight named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per cage, two per cage across four stops)
 are seated by the crew controller, not the resolver. A crew id another NPC of the plan holds, or `grisel_body` (dead
 Grisel on the condemned branch), is dropped ("crew <id>: dropped (id taken)"). The "caged crew" narration fires at S1.
 
@@ -1315,29 +1323,64 @@ The jail room stays a locked vault with nobody in its cells.
 The gates. Each intermediate stop whose room holds a guard or defend collective gets a `RailGate` across both tracks (the
 party lane and the enemy lane beside it) just past the platform, with a winch post on the outer side of the party lane.
 The posts stand 1.05 m out from each lane's centre line (`RailController.GateSide`: the tub's half-width and a margin), so
-a cart passes between them, and the lifted bar sits at 2.95 m, clear of a coupled cage wagon's roof (2.57 m). A stop with no such mobs gets no gate. A gate starts down
+a cart passes between them, and the lifted bar sits at 2.95 m (set clear of the old cage wagons' 2.57 m roof; plan 14's open wagons
+stand far lower). A stop with no such mobs gets no gate. A gate starts down
 while any member of those collectives lives. A patrol or alarm group passing through does not hold a gate. The cart
 rolls into the stop as usual but does not count down to leave, and the HUD says "Cart — gate down". Every 0.25 s the
 server lifts any down gate whose holders are all dead. Riders already seated then start the boarding. The winch ("Crank
 the winch") lifts the gate by hand, but only when no living holder stands within 12 m of it; otherwise the log says
 "Not while they're still here."
 
-Cage wagons and coupling. At each intermediate stop a `CageWagon` (`Dungeon/Rails/CageWagon.cs`, procedural, with a stub
-of siding track under it) stands on a free cell beside the platform. The cell is blocked, and nobody getting out of the
-cart is set down on it. The crew ride inside, two to a wagon, in stop order. Looking at a locked wagon offers one of three
-ways in. "Open the cage (the orc's keys)" works once the party carries them. "Open the cage (Grisel)" works when she
-follows the party within 8 m, or sits on the cart's bench at that stop. "Unlock the cage" spends an iron key or tries a
-pick (`PartyController.TryUnlock`, an objective lock). An open cage frees its two: XP and a `freed:<id>` flag each, as the
-walk-in jailbreak gives. When the cart next leaves that stop, an open wagon with crew aboard couples on behind it, and the
-train is posed along the line behind the cart. Each coupled wagon slows the cart a little (`CartInput.CrewWagons`, 5% per
-wagon). An open wagon offers "Let them out" only when it cannot ride: on its siding while the cart is not held at its
-stop (the cart is elsewhere, or already gone past), or anywhere once the cart is wrecked with no spare left. Its crew
-climb out and follow the party on foot, and crew on foot never board again (neither a wagon nor the bench). While the
-cart is held at the wagon's stop the choice is not offered, since the wagon couples on at the departure. A follower whose
-lead rides the cart never regroups into the tub or onto the line: stuck, it holds where it is, and only when it is more
-than 30 m behind (`Npc.SeatedLeadCatchUp`) is it set down beside the cart, as a rider steps out at a stop.
+The train (plan 14; `Dungeon/Rails/TrainWagon.cs`, `CartTrain.cs`, the numbers in `Rails/Core/TrainRules.cs`). Four open wagons, W1..W4
+(nearest the cart first; one per cage placed, `TrainRules.WagonsFor`), are built under the floor root on every role
+(`RailController.BuildTrain`) and coupled behind the party's cart from the landing. They are box tubs the cart's size with no roof,
+`TrainRules.Spacing` (2.6 m) apart, so the train is `TrainRules.Length` (12.6 m) long; held at stop 0 its rear is at S 4.5, on room 1's
+platform. Each wagon has one hero place (seat 0, at the cart's seat-0 spot), two crew seats (the bench's 4 and 5,
+`TrainRules.CrewSeats`) and one boarder spot on its rim at the cart's rim height. A coupled wagon is shown and on layer 8; it offers
+"Revive {name}" for a downed crew member seated in it, the move car to car to a hero in another car (see "Fighting along the train"
+under "The five rides"), and "Get out" to its own rider only as the move rules allow, else nothing. The interact ray passes through
+anything offering nothing to the next hit, up to six times (`Adventurer.FirstOffered`), so a wagon never blocks a prompt behind it
+(the cart, a lever, a downed NPC; a cage stands 4.18 m past a wagon's far side, out of the ray's 3 m). `RailController.CoupleFresh(why)`
+empties every uncoupled wagon (its riders set down beside the lane quietly), couples W1..Wn in number order and prints
+`[rails] train: W1..W{n} coupled at stop {s} ({why})`: at the build ("the build"), at every `Restore` ("restored whole") and when a spare
+takes over a train that lost wagons ("a spare takes over"). Nothing couples at a departure. A fall loses every wagon (uncoupled and
+hidden, with its crew; see "Crevasses"); a plain wreck keeps them and their crew, and the spare that takes over pulls them on.
 
-The cage hold (plan 7). The cart does not count down at a stop whose cage wagon is still locked with living crew
+The cages (`Dungeon/Rails/PlatformCage.cs`). At each intermediate stop a `PlatformCage`, an iron cage (`CageHeight` 1.95 m) on a plank
+floor with no wheels or track, stands on a free cell beside the platform (`PickSiding`). The cell is blocked, and nobody getting out of
+the cart is set down on it. Two crew stand in it, in stop order (`PlanValidator.ValidateCrew` caps two per cage). Looking at a locked
+cage offers one of three ways in. "Open the cage (the orc's keys)" works once the party carries them. "Open the cage (Grisel)" works
+when she follows the party within 8 m, or sits on the cart's bench at that stop. "Unlock the cage" spends an iron key or tries a pick
+(`PartyController.TryUnlock`, an objective lock). An open cage frees its two: XP and a `freed:<id>` flag each, as the walk-in jailbreak
+gives. Its living, up crew get out at its door at once (`PlatformCage.DoorSpot`; `[CrewRescue] {name} gets out of cage {s} at its door`)
+and follow the party. One who went down inside the cage stays there until revived (the open cage offers "Revive {name}"), then gets
+out the same way. "Let them out" is gone: an opened cage always lets its crew out.
+
+Running to the seats (`CrewRescueController.TickBoarding`, server and solo, every tick). While the train is held at a stop that is not
+the last and not halted (`TrainRules.BoardsHere`), every freed crew member who is up, on foot and within `TrainRules.BoardReach` (25 m)
+of its seat's spot (beside its wagon on the lane) books the first seat in `TrainRules.SeatOrder` that nobody sits in or has booked:
+W1 seat 4, W1 seat 5, W2 seat 4, and so on. So stop 2's crew sit in W1 when stop 1's were left. It walks there (`MoveTarget`; a pocket's
+walk or a test's comes first) and sits in at `HopReach` (3 m). The prints are `[CrewRescue] {name} books W{k} seat {n} at stop {s}
+({d} m)`, `… sits in W{k} seat {n} after {t} s`, `… sat in at once at 8 s ({d} m)` and `…'s booking of W{k} seat {n} ends ({why})`.
+- **The countdown's wait.** While a crew member booked at this stop is on the way (`CrewRescueController.OnTheWay`), the departure that
+  falls due is held at 0 left (`RailController.CrewBoardingHolds`, `TrainRules.HoldsDeparture`, passed as `Boarding.Tick`'s hold), up to
+  `TrainRules.BoardMax` (8 s from the countdown's start, `Boarding.Elapsed`, which counts the hold).
+- **At `BoardMax`** anyone still booked within 25 m sits in at once (`TrainRules.SeatsAtOnce`), as companions hop in; anyone farther
+  stays on foot.
+- **A booking ends** when the train leaves, wrecks or halts, at the end of the line, when the walker goes down or is more than 25 m
+  off, or when its seat is taken or its wagon gone.
+- **Crew on foot board again.** This reverses plan 7's rule: crew on foot who follow the party board the held train the same way at
+  every stop short of the last. Grisel, an escort, never takes a wagon seat; she keeps the cart's bench.
+- **Measured** (`--test-crew`, where the cages stand beside the train): each stop's crew sat 0.4–1.4 s after their cage opened, inside
+  `Boarding.MinWait` (2 s), and the departure came 0.61–1.57 s after the last of them sat (Task 2's table; the sweep at plan 14 Task 8
+  read the same). In `--test-chase` stop 3's walk to W4 held the departure to 2.4 s, so the wait does hold. No flow reaches the 8 s
+  sit-at-once (see "Known gaps").
+
+A follower whose lead rides the train (any car of it: `RailController.CarOf`) never regroups into a tub or onto the line: stuck, it holds
+where it is, and only when it is more than 30 m behind (`Npc.SeatedLeadCatchUp`) is it set down beside the cart, as a rider steps out at
+a stop. No flow exercises that set-down (`--test-crew`'s straggler walked back by its own path).
+
+The cage hold (plan 7). The cart does not count down at a stop whose cage is still locked with living crew
 (`RailController.CageHeld`, from `CageHoldRules.Held`: Held at an intermediate stop, not halted on the line, nobody has left
 that stop's prisoners, and the stop's cage holds). The crew controller answers `RailController.CageHolds` for each stop: a
 locked cage holds the cart while any of its crew lives (`CageHoldRules.Holds`). A downed crew member is living and still
@@ -1359,32 +1402,33 @@ holds the cart again after a load; a cage still locked at a stop the cart is pas
 
 A cage left behind. Its crew count as lost (`CrewRules.JudgeCaged`), and the cage no longer blocks the stairs
 (`CrewRules.CagesBlocking` counts only the cages neither open nor left behind). Opening it later on foot frees its crew
-as any cage does, and they follow on foot ("Let them out" on its siding). The save still lists only the dead as lost, but a load
+as any cage does: they get out at its door and follow on foot. The save still lists only the dead as lost, but a load
 counts every passed stop as left (above), so a left cage behind the cart stays left and its crew stay lost; only a cage at
 the stop the cart is restored at holds again, with its crew caged. The crew line's "freed" (`CrewRules.HudText`) counts only crew whose
 cage stands open (or who had none), so a left cage's crew, and crew who died still caged, are lost but never freed.
 
-The crew. Floor 12's six are Hob Tallow, Merrin Ash, Dace Wicker, Old Pell, Juno Brack and Selby Crane (wagon 1 holds Hob
-and Merrin, wagon 2 Dace and Old Pell, wagon 3 Juno and Selby). A plan with no `Crew` falls back to the floor's stock
-prisoners. Crew who cannot fit in a wagon wait freed at the landing. A crew member (`Npc.Crew`) who is hurt to nothing
+The crew. Floor 12's eight are Hob Tallow and Merrin Ash (cage 1), Dace Wicker and Old Pell (cage 2), Juno Brack and Selby Crane
+(cage 3), and Hal Sumpter and Bet Wynn (cage 4). A plan with no `Crew` falls back to the floor's stock prisoners. Crew who cannot fit
+in a cage wait freed at the landing. A crew member (`Npc.Crew`) who is hurt to nothing
 goes down and bleeds out after 60 s (`CrewRules.BleedOutSeconds`), and the label counts the seconds left. "Revive <name>",
-on the NPC or on the wagon they sit in, gets them up at 35% HP, but not with a hostile within 6 m. One who bleeds out is
+on the NPC, on the cage they stand in or on the wagon they sit in, gets them up at 35% HP, but not with a hostile within 6 m. One who bleeds out is
 gone ("<name> is gone.") and counts as lost. The same "Revive <name>" now works for any downed escorting Quest NPC on
 every floor (`Npc.CanBeRevived`), which closes the old gap where an escort put down by wounds could never be got up.
 
 Grisel's two branches hang on the floor 9 flag `grisel_forgiven`; condemned and unset are the same. Forgiven, Grisel
 (`npc_grisel`) waits at the landing with her escort quest `q_grisel_out`. Once she follows, she takes the cart's rear
 bench (seats 4 and 5, Grisel first) whenever a player boards within 25 m of her. She opens every cage for free at its stop.
-The quest completes when she reaches the down stairs. Condemned, she lies dead on a cell beside wagon 1 with no dialogue,
+The quest completes when she reaches the down stairs. Condemned, she lies dead on a cell beside cage 1 with no dialogue,
 and an `OrcKeyring` hangs at her belt. "Take the orc's keys" sets `OrcKeys`, and every cage then opens free. Her body is
 built again with the floor every time, and the keyring is hidden once the save says the keys are taken.
 
 Spare carts. A spare cart, for looks only, stands beside each intermediate stop's platform. When the party's cart is
 wrecked, the nearest stop (along the line, ahead or behind) with an unused spare provides a new one. The spare vanishes,
-and the party's cart stands Held there with full plating, its wagons still coupled behind it. The log says "A spare cart
-waits at stop N." With every spare used, a wreck leaves the rest on foot ("No carts left. The rest is on foot.", a
-`CartEventKind.OnFoot` event). The crew in coupled wagons then get out and follow. A load after that brings the cart back
-whole at its last stop, but with every spare spent the crew who were let out stay on foot and are not seated again.
+and the party's cart stands Held there with full plating, its wagons still coupled behind it (after a fall that took them, four fresh
+empty ones: `CoupleFresh`, so later prisoners always have seats while the party has a cart). The log says "A spare cart waits at stop
+N." With every spare used, a wreck leaves the rest on foot ("No carts left. The rest is on foot.", a `CartEventKind.OnFoot` event). The
+crew seated in the train then get out and follow (`LetOutOfTrain`). A load after that brings the cart back whole at its last stop with
+W1..W4 coupled fresh; the crew on foot board it again at the next hold within 25 m, as any crew on foot.
 
 The stairs. On a railed floor the sealed down stairs say "<villain> has sealed the stairs. Bring Grisel's crew home."
 (`ObjectiveText.CrewLockReason`) in place of the walk-in jail's line.
@@ -1396,44 +1440,73 @@ every cage is open or left behind and every crew member is home or lost. The los
 wagon, or wagons stand but there is nobody to bring home and every cage is open, the trial is waived and the stairs open
 on the next tick.
 
-The save. `FloorStateDto.SparesUsed` lists the stops whose spare is spent. `ObjectiveStateDto` adds `GatesUp`, `OpenCages`,
-`CoupledCages` (in train order), `HomeCrew`, `LostCrew` and `OrcKeys`; every one is nullable, so old saves load. Seats
-are not saved. A load puts the cart Held at the stop it last reached and couples the saved train behind it again. It
-seats the caged crew and the train's riders in their wagons, leaves crew who were let out on foot where they stood, and
-sets the home crew in the exit room. Lifted gates come back up with no animation or log line. On a co-op client (a join
-or a revisit) the objective's restore only reads the state for the HUD, as the 2 s objective sync does, and the cart's
-restore does nothing: seats, the train and the doors are the server's.
+The save. `FloorStateDto.SparesUsed` lists the stops whose spare is spent. `ObjectiveStateDto` adds `GatesUp`, `OpenCages` (stops),
+`HomeCrew`, `LostCrew`, `OrcKeys` and, since plan 14, `AboardCrew` and `LostWagons`; every one is nullable, so old saves load.
+- **`AboardCrew`** (`CrewSeatDto`: id, wagon number, seat) lists the crew seated in the train, by wagon then seat. A load seats each one
+  there again (`TrainRules.Reseat`: the saved seat if it is free, else the first free seat in `SeatOrder`; the same id listed twice gets
+  its first): `[CrewRescue] load: {name} back in W{k} seat {n}`, or `… (seat {m} of W{w} taken: first empty)`.
+- **`LostWagons`** lists the wagons a fall took, and holds only between that fall and the next restore. It is a record only: every
+  load restores the cart whole (`Restore`), and a cart restored whole couples W1..W4 fresh, so no load honours it (`[rails] train: the save
+  had wagons [..] lost; the cart is restored whole, W1..Wn couple fresh`). The crew who fell stay lost through `LostCrew`.
+- **`CoupledCages` and `LostCages`** are retired: never written, ignored on load. Floor-12 dev saves from before plan 14 are not supported.
+- `RailArrival.Merge` takes `OpenCages`, `HomeCrew`, `LostCrew`, `FreedNpcs`, `LostWagons`, `AboardCrew` and `Completed` from the arrival
+  snapshot, so a wipe's rise brings the train back as it arrived.
 
-`--test-crew[=forgiven|condemned]` (condemned when no branch is given) plays the rescue on the built-in floor 12 at
-lethality 3 with no AI and prints `[crew]` lines. It checks the floor first: six stops, a wagon at each intermediate stop (4),
-two caged crew per wagon (8), and a gate down at every intermediate stop whose room a Guard or Defend group of the floor's
-contents holds (4: the Oddfellows hold stop 2's). Every count reads `LineShape`, so a line of another stop count needs no edit. Then it
-boards at the landing, and at each stop it checks that the gate is down, kills the stop's guards by hand and waits for
-the gate to lift. Each cage must open free (an iron key in the bag stays unspent, and every pick is forced to fail).
-Condemned, the party takes the orc's keys from Grisel's body. Forgiven, Grisel must be on the bench (or following within
-reach) at every cage, and each cage must offer "Open the cage (Grisel)". Her escort quest is accepted by raising its
-accept event (`QuestAccepted`), so her dialogue's accept button is not covered. After the load she must not stand on a
-rail cell. Each wagon must couple on as the cart leaves. Between stops 2 and 3 the run saves and loads, and the train, crew, `OrcKeys` and gates
-must come back. On ride 3 the seated lead throws the `switch_out` lever from the seat as the seated window offers it, out of
-the look ray's reach and through `PartyController.VrUse` (the dispatch E uses): the prompt must be "Throw the switch", the
-lever thrown and the lead still seated (`[crew] ride 3: the seated lead throws …`), and the lever must never pass its points
-straight. A crew member taken out of wagon 2 is downed and bleeds out (the clock is wound on through
-`Npc.DebugBleed`) and is lost. Every stop from 3 to the last crew stop is ridden to the same way (guards killed, the cage
-opened free, its wagon coupled). The end of the line must bring the other seven home and unlock the stairs; forgiven, Grisel
-walks with the party to the stairs and `q_grisel_out` must complete. Then the floor is built again. The rebuilt floor's cart rides into stop 1 with cage 1 locked: it must be held there
-(`CageHeld`) a countdown and two seconds later with no countdown run, the bar "Cart — cage locked", the seat's prompt
-`CageHoldRules.SeatedPrompt` with the hold offered, and "The cage here is still locked." heard once. The lead then
-leaves the prisoners behind (`[crew] 8 held at stop 1 by its locked cage`). The cart must leave within 6 s with wagon 1
-uncoupled and still locked, `CrewLeftAt` listing stop 1, its two crew lost, the crew line reading "Crew freed 0/8, home 0, 2 lost." and the floor
-not complete (`[crew] 8 departed stop 1 without its prisoners`). (The other solo ride flows, `--test-ride`,
-`--test-ride-edges`, `--test-chase` and `--test-cart-watchdog`, leave each held stop's prisoners the frame the hold shows,
-through `DebugTools.RideWaiveCages`, so their timings are as before.) Then a cart on thin
-plating hits a cinder brute between stops 1 and 2. One spare must take over, holding the cart at a stop (stop 1, whose
-prisoners were left, must not hold it). The brute dies and the cart rides on to stop 2, where cage 2 holds it, and the run
-saves and loads there. After the load `CrewLeftAt` must list stop 1 alone, wagon 1's crew must still be lost, three cages
-(2 to 4) must block the stairs (`CrewRescueController.CagesBlockingNow`), the crew line must still read "Crew freed 0/8,
-home 0, 2 lost." and cage 2 must hold the cart again (`[crew] 9 the load kept stop 1's prisoners left behind`). The run ends
-with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
+A load puts the cart Held at the stop it last reached with W1..W4 coupled fresh, seats the caged crew in their cages and `AboardCrew` in
+the train, leaves crew who were on foot where the save had them (one downed on foot stays lying there; only one downed inside its open
+cage stays in it, `CrewRules.StaysInOpenCage`), and sets the home crew in the exit room. Lifted gates come back up with no animation or
+log line. The heroes are not seated again (a load puts nobody aboard). On a co-op client (a join or a revisit) the objective's restore only reads the state for the
+HUD, as the 2 s objective sync does, and the cart's restore does nothing: seats, the train and the doors are the server's.
+
+`--test-crew[=forgiven|condemned]` (condemned when no branch is given; `DebugTools.Crew.cs`, quits after 570 s, about 430 s a run)
+plays the rescue on the built-in floor 12 at lethality 3 with no AI and prints `[crew]` lines. It is written for the train from the
+landing (plan 14).
+- **The floor check:** six stops, a cage at each intermediate stop (4), two caged crew per cage (8), W1..W4 coupled and empty at stop 0,
+  and a gate down at every intermediate stop whose room a Guard or Defend group of the floor's contents holds (4: the Oddfellows hold
+  stop 2's). Every count reads `LineShape`, so a line of another stop count needs no edit.
+- **Each stop:** it boards at the landing, and at each stop it checks that the gate is down, kills the stop's guards by hand and waits
+  for the gate to lift. Each cage must open free (an iron key in the bag stays unspent, and every pick is forced to fail). Condemned, the
+  party takes the orc's keys from Grisel's body. Forgiven, Grisel must be on the bench (or following within reach) at every cage, and
+  each cage must offer "Open the cage (Grisel)". Her escort quest is accepted by raising its accept event (`QuestAccepted`), so her
+  dialogue's accept button is not covered. The opened cage's crew get out at its door and walk to the first empty seats in
+  `TrainRules.SeatOrder` (`[crew] 3 cage {s}'s crew run to the first empty seats [...]`): each must sit in before the departure, which
+  comes after the last of them sits and at most `BoardMax` + 0.5 s after the countdown started (`[crew] stop {s}: crew [...] seated {t} s
+  after the cage opened`, `… the countdown ran {c} s …; the departure came {d} s after the last of them sat in`).
+- **Ride 1:** `r1_beam` clears every seated head in the train (Grisel's on the bench when forgiven) by 0.05 m or more (`[crew] 1 beam: …
+  by 0.14 m`).
+- **The save between stops 2 and 3:** the train, the crew, `OrcKeys` and the gates come back, and every `AboardCrew` entry is back seat
+  for seat (`[crew] load: AboardCrew [...] back seat for seat`). After the load Grisel must not stand on a rail cell.
+- **Ride 3:** the seated lead throws the `switch_out` lever from the seat as the seated window offers it, out of the look ray's reach and
+  through `PartyController.VrUse` (the dispatch E uses): the prompt must be "Throw the switch", the lever thrown and the lead still
+  seated (`[crew] ride 3: the seated lead throws …`), and the lever must never pass its points straight.
+- **A crew member lost:** one taken out of W2 goes down; a save and a load find it lying on foot where it lay, not back in its cage
+  (`[crew] 6 after the load … 0.00 m from where the save had it`); it bleeds out (the clock wound on through `Npc.DebugBleed`) and is lost.
+- **The straggler:** at stop 3 one freed crew member is held 30 m off while the countdown runs. Its booking ends (`(31.2 m off)`), it is
+  on foot and following at the departure, it is held there through ride 4 (the collapsing bridge is no place to walk) and let go at stop
+  4's arrival, where it walks back to the train, books W3 seat 4 at 24.9 m and boards (`[crew] straggler: … boards at stop 4 …`; it walked
+  back by its own path, so `SeatedLeadCatchUp`'s set-down is not exercised). Stop 4's last guard is frozen alive meanwhile, so the gate
+  stays down.
+- **The end of the line:** every stop from 3 to the last crew stop is ridden to the same way, and the end of the line must bring the
+  other seven home and unlock the stairs; forgiven, Grisel walks with the party to the stairs and `q_grisel_out` must complete.
+- **The rebuilt floor:** the cart rides into stop 1 with cage 1 locked. It must be held there (`CageHeld`) a countdown and two seconds
+  later with no countdown run, the bar "Cart — cage locked", the seat's prompt `CageHoldRules.SeatedPrompt` with the hold offered, and
+  "The cage here is still locked." heard once. The lead then leaves the prisoners behind (`[crew] 8 held at stop 1 by its locked cage`).
+  The cart must leave within 6 s with cage 1 still locked and W1..W4 empty, `CrewLeftAt` listing stop 1, its two crew lost, the crew
+  line reading "Crew freed 0/8, home 0, 2 lost." and the floor not complete (`[crew] 8 departed stop 1 without its prisoners`). (The
+  other solo ride flows, `--test-ride`, `--test-ride-edges`, `--test-chase` and `--test-cart-watchdog`, leave each held stop's prisoners
+  the frame the hold shows, through `DebugTools.RideWaiveCages`.) Then a cart on thin plating hits a cinder brute between stops 1 and 2.
+  One spare must take over, holding the cart at a stop (stop 1, whose prisoners were left, must not hold it). The brute dies and the cart
+  rides on to stop 2, where cage 2 holds it, and the run saves and loads there. After the load `CrewLeftAt` must list stop 1 alone, cage
+  1's crew must still be lost, three cages (2 to 4) must block the stairs (`CrewRescueController.CagesBlockingNow`), the crew line must
+  still read "Crew freed 0/8, home 0, 2 lost." and cage 2 must hold the cart again (`[crew] 9 the load kept stop 1's prisoners left
+  behind`).
+- **The ray through a wagon** (`[crew] look: …`): aimed through a coupled wagon (its prompt empty), the real interact ray must offer what
+  lies past it: a cage when one is within the ray's reach past a wagon, else the cart (on floor 12 a cage stands 4.18 m past the nearest
+  wagon's far side, out of the 3 m ray, so the flow aims at the cart through W1).
+- **W1 taken by the next stop's crew:** stop 2's cage opens by the test's hook and its crew take W1's seats 4 and 5, since stop 1's
+  were left (`[crew] 10 stop 2's crew took W1 (stop 1's were left): […] 0.4 s after the cage opened`).
+
+The run ends with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
 as it appears. A run with no RESULT line 10 s before its quit timeout fails with "timed out at step N" and exit code 1.
 `--test-ride` and `--test-ride-edges` share this watchdog.
 
@@ -1510,8 +1583,8 @@ kinds are `beam`, `switch_out`, `switch_back`, `heap`, `buckets`, `hammers`, `po
 `dark`, `runaway` and `split` (plan 12), and `bridge` and `leap` (plan 13, ride 4's cavern). `PlanValidator.ValidateRailPlans` drops both lists on a floor with no rails. It also drops an item with no id or a
 duplicate id, an unknown kind, a ride outside 1..stops−1, no riders, an unknown enemy id or any boss rider ("no bosses").
 It clamps `At` to 0.05..0.95, trims a slag cart to 3 riders, and caps the lists at `RailEncounterCap(rides)` = max(12, 3 × rides)
-encounters and `RailSetPieceCap(rides)` = max(20, 5 × rides) set pieces: 15 and 25 on floor 12's five rides, which has 9 encounters and
-21 set pieces.
+encounters and `RailSetPieceCap(rides)` = max(20, 5 × rides) set pieces: 15 and 25 on floor 12's five rides, which has 12 encounters
+(of 15; plan 14 added the three hound groups) and 21 set pieces.
 
 `RailEncounterController` (`Dungeon/Rails/RailEncounterController*.cs`) is a node under the floor root. It is made after
 the objective only when the floor has a `RailController` and either list, so every other floor is untouched. It is server
@@ -1532,17 +1605,20 @@ Floor 12's five rides (`data/adventures/builtin/floor_12.json`; the lengths are 
 
 | Ride | Stops | Encounters | Set pieces | Slots left for later plans |
 |---|---|---|---|---|
-| 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8) | `r1_barricade` (0.25, S 82.8), `r1_beam` the low beam (0.6) | — |
+| 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8), `r1_hounds` an ember hound on a slag cart (0.3331, −8: S 105.0, plan 14) | `r1_barricade` (0.25, S 82.8), `r1_beam` the low beam (0.6) | — |
 | 2 Side by Side (≈206 m) | S1 → S2 | `r2_slag1..3`: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | `r2_slag_barricade` on the slag line (0.3, ahead of `r2_slag1`), `r2_barricade` (0.7, S 427.1, defended by `r2_slag2` alongside) | — |
-| 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.731, live: its points at S 694.4, 20.2 m before the gap), `r3_buckets` (0.832, past the gap); the broken bridge on its slag line (the gap at party S 714.7, plan 11) | — |
+| 3 The Switchyard (≈281 m) | S2 → S3 | `r3_hounds` an ember hound on a slag cart (0.05, −5: S 502.9, plan 14), `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.731, live: its points at S 694.4, 20.2 m before the gap), `r3_buckets` (0.832, past the gap); the broken bridge on its slag line (the gap at party S 714.7, plan 11) | — |
 | 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.262, −4: S 836.2, the dark's middle), `r4_slag` a cinder and a priest (0.3086, 0: party S 848.0, spawned out of sight 40 m ahead round the hairpin; the leap's slag cart) | `r4_beam` (0.15); `r4_dark` (0.093, S 793.6–878.6), `r4_runaway` (0.172, S 813.5), `r4_split` (0.371, its points at S 863.6, plan 12); `r4_bridge` the collapsing bridge (0.5268, S 903.1: the cavern's party deck, S 903.1–991.1, 22 cells) and `r4_leap` the leap and the slag line's drop (0.5664, S 913.0: the stretch to S 975.1, the drop at enemy S 999.1–1007.1, plan 13) | — |
-| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_barricade` (0.88, S 1206.6), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | — |
+| 5 The Pour (≈209 m) | S4 → exit | `r5_hounds` two ember hounds on a slag cart (0.2749, −8: S 1080.0, plan 14), `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_barricade` (0.88, S 1206.6), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | — |
 
 The S values here are `--track-depth`'s `piece` and `encounter` lines (the encounter lines since plan 13; measured at plan 13's Task 5,
 `.superpowers/sdd/2026-11-22-mine-cart-13-bridge-and-leap/t5-depth.txt`, with `r4_slag` moved by Task 6 from S 900.0 to 848.0, and
 re-run at Task 7), and before them the exposed-track fix's re-measure (each of floor 12's two ramps, on rides 3
 and 5, lengthens its lane by about 0.64 m, so every S past ride 3's ramp moved up by about 0.6 m and past ride 5's by about 1.3 m,
-and a piece on a ramp's ride by its fraction of it; no `At` changed and every placement rule still holds). The barricades' `At` are the measured ones: `r2_barricade` went from the plan's 0.6 to 0.7 and `r5_barricade` from 0.9 to 0.88,
+and a piece on a ramp's ride by its fraction of it; no `At` changed and every placement rule still holds). No S moved in plan 14:
+it changed no generator code, `--rehash-plans` left floor 12's `LayoutHash` (16995108853750381062) alone, and its static gate (plan 14
+Task 6, `--print-map --track-depth`) read every piece and `StopS` as before, within 0.1 m; the three new encounters read S 105.0, 502.9
+and 1080.0 (`r5_hounds` moved there from the planned 1100.0 by Task 6's fix round, below). The barricades' `At` are the measured ones: `r2_barricade` went from the plan's 0.6 to 0.7 and `r5_barricade` from 0.9 to 0.88,
 because at the planned values each stood just past a tight bend and the 15 m sight ray from the seat hit the inner wall (0.7 is
 still beside `r2_slag2`; 0.88 is still between `r5_spur` and `r5_buffer`).
 
@@ -1550,22 +1626,219 @@ Ride 1. The lone cinder stands on the party lane where the cart will come, and t
 the nearest party-side pocket and throws at the riders, with a hand glow of at least 1.5 s for its wind-up; it stays until a
 load. The beam (`LowBeam`) spans the line just above the tallest seated head (0.1 m clear). It has no
 collision, so the cart passes under it without a touch. Seated heroes duck (a small shake, none in VR) and a seated
-companion calls "Heads!". A beam on a later ride would clip a coupled cage wagon's roof.
+companion calls "Heads!". A beam clears every seated head in the train: the cage roof is gone (plan 14), crew sit in the wagons
+folded as a seated hero is (`Npc.Sitting`, `SitScale` 0.7, `HeadHeight` 1.26 m against 1.8 standing), and a wagon boarder stands at
+rim height like the cart's. `--test-chase` and `--test-crew` measure `r1_beam` over crewed wagons (every head clear by 0.14 m) and
+`--test-split` `r4_beam` (0.25 m); `--test-boarders=move` rides it with the lead in W2 (0.25 m).
 
-Slag carts (`SlagCart`, ride 2). Each rolls up the enemy line from 10 m behind its pace point at the party's speed. It then
-holds pace beside the party's cart: it aims at the party cart's place on the enemy lane plus its offset, at the party's
-speed plus a correction of 0.8 × the gap, capped at ±3 m/s (`PaceRules`). Its riders (up to 3) are carried on the heap
-and awake. A slag cart runs over whoever stands on the enemy lane, by the lethality, and rings its bell first ("Cart
-coming!", 3 s of look-ahead at 3 m/s at least). A glowing brake shoe on the side that faces the party is a layer-4 prop:
-one hit from a blade, a shove or an arrow breaks it. The cart then derails, its living riders are thrown under it and die,
-and a cosmetic tub tumbles off the line. Ember hounds aboard leap across (`RailEncounterController.Leaps.cs`). A hound on a
-cart that is alongside, within 6 m of the party's cart (or of a coupled wagon with crew in it), crouches for 0.8 s with a
-glow and a "Hound!" call. It then leaps on a 0.6 s arc onto a free boarder spot: two on the cart's rim, one on each crewed
-wagon's roof. With no spot free it misses and lands beside the party lane as a normal creature. A boarder bites with its
-normal melee (a wagon boarder bites the crew inside), dents a rolling cart's plating by 3 every 2 s, and falls off when it
-dies. When the cart is wrecked, live boarders drop beside the lane where it was wrecked (`RailController.WreckedAt`), not at
-the stop where a spare takes over: a wreck judged inside the encounter controller's tick is told at the rail controller's
-next flush, after the spare has moved the cart.
+Slag carts (`SlagCart`; rides 2 and 4, and the hound groups of rides 1, 3 and 5). Each rolls up the enemy line from 10 m behind its
+pace point at the party's speed. It then holds pace beside the party's cart: it aims at the party cart's place on the enemy lane plus
+its offset, at the party's speed plus a correction of 0.8 × the gap, capped at ±3 m/s (`PaceRules`); a side-by-side cart (Offset 0) and,
+since plan 14, a hounds-only cart close from behind at up to `PaceRules.AlongsideCatchUp` (6 m/s, `PaceRules.CatchUpFor`; the catch-down
+stays 3 m/s). Its riders (up to 3) are carried on the heap and awake. A slag cart runs over whoever stands on the enemy lane, by the
+lethality, and rings its bell first ("Cart coming!", 3 s of look-ahead at 3 m/s at least). A glowing brake shoe on the side that faces
+the party is a layer-4 prop: one hit from a blade, a shove or an arrow breaks it. The cart then derails, its living riders are thrown
+under it and die, and a cosmetic tub tumbles off the line.
+
+Ember hounds aboard leap across (`RailEncounterController.Leaps.cs`).
+- **The pick** (plan 14; `TrainRules.BoardingOrder`). A hound boards the party's cart or any coupled wagon, crewed or not, each with its
+  rim spot: two on the cart's rim (one per awake hero seated in it, `SetPieceRules.RimSpotsOpen`), one on each wagon's. It takes the
+  crewed wagons first (the one with the most crew, the nearer on a tie: a hound goes for the prisoners), then the cart, then the empty
+  wagons nearest first, and of these only bodies within `TrainRules.LeapReach` (8.6 m: `LeapRange` 6 m + one car's `Spacing`) whose
+  spot is within it too. A body past the reach is left out, whatever it is.
+- **The crouch** (`SetPieceRules.HoundCrouches`). Only with a body it would pick within the reach, and a coupled car's body within
+  `LeapRange` (6 m), does a hound crouch: 0.8 s (`LeapWindup`) with a glow and a "Hound!" call. A hound on a mixed cart (`r2_slag2`,
+  `r2_slag3`) waits until its cart is alongside, as before; a hound on a hounds-only cart (every rider of its plan an ember hound:
+  `r1_hounds`, `r3_hounds`, `r4_hounds`, `r5_hounds`) waits only for its cart's roll-up, `SetPieceRules.HoundRollUp` (2.5 s since the
+  cart spawned), then leaps from reach, alongside or not.
+- **The leap.** A 0.6 s arc onto its spot. With no spot free in reach it misses: it lands beside the nearest body, where that body will
+  be after the 0.6 s, as a normal creature (the miss's flight is not capped in code, only bounded by the crouch-within-reach rule; the flows print its length and fail one past
+  the reach + 1 m, 9.6 m).
+- **Aboard.** A boarder bites with its normal melee: a wagon boarder bites the crew inside (the nearest, then the next), a cart boarder
+  the riders, and only a cart boarder dents a rolling cart's plating, by 3 every 2 s. It falls off when it dies, and a wagon boarder
+  also when its grip is broken (below). When the cart is wrecked, live boarders drop beside the lane where it was wrecked
+  (`RailController.WreckedAt`), not at the stop where a spare takes over: a wreck judged inside the encounter controller's tick is told at
+  the rail controller's next flush, after the spare has moved the cart.
+- **Measured** (plan 14 Task 6's final tree, `=groups` and `--test-chase` alike): every leap that landed on a body 4.4–6.4 m long (each gated at 8.6 m in both
+  flows; before the cap a hound beside the cart leapt 15.1 m onto it on ride 1), `r4_hounds` boarding W4 and W3 at S 853.6, 3.32 s after
+  its spawn at 836.3 (the roll-up and the crouch), 5 m before the split's seated window (858.6).
+
+The hound groups (plan 14; Rulings 18 and 19). `r1_hounds` (one hound, its pace point S 105.0, Offset −8), `r3_hounds` (one, S 502.9, −5)
+and `r5_hounds` (two, S 1080.0, −8) are `slag_cart` encounters of ember hounds only, appended after `r5_golem`, so that fighting along the
+train runs the length of the line (floor 12 had four hounds before: one each on `r2_slag2` and `r2_slag3`, two on `r4_hounds`). They were
+placed from the measured layout and gated by `--test-boarders=groups` (see "Fighting along the train" below): `r1_hounds` between
+`r1_barricade` + 5 m and `r1_beam` (it leaps at S 122.3, 6.4 m onto W3, about 3.3 s after spawning beside W4), `r3_hounds` before the
+switchyard (it leaps at S 521.2, 5.2–5.3 m onto W3; its cart freed short of `r3_switch_out`'s points − 2 m), and `r5_hounds` after the
+hammers (1067.3) and before the golem (S 1125.0). `r5_hounds` was planned at S 1100.0 (At 0.3705); there its cart never came alongside
+before the golem's burst freed it, so Task 6 gave hounds-only carts the 6 m/s catch-up and the leap from reach, and its fix round moved
+the pace point to S 1080.0 (At (1080.0 − 1022.5) / 209.2 = 0.2749): both hounds leap at S 1097.4 and land 4.55 s before the burst
+unpumped, gated at 1.5 s in `=groups` and `--test-chase`. Pumped, the margin is estimated at 2.3–2.7 s, not measured (plan 15
+re-measures `r5_hounds` against its pit switch).
+
+A boarding group's emptied cart goes (Ruling 19), each printed `[rails] slag cart {id} ({enc}) freed: {why}`, quietly (no derail, no
+taunt):
+- **The linger.** A hounds-only cart is freed `SetPieceRules.HoundCartLinger` (3 s) after its last rider left it (leapt or died), with no
+  leap of its still in the air and no hero on its deck (`SetPieceRules.HoundCartGoes`; "its hounds are gone"). `r4_hounds` is included:
+  its empty cart no longer paces the train through the cavern (the leap uses `r4_slag`).
+- **The crossing.** Every live slag cart of the ride whose party-equivalent S is behind the party's front, with no hero on its deck, is
+  freed when the front comes within `SetPieceRules.CrossFreeAhead` (5 m) of a thrown `switch_out`'s points (`CrossingFrees`; "the train
+  crosses onto its lane"), so a hound cart never sits where the train crosses. Measured: `r3_hounds`' cart with its hound held aboard is
+  freed with the front at S 540.2, the points at 545.1.
+- **The golem.** `r5_golem`'s burst frees any other live slag cart of its ride ("the golem bursts out", with its distance to the golem's
+  runner). With `r5_hounds` at S 1080.0 the linger frees its cart first (at S 1113.0), so the burst usually has nothing to free.
+
+Fighting along the train (plan 14; `RailController.Moves.cs`, `RailEncounterController.Answers.cs` and `.Throws.cs`, the numbers in
+`Rails/Core/TrainMoveRules.cs`, `BoarderRules.cs` and `ThrowClock.cs`).
+- **The move** (Rulings 7–12). A seated hero who is up may climb car to car while the train rolls. It is a seat change, like the cavern's
+  leap (`Adventurer.SitIn(…, keepYaw: true)`), never a get-out.
+  - **The way and the target.** The way is read from the camera's flat heading against its seat's forward (the desktop's seat yaw and a
+    headset's head yaw alike): more than `BackCone` (100°) off forward is back; otherwise from a wagon it is forward, and from the cart
+    there is none (`TrainMoveRules.Direction`). The target is the nearest car that way with a free hero place (a wagon's seat 0, or the
+    cart's first free hero seat 0–3), passing taken ones, so a companion in W2 never walls off W3 and W4 (`TrainMoveRules.Target`). One
+    move is one hop, however many cars it passes.
+  - **The prompt** is "Climb back to wagon N", "Climb forward to wagon N" or "Climb forward into the cart" (`TrainMoveRules.Prompt`), on the
+    target car, through the seated look (`RailController.MoveOfferFor`, as the leap's offer); E and the VR grip both reach it.
+  - **The hop.** The press books the target's place in its seat book; the body stays in its old seat for `HopSeconds` (0.6 s), counting as
+    aboard the old car, then sits in. `cart_jump` plays at the press and `cart_land` at the landing, with a small shake (none in VR), and
+    the log says "{name} climbs back to wagon 2." / "… forward to wagon 1." / "… forward into the cart." (`TrainMoveRules.Log`). The server
+    prints `[rails] move: {name} {back|forward} from car {a} to car {b} ({why}) at S=…` and `[rails] move: {name} lands in car {b} seat {n}
+    after {t} s`. A hop lands unless the hero went down, left the train or the target was uncoupled meanwhile (`Lands`); then the booking is
+    dropped and the hero stays where it sits.
+  - **The cooldown.** E does nothing for `MoveCooldown` (1 s) from the press, so a mashed key never becomes a get-out at speed. The server
+    takes a remote move whose target is still `Target` on its own book, `MoveCooldown` − `AcceptSlack` (0.75 s) after the last it took for
+    that hero (`TrainMoveRules.Accepted`).
+  - **Never offered, and refused** (`RailController.MovesRefused`, `TrainMoveRules.Refused`): while the train is held or halted; while
+    downed; inside any seated lever window of the armed ride, to anyone in the train (`RailEncounterController.AnyLeverWindow`: the window
+    owns E); with the train on ride 4's live collapsing bridge (`HoldsRiders`). A press that asks for a move from another car of the
+    rolling train on a car whose plain use offers nothing (`IsMoveAsk`: `IsMovePress` or `IsMoveAttempt`) is judged as a move, never as the
+    car's plain use: refused, it is said out loud on the server and in solo (`[rails] move refused ({why}): …`, `[net-server] interact {ref}
+    from {name}: move refused ({why})`; "the place is booked", "a lever window is open", "the train is on the live bridge"). Held, a press
+    on another car is that car's plain use, so a cart rider can still revive a downed crew member in W1.
+  - **Seated in a wagon** a hero counts as aboard for the departure's player aboard and seated count, companions hopping in, an arrival's
+    "no player aboard" set-down, the relief's left-behind test, the capture of the riders and a restore's set-down (Ruling 12). It does
+    not pump or brake (only the cart's riders do: `RailController.Inputs`, `ServerWorld.RideInputOf`), it is not "able" for a deadly
+    switch (`AbleToThrow`), it is offered no lever window and no leap, and `GetOutWithParty` reads the cart alone. A wreck sets a wagon's
+    heroes down beside the lane with the wreck's 25% toll, as the cart's riders; crew stay seated. A companion on foot hops in while its
+    lead rides any car of the train (`Adventurer.BesideTheCart` reads `CarOf`).
+  - **Measured** (`--test-boarders=move`): every landing 0.600 s after its press, within one physics tick (0.017 s); a press 0.3 s after
+    the first does nothing; the next move offered again 1.01 s after the first press.
+- **The reach** (Ruling 13; `BoarderRules.Strikes`, `Adventurer.BlowReaches`). A seated hero's melee (the shapecast, the blade's contact,
+  the companion's boarder path and the "met nothing" fallback) lands on a train boarder only when the boarder's car is the hero's own;
+  carried and chained blows (`Cleave`, `ShatterChain`) from a seat in the train keep to it too. A hero on foot is unaffected, and so are
+  arrows and spells: an archer in the cart can shoot W4's hound. `BoarderRules.WagonReach` (2.0 m) replaces the old cage-roof
+  `CompanionBrain.BoarderReach` (3.9 m and 45°): a seated blade reaches its own car's rim boarder within 2.0 m and 45° of its aim.
+  Measured by `--test-boarders=reach` off the wagons' own poses: W2's seat 0 to its own rim spot 1.789 m, straight and in the sharpest bend
+  (0.334/m), the bodies' spread 1.80–1.85 m; the car ahead's spot 1.75–1.77 m (nearer than the own spot, so the own-car rule, not the
+  distance, keeps the blow off it), the car behind's 3.66–3.96 m. The proposed 2.4 m was cut to 2.0 (the own spot + 0.15 rounded up,
+  covering the widest body sample + 0.15, under the 2.6 m spacing; a unit test pins both bounds). A companion on a crew bench reaches too:
+  W2's seat 5 to its rim spot 0.93 m, seat 4's 1.25 m (`=throw`). The reach for a hero on foot is not measured.
+- **The grip** (Ruling 14; `BoarderRules.Grip`, `GripTaken`). A wagon boarder has a grip, as a barricade has its toughness: three hits,
+  or one spell, knock it off alive, each `EventBus.EnemyHurt` by a party member (a player, a companion, a remote player: `byMember ≥ 0`)
+  weighed by `BarricadeRules.HitWeight(Enemy.LastHitKind)`. Damage over time and thorns do not count, and a killing blow is left to the
+  death drop. Knocked off, it drops beside the lane as a creature on foot, left behind, aggro on: "{name} knocks the hound off wagon {k}!"
+  and `[rails] t=… {hound} knocked off wagon {k} by {name} after {n} hit(s)`. The cart's own rim boarders have no grip: they fall off only
+  when they die. A client drops the hound as it leaves the boarder list (`RailNet.Leaps.Reconcile`); a remote hero's hits ride its
+  `AttackIntent`s.
+- **Companions answer** (Ruling 15 as amended at Task 4's review; `BoarderRules.PickAnswerer`, `TickAnswers`, server and solo). A wagon
+  needs an answer when it has a boarder aboard, crew seated in it and no up hero (`BoarderRules.NeedsAnswer`). Its candidates are the
+  seated, up companions and hero bots of the train not already answering and not hopping.
+  - A candidate with a clear shot answers from its seat first: it targets that boarder and never moves (the nearest by cars, then the
+    nearer the cart, then party order). "A clear shot" is exactly what the companion brain would fire at a single boarder
+    (`CompanionBrain.HasShot`: a ranged weapon's swing or a projectile with an attack, arrows in the bag, in range and in sight; never a
+    nova). A pumping companion is never a seat answerer.
+  - Only when nobody has a shot does one climb: the nearest blade (a companion that knows no shot and has a blow, so a rogue with Smoke
+    Bomb or Fan of Knives climbs) or hero bot, a blade first on a tie by cars. It moves one car per cooldown (`TrainMoveRules.AnswerStep`,
+    which never passes its wagon), only while moves are not refused. A moving answerer stops advancing once its wagon is clear ("holds in
+    car c"), and goes back toward the cart `AnswerBack` (5 s) after it is, while the cart has a free hero seat.
+  - It lands in the wagon's hero place, or, when a downed hero holds that place, on a free crew bench seat (4, then 5;
+    `TrainMoveRules.AnswerSeat`), so a hero down in seat 0 never keeps the answer out.
+  - A seat answer ends on the tick its answerer starts pumping, goes down, is taken over by a player, or has been without its shot for more
+    than `BoarderRules.ShotGrace` (0.5 s); the wagon is answered afresh that tick. A caster out of mana still counts as having a shot, as the
+    brain's own `CanStrike` does.
+  - Prints: `[rails] answer: {name} answers wagon {k} from its seat in car {c} (… m, a clear shot)` or `… (from car {c})`, `… reaches wagon
+    {k} after n move(s) [route]`, `… goes back to the cart …`, `… is back in the cart …`, `… stays in car {c}: the cart has no free hero seat`.
+  - Measured in `--test-chase` (Task 4's final tree): every hound needing an answer on ride 2 answered from Wren's seat, first struck
+    0.13–0.92 s after it boarded; on ride 4 r4_hounds' two boarders answered from their seats by Wren and Ilex, nobody leaving the cart.
+- **A boarder alone throws prisoners off** (owner's call; Rulings 16, 17 and 20; `ThrowClock`). A wagon is alone when a boarder is on its
+  spot, at least one crew member sits in it, no up hero is in it and the train rolls (`BoarderRules.Alone`; a downed hero does not stop
+  it).
+  - **The call.** On each start of an alone stretch the seated up hero of the train nearest the wagon calls it through
+    `RailCalls.SayNearest` (`BarkTrigger.BoarderThrow`, a Shout, appended after `SlagDrop`, with subtitle-only stock lines in `RideBarks`:
+    three per roster name, Sable's in her own words, two per class, three generic; none names a wagon). With nobody to speak, the log
+    reads "It's at the prisoners — wagon {k}!". `[rails] t=… wagon {k}: {hound} alone with {n} crew; called by {who|the log}`.
+  - **The glow.** The hound glows `ThrowGlow` (1.5 s) before each throw (`TelegraphFx.HandGlow`; `[rails] t=… {hound} crouches over the crew
+    of wagon {k} …`), told to clients as the `BoarderThrow` enemy telegraph (`TelegraphRules.BoarderThrow` through
+    `EventBus.RaiseEnemyTelegraph`, the kiln golem's path; a client's copy glows from `Enemy.ClientTelegraph`). Hounds have no crouch clip:
+    the crouch is the glow.
+  - **The throws.** After `ThrowFirst` (6 s) alone it throws one crew member off, seat 5's first (`BoarderRules.ThrowSeat`), and one more
+    after each `ThrowEvery` (4 s): `[rails] t=… {hound} throws {name} off wagon {k} (seat {n}) after {t} s alone ({p} s paused)`. 6 s
+    covers a hero going from the cart to W4: four moves take 3 × 1 s of cooldown + a 0.6 s hop = 3.6 s, leaving 2.4 s to react; any later
+    change to the wagon count or the cooldown must keep `ThrowFirst` ≥ `TrainMoveRules.ThrowBound(moves)` ((moves − 1) × cooldown + hop +
+    2 s, 5.6 s for four), which a unit test pins.
+  - **The clock** runs only while a hero could move to that wagon: it pauses, keeping its count, while moves are refused for everyone (a
+    seated lever window, the live bridge). It resets to the full 6 s whenever the wagon stops being alone: a hero lands in it, the boarder
+    dies or is knocked off, or the train is held; the clocks clear on an arrival, a wreck, a restore or the party on foot. So
+    `r4_hounds`, boarding at S 853.6, runs its clock about 1 s before the split's window (from S 858.6) pauses it.
+  - **A thrown prisoner** (`CrewRescueController.ThrowCrew`, `Npc.Throw`) is unseated (the usual `SeatMsg`) from over the rim above its
+    seat, at the tub's top + 0.05 m, and thrown on a 0.9 s arc to a set-down spot on the enemy lane's side
+    (`RailController.SetAsideBesideEnemyLane`, clamped 1.5–4.5 m out); for `Npc.ThrowLaunch` (0.1 s) it flies whatever its stale floor
+    state says, so crew who walked to their seats are thrown too. It dies at once (`Dead`, no corpse, no revive, no loot), is lost at once
+    (`LostCrew`), logged "{name} is thrown from the wagon!" and sent as `PropEvt wagon:{k} "thrown:{crewId}"`. `BoarderRules.ThrownHide`
+    (1.2 s) later it is hidden and `Fled` set (gone, not a corpse), so a save, a load and a client keep it gone; `Fled` waits for the hide so
+    that clients see the tumble, and `FloorStateCapture` writes a thrown crew member as fled for a save inside the 1.2 s. The arc ignores
+    the train's speed (measured on a straight: it lands 3.6–4.4 m out of line; sharp curves are unmeasured). Escorts (Grisel) never ride
+    in wagons and are never thrown.
+  - **Measured** (`--test-boarders=throw`, physics frames from the hound's landing): the call at 0.017 s, the glows at 4.517 and 8.517 s,
+    the throws at 6.017 s (6.000 counted, seat 5) and 10.017 s (10.000, seat 4), each hidden 1.22 s after its throw (one tick from the NPC
+    tick order); each flight rose 1.05 m over its seat and lay 3.6–4.2 m out from the wagon's line, on the enemy lane's side. In
+    `=lone` the lead climbed cart → W1 → W3 → W4 past a companion in W2 and landed 2.63 s after the hound, 3.37 s to spare; in `=pause` a
+    3.83 s lever window paused the clock 3.83 s and the throw came at 6.000 s counted.
+
+`--test-boarders[=move|reach|knock|throw|lone|pause|groups]` (`DebugTools.Boarders.cs`, the dispatcher and shared helpers, with one
+partial file per variant, `DebugTools.Boarders.{Move,Reach,Knock,Throw,Lone,Pause,Groups}.cs`; `=throw` is the default; quits after
+150 s, `=groups` after 600) plays floor 12 at lethality 3, solo, possession off, every enemy culled as it appears but the hounds the flow
+puts on wagons (`RailEncounterController.DebugBoard(k, holdHp)`), and keeps the party's HP up. An unknown variant prints an ERROR and
+fails. It prints `[boarders]` lines and `[boarders] RESULT ok ({variant}): …`.
+- `=move` (from stop 0, ride 1): the lead's seat yaw turned and every press the VR grip's. "Climb back to wagon 1" lands after 0.6 s
+  within a tick and logs; a press 0.3 s later does nothing; the next move at the cooldown; W2 to W4 past a companion seated in W3 in one
+  move; forward to wagon 2, 1 and the cart; W2 under `r1_beam` (every head clear by 0.05 m or more); a double press for W1 (the lead's
+  press and a cart companion's real press on the booked W1) refused out loud, the place booked, with no plain use of the wagon; a mid-hop
+  down dropped (the lead stays in W1, W2's place free again); never offered held at stop 1 (W1's prompt "Get out"), downed or on foot; a
+  point 4.1 m end-on from W1's middle reads 3.000 m from its tub (`TrainWagon.TubDistance`, the server's reach; 4.22 m from its origin);
+  and at stop 1, with the lead in W1, a companion set on foot beside W3 (8.9 m from the cart) hops in by its own brain.
+- `=reach` (from stop 1, ride 2): the lead in W2, hounds held above 1 HP on W1, W2 and W3, answers and fire held. The reach off the poses
+  (above); every melee attack the lead's class has, aimed at each hound in turn, lands only on W2's (W1's and W3's take no hit and lose no
+  grip); a cleave off W2's hound widened past both neighbours (2.91 m) and a shatter chain take neither; a cart blade's strikes at W1's
+  hound never land, nor the same blade's from W3 at W2's hound within 2.0 m (1.77–1.95 m, the own-car rule).
+- `=knock` (from stop 1, ride 2): the lead climbs into W1 by the grip's press; at speed after the move's grace W1's own prompt is "" (no
+  Get out), and in ride 3's first seated lever window (`r3_switch_out`) the lead's move is refused ("a lever window is open") and none is
+  offered. Pass 1: three melee blows knock a W1 hound off (grip 1, 2, off), standing alive beside the lane, aggro on. Pass 2: one spell
+  (a Fireball) knocks a fresh one off. Pass 3: 3a, a W3 hound answered from a cart seat with a clear shot (no move; three ranged hits knock
+  it off); 3b, each shooter made to pump in turn hands the answer to the next shooter within 0.25 s, and with none left the cart's blade
+  climbs (0 > 2 > 3, 0.99–1.00 s apart), knocks the hound off (grip 1, 2, off) and moves back 5.03 s after W3 went clear (the cart's own
+  pump held, `PumperCap` 0). Pass 4: a killed W1 hound lies beside the lane.
+- `=throw` (from stop 1, ride 2; the default): stop 1's crew walk out of their cage to W3 as in play; nobody answers, fire held, the hound
+  held above 1 HP, so the clock alone is measured: the call, the glows at 4.5 ± 0.1 and 8.5 ± 0.1 s, the throws at 6.0 ± 0.1 (seat 5) and
+  10.0 ± 0.1 s (seat 4), each glow told as the `BoarderThrow` telegraph in its tick, each flight over the rim to more than 1 m out on the
+  enemy lane's side, each thrown crew member dead, unseated, hidden 1.2 s (± 2 ticks) later and fled, lost, logged and sent. Part 2: a
+  blade answering W2, whose place a downed hero holds and whose bench is full, waits one car short until the throw empties seat 5, lands
+  there within a cooldown and a hop, and its blows from the bench end the hound. Part 3: a save and a load keep the thrown gone.
+- `=lone` (from stop 1, crew in W4, a companion in W2's place): the lead climbs from the cart to W4 within `ThrowBound(4)` (5.6 s) of the
+  hound's landing, the clock resets, and no glow or throw follows.
+- `=pause` (from stop 2, crew in W1, ride 3, `r3_heap` cleared by the test's hook): a hound lands 3.0 s before `r3_switch_out`'s seated
+  window; inside it moves are refused, none is offered and the clock stands still; the throw comes at 6.0 ± 0.1 s counted with the
+  window's length paused; a move pressed `HopSeconds` before the next throw is due lands on the throw's own tick and resets it.
+- `=groups` (from the landing to the last stop, nobody pumping until 1 m past `r5_golem`'s S, stops 1–3's crew seated in W1..W3 by the
+  test's hook, both ride-3 levers thrown at the arming, every enemy culled but `r1_hounds`', `r3_hounds`' and `r5_hounds`' hounds, which
+  hold their HP only while they ride their cart): one `[boarders] group {id}: spawned at …, in reach at …, alongside at …, {hound} leapt
+  at … onto …, its cart freed at … ({why})` line per hound and one `[boarders] leap: …` line per leap of the floor build with its length.
+  It fails unless every hound leapt, each landing on a body within `LeapReach` (8.6 m) (a miss is printed and failed only past 9.6 m, the
+  reach + 1 m: it lands beside a body, not on it), `r1_hounds` leapt with the cart 5 m past `r1_barricade` or more and the front at
+  `r1_beam` or short of it, `r3_hounds`' cart was freed short of `r3_switch_out`'s points − 2 m, both `r5_hounds` hounds landed 1.5 s or
+  more before the golem's burst and their cart was freed short of the golem or by its burst and never within 3 m of its runner, and every
+  throw came after its call and glow. Then a crossing pass, restored at stop 2 with every hound held aboard
+  (`RailEncounterController.DebugHoldCrouches`), must see `r3_hounds`' cart freed by the crossing with the front within
+  `CrossFreeAhead` of the points, and no leap.
 
 The cart's plating is mended to full whenever it rolls into a stop (`RailController.Arrive`), as a load would give it: each
 ride has its own 100. A halt at the heap is not an arrival and mends nothing.
@@ -1884,7 +2157,7 @@ and a `[split] RESULT` (the split's five). With no variant, `--test-runaway` and
 - `=tail`: the lead pumps; the runaway breaks loose with its front 14–16 m behind the train's last body and its call is
   heard; the gap never shrinks under 3 m; at stop 4 it halts 2.5–4 m behind the last body (measured: the least gap 14.9 m, the halt 3.00 m)
   and is gone within 2 s; nobody is run over (`[runaway] RESULT ok (tail)`).
-- `=ram`: the crew wagons of stops 1–3 coupled, nobody pumping; one ram: the plating 100 → 60, each seated hero up −20% (±1) and none
+- `=ram`: the train's four wagons coupled (plan 14: no coupling by the test, the check reads `Train.Count` 4), nobody pumping; one ram: the plating 100 → 60, each seated hero up −20% (±1) and none
   under 1 HP, the seated NPCs unhurt, nobody unseated, `RunawayRams` 1 to stop 4; then restored at stop 3 with the plating set to 30, the
   ram wrecks the cart, the runaway is gone by the wreck's event and a spare takes over (`[runaway] RESULT ok (ram)`).
 - `=after`: the seat offers the split from the window's start with the wait call there, the now call 1 m past the points, and the lead
@@ -2115,7 +2388,7 @@ wagon now. `RailEncounterController.TraceTraffic` prints the warnings and refuge
 `BeamPasses`, `Rams`, `HammerHits`, `PourHits`, `GolemSlams`, `Leapers` and `Seeking`.
 
 `--test-chase` rides the five rides of the built-in floor 12 at lethality 3 with no AI and prints `[chase]` lines (a 750 s
-quit timeout (about 490 s a run) and the scripted rides' watchdog). Every number that names the kiln (`LineShape.LastRide`, the ride; `LastRideStop`,
+quit timeout (about 530–550 s a run since plan 14's 5.22 m/s train: 534 s in its Task 8 sweep) and the scripted rides' watchdog). Every number that names the kiln (`LineShape.LastRide`, the ride; `LastRideStop`,
 the stop it leaves from) or the end of the line (`Rides`) reads the line's own stop count, and the kiln's pieces are `r{LastRide}_*`
 (`r5_*`). The rides between ride 3 and the kiln ride for real through `DebugTools.RideOnTo` (`DebugTools.RideOn.cs`): at each
 stop held on the way the stop's holders die by the test's hand (`DebugKillHolders`), the gate rises, the cage is left
@@ -2131,7 +2404,18 @@ clock to a quarter second. A companion held on the enemy lane must get "Cart com
 enemy-lane pocket must be untouched. On ride 2 all three slag carts must appear and pull alongside. A debug hit breaks the first
 one's brake shoe, which must derail it with its riders, and at least one hound must leap. The lead sits idle on ride 2.
 Each boarder and who killed it (a hero by name, a crew member or a hazard) is logged, and at the default level or higher at
-most one companion may go down by stop 2. At every stop the cart must stand with full plating. The kiln's spur lever is
+most one companion may go down by stop 2. Plan 14: the floor check reads W1..W4 coupled and empty at stop 0 (`[chase] 0 the train at
+stop 0: wagons 4, train=[1,2,3,4], 0 rider(s) in it, its rear 4.5`); the kiln stop's cage is opened at the landing by the test's hook
+(`DebugSeatCrew`), so ride 1 runs with a crewed W1 and `r1_beam` must clear every seated head in the train by 0.05 m (`[chase] 1 beam:
+… by 0.14 m`); every other cage the party opens lets its crew walk to the first empty seats, each departure checking they sat there
+before it. On ride 2 a hound must board a crewed wagon (the most crew first), every hound that boards a crewed wagon with no hero up in
+it must be answered (a seat shot or a move, `ChaseAnswerFor`) and struck by a companion within `ChaseBoarderAnswer` + 3 s (9 s), and no
+crewman may go down to a wagon boarder's bite; ride 2 is ridden so twice, the second time with a blade swapped into a rear seat. On
+ride 4 the lead must not go down (`[chase] 4 ride 4: heroes down []; companions away from the cart [] …`, the baseline before Task 4's
+answering). Every leap of the floor build is printed with its length (`[chase] leap: …`): one that lands on a body must be within
+`LeapReach` (8.6 m), a miss within 9.6 m, and both `r5_hounds` hounds must land 1.5 s or more before the golem's burst; `r4_hounds`'
+boarding S and its roll-up are printed (`[chase] section 1 r4_hounds: spawned at party S=836.3 …; boarded at party S=[853.6 W4, 853.6
+W3], the first 3.32 s after its spawn`). At every stop the cart must stand with full plating. The kiln's spur lever is
 thrown through `DebugThrow()` as ride 2 starts, and must still be thrown at stops 2, 3 and 4. On ride 3 the switch is thrown by
 a hit (`ReceiveAttack`), and a second hit must leave it thrown: the cart must cross, ram the slag cart ahead and cross back,
 and the arrival at stop 3 must set that lever back. Ride 4 runs for real to stop 4, the kiln's stop. On ride 5, the kiln, the golem must
@@ -2148,8 +2432,8 @@ and the cart must resume (a `Resumed` event) and reach stop 3, then ride 4 to st
 hammer and then under the pour until each hits (both stand before the golem's At), and kills the golem after its first slam. It
 breaks the valve with a debug hit, then saves and loads mid-ride. The cart must come back Held at stop 4 with `GolemDefeated` and
 the valve broken. With no ride armed, a stunned
-cinder stood under the middle hammer must be hurt by its next fall. Departing again with every cage open, every wagon coupled
-(four: three by the test's hand, the kiln stop's at the departure) and the pumpers capped at one (`PumperCap`), no golem may come,
+cinder stood under the middle hammer must be hurt by its next fall. Departing again with every cage open (the far cages' crew seated by the test's hand), W1..W4 coupled as ever since
+the landing, and the pumpers capped at one (`PumperCap`), no golem may come,
 the pour must not run, the jump must still be made with one pumper (the load counts three wagons at most, `CartRules.MaxLoadWagons`)
 and the buffer must work again. Throughout, every enemy on the floor root (plan
 collectives included) is swept for a boss at each ride's start and every frame, and the stairs must stay sealed until the crew
@@ -2165,7 +2449,8 @@ Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check
 
 A railed floor with `FloorSpec.Crevasses` on has drops cut into its rock (plan 10; floor 12 in the built-in campaign).
 Everything here is built from the shared seed: clients build the same chasms and bridges, and nothing new goes on the wire
-but three fields in existing messages (`CharacterDto.Fallen`, `CartStateDto.Fell`, `ObjectiveStateDto.LostCages`). The
+but three fields in existing messages (`CharacterDto.Fallen`, `CartStateDto.Fell` and `ObjectiveStateDto.LostCages`, which plan 14
+replaced with `LostWagons`). The
 protocol stays at 17. No crevasse code reads `TierRules.Lethality`: a fall is the same at every lethality.
 
 **Where the generator cuts them.** `FloorGenerator.CarveChasms` (`FloorGenerator.Chasms.cs`) runs in `LayRails` right after
@@ -2295,8 +2580,9 @@ when its cell may take a body and the ground to it from the lead's footing holds
 `RailController.Fall(why)` (`RailController.Fall.cs`), the entry later plans call; anywhere else it is the plain wreck.
 The broken bridge's gap is the third cause (plan 11): the party's train still across on the slag line as its front reaches the gap
 falls there (see "The live switch back and the broken bridge" under "The five rides"). A fall is a wreck with no tumble: the riders, the hounds aboard, every coupled wagon and its crew go into the crevasse
-(`TakeTheTrain` takes the riders over the nearest drop), the wagons are hidden and marked lost
-(`ObjectiveStateDto.LostCages`). A spare takes over only if a hero still stands (`CrevasseRules.SpareAfterFall`), so a fall
+(`TakeTheTrain` takes the riders over the nearest drop), the wagons are uncoupled and hidden, and the capture names them in
+`ObjectiveStateDto.LostWagons` until the next restore of the cart whole, which couples four fresh ones (plan 14; see "The save" under
+"Stops, cages and the crew"). A spare takes over only if a hero still stands (`CrevasseRules.SpareAfterFall`), so a fall
 that takes everyone spends no spare before the wipe. On the wire it is the usual Wrecked state plus `CartStateDto.Fell`
 (`CartFlags` has no free bit): a client plays the plunge, not the tumble, on that rising edge; the sound reuses `cart_wreck`.
 
@@ -2318,7 +2604,7 @@ the fallen).
 A wipe on a floor whose cart has a snapshot (any cause, on foot or aboard; `Main.RiseAtTheLastStop`) keeps its own live
 capture and takes the train from the snapshot (`Save.Core.RailArrival.Merge`): always the `RailStop`. On the crew trial's
 floor (a `CrewRescueController` is built) it also takes the crew's `NpcDto`s and the objective's `Completed`, `FreedNpcs`,
-`OpenCages`, `CoupledCages`, `HomeCrew`, `LostCrew` and `LostCages`; Grisel's (an escort's) entry comes from the arrival too,
+`OpenCages`, `HomeCrew`, `LostCrew`, `LostWagons` and `AboardCrew` (plan 14); Grisel's (an escort's) entry comes from the arrival too,
 unless she is Dead or Fled at the wipe (a fall never kills her, so that came from combat or her betrayal), when her live
 entry and quest state stand. On any other railed floor only the stop is taken: its objective stands as the wipe found it.
 Spares, gates, the orc's keys, enemies and chests stay as they are at the wipe. A win since the arrival is taken back with
@@ -2334,17 +2620,18 @@ lands it there (the RIDE pass's last step proves it). A wipe before the first ar
 Grisel forgiven, and prints `[crevasse]` lines and a `[crevasse] RESULT`. A0: the human walks the cavern deck end to end and a
 plank there and back with the companions following, and nobody falls (the footing guard). A1: a companion over a chasm falls
 (fallen, down, hidden, no auto-revive 8 s on). A2: an enemy dies to it ("The crevasse swallows"). A3: a crew member out of
-their wagon is lost, Grisel caught at the lip (down, not dead, escorting, revivable). A4: on ride 1's arrival at stop 1 A1's
-companion is back within 1 s, up at a quarter of its HP beside the cart. B: with stop 1's wagon coupled and Grisel on the bench,
+the train is lost, Grisel caught at the lip (down, not dead, escorting, revivable). A4: on ride 1's arrival at stop 1 A1's
+companion is back within 1 s, up at a quarter of its HP beside the cart. B: with stop 1's crew seated in W1 and Grisel on the bench,
 the cart restored at the kiln's stop and nobody pumping, the train misses the jump over the gorge and falls: every rider
-fallen, the wagon lost, its crew dead, Grisel down at the lip, no spare spent. C: the wipe that follows rises at the stop the
-train left within 10 s: the cart Held, whole and seen, the train as it arrived, the crew alive again, Grisel up and
+fallen, W1..W4 uncoupled and hidden, stop 1's crew seated in W1 dead, the capture naming `LostWagons` [1,2,3,4], Grisel down at the lip,
+no spare spent. C: the wipe that follows rises at the stop the train left within 10 s: the cart Held, whole and seen, W1..W4 coupled
+fresh, the train's crew back in their seats (`AboardCrew`) and alive again, Grisel up and
 escorting, every hero up beside the cart at full HP, no spare spent, a fifth of the gold gone, the Scar on, the trial (its flag,
 the stairs) as at the arrival. After every step nobody but the step's own victim is fallen. `=trestle` makes the human brake on
 the trestle, which falls with the train on it, then C. `=survivor` has the human get out at the stop as the cart departs: after
-the fall nobody wipes, a spare waits, and the human stepping onto its platform brings the fallen back; a fresh capture names the
-lost wagon and its crew, a save and load keep the wagon hidden and its crew dead below the lip, and a hero fallen again comes
-back on the floor change to 13.
+the fall nobody wipes, a spare waits with four fresh wagons (the capture names no lost wagon), and the human stepping onto its platform
+brings the fallen back; a fresh capture names the lost crew, a save and load leave W1..W4 coupled and empty and the crew dead below the
+lip, and a hero fallen again comes back on the floor change to 13.
 
 Tests: `tests/Dungeon/ChasmTests.cs` (the carving, the walkways, `IsShutUnder`), `tests/Dungeon/CrevasseRulesTests.cs` (the
 fates, `NpcBody`, the lip, the footing guard, the rejoin and return rules), `tests/Dungeon/Rails/FallenReturnTests.cs`,
@@ -2455,9 +2742,9 @@ while it rolls, "Spare cart — behind the train" once held.
 
 **Lamps and labels.** Every cart carries a head lamp (`Dungeon/Rails/CartLamp.cs`): a spot down the track, a small glow and an
 emissive lens facing forward, warm white on the party's cart, its spares and chasers, hot orange on the slag carts and runaway wagons.
-The lamp hangs on the cart node, never on its "Body", which a tumble duplicates. The two crew in a cage wagon stand at bench seats 4
-and 5; the second one's name is raised 0.32 m (`CrewRules.LabelLift`, `Npc.SetLabelLift`, set in `CageWagon.Admit` and reset in
-`Release`) so the names do not overlap.
+The lamp hangs on the cart node, never on its "Body", which a tumble duplicates. The two crew in a cage stand at its seats 4
+and 5, and two in a wagon sit at its bench's 4 and 5; the second one's name is raised 0.32 m (`CrewRules.LabelLift`, `Npc.SetLabelLift`,
+set in `PlatformCage.Admit` and `TrainWagon.Admit` and reset in `Release`) so the names do not overlap.
 
 Tests: `RideLinesTests`, `RideBarksTests`, `TauntTests`, `TauntTimingTests`, `WritingCampaignTests`, `RideSoundTests`,
 `RideMusicTests`, `RailHudTests` and `CrewRulesTests`; headless, `--test-ride` (the taunts, AllAboard, the cart's sound and music),
@@ -2521,7 +2808,8 @@ At 60 Hz each fires every n ticks as the old `tick % n` did, counted from the ca
 **Ids.** Every cart has an id (`CartIds`):
 - the party's cart is 0;
 - a ride's slag, traffic, runaway and golem carts are numbered from 1 for each floor build;
-- a cage wagon is 1000 plus its stop;
+- a wagon of the party's train is 1000 plus its number (`CartIds.Wagon`, plan 14), and a stop's cage (its crew's seat book) 1500 plus
+  its stop (`CartIds.Cage`);
 - a chaser is 2000 plus its stop.
 
 **The state.** Each cart has a `CartStateDto`:
@@ -2536,8 +2824,8 @@ The party's cart adds:
 - the lane blend's two S, the gap and the jump's take-off speed (NaN for none);
 - `BlockedAt`, the heap's face (NaN for none);
 - the boarding countdown (−1 for none);
-- the coupled wagons' stops;
-- the boarders;
+- the coupled wagons' numbers (`Train`, W1 nearest; the train hash and the RIDE books name them `W{k}`);
+- the boarders (the rim's, and each coupled wagon's rim boarder in `WagonBoarders`);
 - the armed ride and the server's time when it armed.
 
 Slag and golem carts name their riders' net ids by spot (−1 for an empty spot; net id 0 is a real id).
@@ -2567,7 +2855,8 @@ Slag and golem carts name their riders' net ids by spot (−1 for an empty spot;
 - **A spur track the client cannot find** is skipped. It logs one warning per track, and the next state retries.
 - **`Snaps`** counts the jumps of the rendered S. **`AuthS` and `AuthV`** give the server's ride without the rendered corrections; VR comfort reads them.
 
-**The client's party cart.** `RailController.ApplyNet` applies the stop, the halt, the lane, the gap, the train (`CartTrain.UncoupleAll`, then `Couple`), the flags and the HUD line. `LineBlocked` and `GateClear` come from the flags. The countdown is `BoardingLeft` less the server time since the state.
+**The client's party cart.** `RailController.ApplyNet` applies the stop, the halt, the lane, the gap, the train (`RailController.ApplyTrain`: each listed number looked up with `WagonAt`,
+coupled in order, the rest hidden), the flags and the HUD line. `LineBlocked` and `GateClear` come from the flags. The countdown is `BoardingLeft` less the server time since the state.
 
 `ClientPose`, each rendered frame, poses the cart, its train, its riders and its boarders at the follower's S.
 
@@ -2580,7 +2869,7 @@ Slag and golem carts name their riders' net ids by spot (−1 for an empty spot;
 #### Seats and poses
 
 **`SeatMsg` (kind 13).** It carries the rider kind (0 a hero by member index, 1 an NPC by id), the cart's id, the seat, and seated or not, with the landing spot when not.
-- The server hears `RiderChanged` on the party's cart, on every cage wagon (subscribed on the first tick each stands) and on the chaser. Each change goes out after the tick's cart state.
+- The server hears `RiderChanged` on the party's cart, on every train wagon (by its number, `CartIds.Wagon(k)`), on every cage (by its stop, `CartIds.Cage(stop)`; subscribed on the first tick each stands) and on the chaser. Each change goes out after the tick's cart state; `RailNet.CartById` resolves both id ranges, and the catch-up sends both.
 - A client books exactly that seat (`CartSeats.Put`). It refuses an index outside 0..5. A different occupant already there gets out where it sits, then `Put` runs again.
 - The message is idempotent. An unseat sets the rider down at the landing.
 - **Slag cart ids** (plan 13). A leap is a `SeatMsg` naming the slag cart's own `CartId` (the id its `CartStateDto` carries) and the deck
@@ -2647,14 +2936,14 @@ The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128
 - A client offers no "Leap across" after the slag line's call: its `LeapCalled` follows the drop's `PropEvt` (`ApplyDropTold`) and the
   props' catch-up.
 
-**Boarders.** The party cart's state lists the hounds that have landed on it, by spot, and each coupled wagon's roof boarder (−1 for free). Reserved spots and hounds in the air are not listed.
+**Boarders.** The party cart's state lists the hounds that have landed on it, by spot, and each coupled wagon's rim boarder (−1 for free). Reserved spots and hounds in the air are not listed. A hound knocked off a wagon by its grip leaves the list, so a client drops it there (`RailNet.Leaps.Reconcile`), with no new wire state.
 - A client carries the named hounds at their spots, unless they are still flying there, and drops the others where they stand.
 - A hound this client landed a moment before the server's state named it is kept.
 - A boarder the server frees silently at a ride's end can stand as a ghost for up to about 4 s, until the enemy check.
 
 **Rim spots.** The party cart opens one rim spot per awake hero seated in it, at most its two (`SetPieceRules.RimSpotsOpen`, checked in `MineCart.ReserveBoarderSpot`). A lone rider faces one hound at a time: the next tries a crewed wagon, or leaps and misses beside the lane. A party of two or more awake riders is unchanged, in single player too. A hound already on the rim stays when a rider goes down.
 
-**A player's blow reaches the wagon roof.** A player's melee blow that meets nothing (an instant one, a remote player's through `AttackIntent`, or a blade's swing that cut nothing) lands on the nearest hound riding a coupled wagon's roof within `CompanionBrain.BoarderReach` (3.9 m) and 45° of where it aims (`CompanionBrain.InBoarderSwing`), as a companion's does. The server swings it, so it works for remote players too.
+**A player's blow reaches its own car's boarder** (plan 14, Ruling 13; it was the cage roof's 3.9 m before). A seated player's melee blow that meets nothing (an instant one, a remote player's through `AttackIntent`, or a blade's swing that cut nothing) lands on the nearest boarder of its own car (the cart's rim, or its wagon's rim spot) within `BoarderRules.WagonReach` (2.0 m) and 45° of where it aims (`CompanionBrain.InBoarderSwing`, `Adventurer.CarBoarderInSwing`), as a companion's does; another car's boarder is never struck by a seated blow (`BoarderRules.Strikes`). The server swings it, so it works for remote players too, and a remote player's hits count toward a wagon boarder's grip.
 
 #### Remote riding and the shared prompt rules
 
@@ -2671,6 +2960,18 @@ or the VR grip) sends `InteractIntent("hold:cart:0")`: `NetRefs.HoldKind` ("hold
 resolves the inner ref to an `IHoldInteractable`, checks the reach as for the cart (`PropPromptRules.InteractReach` to the
 tub, `Adventurer.HoldDistance`), and calls `HoldInteract`. A tap still sends the plain `InteractIntent("cart:0")`. The protocol is unchanged (17,
 `MessageKindCount` 114): the hold rides on a flag bit and a ref kind.
+
+**The move car to car** (plan 14). A client offers the move from its own book and seat yaw (`RailController.MoveOfferFor`) and
+presses it as the target car's `InteractIntent`: `wagon:{k}` (`NetRefs.Wagon`, `TrainWagon.NetRef`) or `cart:0`. The server reads a
+press from a rider of another car of the rolling train as a move whenever it asks for one (`IsMoveAsk`: the target is its `Target`
+that way, or the car's plain use offers that rider nothing) and judges it by `WhyMoveRefused` (`TrainMoveRules.Accepted`: the target
+still `Target` on the server's book, `MoveCooldown` − `AcceptSlack` (0.75 s) since the last move it took for that hero, no hop under
+way, moves not refused). Accepted, it passes the reach check (`[net-server] interact {ref} from {name}: move accepted`); refused, it
+does nothing and says why (`… move refused (the place is booked)`; printed on test servers only, as the leap's line). The seat goes
+out as a `SeatMsg`; a client sits the hero in with its yaw kept and plays `cart_jump`/`cart_land` where it left and landed, and its own
+player's shake comes from the server. A wagon's reach is measured to its tub box (`TrainWagon.TubDistance`, as the cart's), not its
+origin, so an end-on press 4.1 m from a wagon's middle reads 3.0 m and is inside the 3.5 m reach. A wagon's "Revive {name}" goes through
+the same `InteractIntent("wagon:{k}")`.
 
 **Getting out.**
 - A downed rider cannot get out (`RideInputRules.MayGetOut`): a "Get out" intent from one is refused.
@@ -2696,7 +2997,8 @@ So its parked pose is that spot. A chaser's rider is handled the same way.
 
 **One rule per prompt.** The server, solo play and a client (with its synced copies) all call the same engine-free rule:
 - `RideInputRules.BoardPrompt(seatedHere, held, lastStop, heroSeatFree, inReach)`: "Get out" when seated, "Board the cart" otherwise;
-- `PropPromptRules.SwitchPrompt(fixed, taken, thrown)`, `SplitPrompt(taken, past, thrown)` (ride 4's split, `SplitRules.Prompt`), `WinchPrompt(gateUp)`, `CagePrompt(open, orcKeys, griselOpens, canLetOut, downedAboard)` and `KeyringPrompt(orcKeys)`;
+- `PropPromptRules.SwitchPrompt(fixed, taken, thrown)`, `SplitPrompt(taken, past, thrown)` (ride 4's split, `SplitRules.Prompt`), `WinchPrompt(gateUp)`, `CagePrompt(open, orcKeys, griselOpens, downedAboard)` (no "Let them out" since plan 14), `WagonPrompt(downedAboard)` (a wagon's "Revive {name}") and `KeyringPrompt(orcKeys)`;
+- `TrainMoveRules.Prompt(fromCar, toCar)` (the move car to car) and `WagonGetOut(rolling, speed)` (a wagon rider's "Get out");
 - `SpareRules.Prompt(onFootPlayer, mayChase)` and `SpareRules.ChaserPrompt(seatedHere, held, downed, boardingLeft)`.
 
 What a prompt cannot know stays on the server, which refuses with its log line: a key or a pick in the bag, a holder still near the winch.
@@ -2704,7 +3006,8 @@ What a prompt cannot know stays on the server, which refuses with its log line: 
 #### Props: PropEvt and the Rail part
 
 **Wire names.** Every rail prop has one (`NetRefs`; `NetRefResolver.RefOf` and `Resolve`):
-- by stop: `gate:{stop}`, `winch:{stop}`, `wagon:{stop}` and `spare:{stop}`;
+- by stop: `gate:{stop}`, `winch:{stop}`, `cage:{stop}` (`NetRefs.Cage`; it was `wagon:{stop}` before plan 14) and `spare:{stop}`;
+- by train wagon: `wagon:{k}` (`NetRefs.Wagon`, the wagon's number, plan 14);
 - by set piece: `switch:{piece}` (ride 4's split's lever too, plan 12: its `SplitSwitch.LeverRef`), `spur:{piece}` (the spur's lever), `heap:{piece}`, `valve:{piece}`, `trestle:{piece}`, `buffer:{piece}`, `barricade:{piece}` (plan 11), `bridge:{piece}` (ride 4's collapsing bridge) and `leap:{piece}` (the slag line's drop, plan 13);
 - by cart: `slag:{cartId}` (a ride's slag cart, the leap's press; plan 13);
 - `keyring:0` and `cart:0`.
@@ -2720,7 +3023,9 @@ What a prompt cannot know stays on the server, which refuses with its log line: 
 - the cavern bridge "gone {n}" (its party cells gone now; a client gives way to n, tumbling the cells' timbers) and "stands" (plan 13);
 - the slag line's drop "drops" (its cells, debris, the lamp; a client's slag copies ring their bells and its `LeapCalled` follows) and "stands" (plan 13);
 - a spare "used" and "restored";
-- a wagon "opened";
+- a cage "opened" (`cage:{stop}`);
+- a wagon "thrown:{crewId}" (`wagon:{k}`, plan 14): a prisoner thrown off it; a client hides its copy `ThrownHide` (1.2 s) later
+  (`ShowThrown`), so it sees the tumble, and `FlagFled` follows in the snapshots;
 - the keyring "taken".
 
 A client's `Show*` methods apply them silently. A live event plays the cosmetic debris; a quiet repair does not.
@@ -2732,7 +3037,7 @@ A client's `Show*` methods apply them silently. A live event plays the cosmetic 
 - Set pieces and spares are applied both ways. Gates, cages and keys only go forward.
 - **One writer.** On a client, gates, cages and keys come only from `PropEvt` and the Rail part. The objective state keeps the crew states and `CrewDownedLeft`. At a client's floor build, `CrewRescueController.Restore` opens the cages and takes the keys that the floor state names, forward only.
 
-**Using the props.** A remote player uses the switch, the winch, a cage wagon and the keyring through `InteractIntent`.
+**Using the props.** A remote player uses the switch, the winch, a cage, a wagon (its revive, and the move) and the keyring through `InteractIntent`.
 - A downed actor does nothing.
 - **A lever thrown from the seat of a rolling cart** is judged with `PropPromptRules.LeverReach`: 3.5 m plus the cart's speed times half the member's round trip, at most 1.5 m more; in the seated window by `InSeatedWindow`, accepted up to `SeatedSwitchRules.AcceptLead` (5 m) before the server's own window opens (see "Switches and the lane blend").
 - **Ride 4's split** (plan 12) is a deadly lever like a live switch back. Its seated window and its early lead are the server's (`InSeatedWindow` through `SplitAccepts`): a remote press that lands short of the server's points, in its early lead, is held to them and thrown as the train passes (`[rails] split {id}: {name}'s throw held to the points …`), never dropped and never sending the party down the spur; one past them, with the party's branch decided, is thrown at once. A press after the runaway has taken it is too late while straight and ignored quietly while thrown (`LateFor`). In the RIDE pass (step 7) the joiner's press in the server's early lead is the throw: held, then thrown as the train passes. The first client's press on its first frame past the points is a second press, and the server keeps the lever thrown.
@@ -2747,6 +3052,10 @@ A client's `Show*` methods apply them silently. A live event plays the cosmetic 
 - The objective state names each downed crew member's seconds left (`ObjectiveStateDto.CrewDownedLeft`). Only a server fills it, so a solo save is unchanged; a server's own autosaves carry it, and its `Restore` ignores it.
 - A client's bleed label counts down locally from it. On the Downed edge it starts full until the next broadcast, at most 2 s later.
 - On a dedicated server, Grisel's cage line goes to every screen as her own NPC line (`NpcSay`, as the merchant's).
+- The crew's runs to their seats are the server's walks, seen in the snapshots; their seats come as `SeatMsg` under the wagons' ids.
+- A boarder's throw (plan 14) reaches every client: its 1.5 s glow as the `BoarderThrow` telegraph in an `EnemyStateMsg` (a client's
+  copy glows from `Enemy.ClientTelegraph`), the call through the bark path, the unseat as a `SeatMsg`, the death in the snapshots and the
+  tumble as `PropEvt wagon:{k} "thrown:{id}"`.
 
 **The armed ride.** The party cart's state names the armed ride and its arm time. A client's copies of that ride's pieces run from the follower under the server's own rules:
 - **The ore buckets** follow `SetPieceRules.BucketStateAt(serverNow − ArmedAt, n)`: bucket n creaks at n·3 s and pours 1.5 s later. A client's pour is a visual-only cinder patch. A joiner silently skips the buckets whose patch has already burnt out. The server's `OreBuckets.Tick` asks the same rule, tick for tick as before.
@@ -2767,7 +3076,7 @@ A client's `Show*` methods apply them silently. A live event plays the cosmetic 
 
 **`RailNet.SendRailCatchUp(peer)`** runs on a join's Ready (`OnPlayerReady`, when not behind) and on every `OnFloorReady`: a floor change, a `FloorResyncIntent`'s rebuild, or a wipe's reload. It sends:
 1. one `CartStateMsg` with every live cart: the party's (train, boarders, flags, armed ride), the ride's slag, traffic, runaway and golem carts with their riders, and a chaser;
-2. a `SeatMsg` for each seated rider in the party's cart, the wagons and the chaser;
+2. a `SeatMsg` for each seated rider in the party's cart, the train's wagons, the cages and the chaser;
 3. every leap still in the air.
 
 The callers send the floor clock's pair just before it, and `OnFloorReady` also sends the prop state.
@@ -2895,7 +3204,9 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 **How to run it.** Build first, then run `RIDE=1 scripts/net_test.sh`.
 - It starts one server on the built-in campaign: `--test-net-server --net-test-ride --objective=jailbreak --seed=4242 --lethality=1`.
 - It starts the first client ("Rider") once floor 1 is built, and a second ("Joiner", `--net-test-ride-join`) as the cart leaves stop 1.
-- It takes about 6 minutes (351–355 s measured at plan 13 Task 7, with the bridge's take at the end; 291 s before it). Seed 4242's floor 12 builds the shipped layout (the same line, five rides).
+- It takes about 6 minutes (351–355 s measured at plan 13 Task 7, with the bridge's take at the end; 291 s before it; about 6 minutes
+  again in the controller's two passing runs at plan 14 Task 7, at the train's 5.22 m/s with the move, the knock-off, the throw and the
+  double press added). Seed 4242's floor 12 builds the shipped layout (the same line, five rides).
 - Every stop and ride the pass names for the kiln or the end of the line reads `LineShape` (`NetTestFlow.Line`): the kiln is ride
   `LastRide` (5) from stop `LastRideStop` (4), the end of the line stop `Rides` (5). The script's strings name them as numbers.
 
@@ -2906,22 +3217,46 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 - The remedy is to switch to `balanced` or `performance` (Fn+Q on the Legion, or `echo balanced | sudo tee /sys/firmware/acpi/platform_profile`) and run it alone. The script warns before a RIDE run when the profile reads `low-power`. A run with three godots at about 600 MHz (`grep MHz /proc/cpuinfo`) is invalid.
 
 **Timeouts.**
-- The server runs with `--quit-after=600` (a test server quits after 120 s unless told) and ends anyway once empty. Its own RESULT fails at 560 s.
-- The first client runs with `--quit-after=480` (about 190 s of its own), and the joiner with 480 (390 before plan 13 Task 7, which added
-  about 70 s to it: the cavern's brake and leaps, the props after the rise and the bridge's take; it runs about 270 s of its own). The
-  server's 600 and 560 are unchanged (its run ends near 355 s).
+- The server runs with `--quit-after=660` (600 before plan 14 Task 7; a test server quits after 120 s unless told) and ends anyway once
+  empty. Its own RESULT fails at 560 s.
+- The first client and the joiner run with `--quit-after=540` (480 before plan 14 Task 7, which raised all three for the long train's
+  slower rides and its new steps; 390 for the joiner before plan 13 Task 7). The script's header puts the first client's own run at
+  about 330 s.
 
 **The script, in order:**
 1. **Floor 12.** The party goes to floor 12. The server throws the kiln's (ride 5's) spur lever, and the client must show it. The client's set pieces stand and its props, rail part included, hash as the server's.
-2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping) and brakes for 0.6 s (the server's V drops at least 1 m/s). Then it cuts ride 1's barricade from the seat over the wire (plan 11): it hears the call (`[net] ride: barricade r1_barricade called here (BarkMsg …)`, or the log's plain words), from 12 m out sends the brake intent until its cart state shows V < 0.5, creeps up with the brake feathered until the front stops within 0.5 m of the face (a stop 12 m out leaves the blade metres short), and, held on the brake, aims at `r1_barricade` (`Adventurer.AimAt`, as `FightBoarders` does, which stands aside meanwhile) and swings every 0.5 s until the "cut" PropEvt arrives (`[net] ride: barricade r1_barricade cut here by our blade from the seat ({n} swings, V=…)`; the server prints `[rails] barricade r1_barricade cut by Rider`). It lets the brake go and pumps on; at stop 1 the props' hash must have matched since the cut, with no prop-check asked (`[net] ride: prop hash still matches the server's after the cut`). It gets out at stop 1, within 0.5 m of the server's landing within 0.5 s. Cage 1 is locked there, so the client's seat must offer "Get out (hold to leave the prisoners behind)" (the server's `CartFlags.CageHeld`); the client still gets out with the plain tap.
-3. **Stop 1's props.** The holders die by a hook (`DebugKillHolders`), and the gate rises on the client. The client takes the keys, opens cage 1, and revives a crewman the server downed there, each through its intent. The bleed label counts down on the client.
-4. **Ride 2.** The client boards again. The opened wagon couples on the client within 0.5 s of the departure, and the beam ducks its seated camera. Nobody cuts `r2_barricade`: the cart smashes it, and the client prints `[net] ride: barricade r2_barricade smashed here (PropEvt), plating {a} -> {b}` from the party cart's plating in the cart states just before and just after the PropEvt (the script wants a drop of 24.5–25.5). The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`).
+2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping) and brakes for 0.6 s (the server's V drops at least 1 m/s). Then it cuts ride 1's barricade from the seat over the wire (plan 11): it hears the call (`[net] ride: barricade r1_barricade called here (BarkMsg …)`, or the log's plain words), from 12 m out sends the brake intent until its cart state shows V < 0.5, creeps up with the brake feathered until the front stops within 0.5 m of the face (a stop 12 m out leaves the blade metres short), and, held on the brake, aims at `r1_barricade` (`Adventurer.AimAt`, as `FightBoarders` does, which stands aside meanwhile) and swings every 0.5 s until the "cut" PropEvt arrives (`[net] ride: barricade r1_barricade cut here by our blade from the seat ({n} swings, V=…)`; the server prints `[rails] barricade r1_barricade cut by Rider`). It lets the brake go and pumps on; at stop 1 the props' hash must have matched since the cut, with no prop-check asked (`[net] ride: prop hash still matches the server's after the cut`). Plan 14 adds two steps on ride 1, before the barricade's stop:
+   - **The move.** 10 m past the cut the client turns its seat yaw to 150° and, on the first frame wagon 1 reads "Climb back to wagon 1"
+     and is what it looks at, presses through `party.VrUse` (`InteractIntent(wagon:1)`); the server accepts it (`[net-server] interact
+     wagon:1 from Rider: move accepted`, `[rails] move: Rider lands in car 1 seat 0 after 0.60 s`) and the client sees itself in W1 seat 0
+     through the SeatMsg with its seat yaw kept (±1°).
+   - **The knock-off.** Once ride 1's own `r1_hounds` has leapt, missed or been freed and W1's rim is free, the server holds the answers
+     and the hero bots' fire and boards a test hound on W1 (`DebugBoard(1, holdHp: true)`). The client's `FightBoarders` strikes only its
+     own car's boarder (`BoarderRules.Strikes`, through `AttackIntent`): three blows knock it off (`[rails] t=… Dyn3 knocked off wagon 1 by
+     Rider after 3 hit(s)`), and the client shows it off W1 within 1 s (a window of −0.05..+1.0 s; it tells the test hound from ride 1's
+     own as the one it never saw ride a slag cart). A second later the client turns forward and presses "Climb forward into the cart"
+     (`cart:0`), landing in a cart hero seat.
+   It gets out at stop 1, within 0.5 m of the server's landing within 0.5 s. Cage 1 is locked there, so the client's seat must offer "Get out (hold to leave the prisoners behind)" (the server's `CartFlags.CageHeld`); the client still gets out with the plain tap.
+3. **Stop 1's props.** The holders die by a hook (`DebugKillHolders`), and the gate rises on the client. The server downs a crewman while
+   cage 1 is still locked (an opened cage lets its up crew out at once, and one downed inside stays there, `StaysInOpenCage`); the client
+   takes the keys, opens cage 1 (`prop:cage:1:open`) and revives him through `cage:1`, each through its intent. The bleed label counts down
+   on the client. Stop 1's crew then run to W1: the server and the client each print "stop 1's crew seated in W1" in server time, within
+   1.0 s of each other, with the crew counted in the train's wagons on both. **End-on** (Task 3's carry): the server downs W1's seat-4
+   crewman and puts the client's hero by W1's back end, more than 3.5 m from W1's origin and within 3 m of its tub; the client's
+   `InteractIntent(wagon:1)` ("Revive {name}") is judged by the tub distance (at most 3.0 m) and revives him.
+4. **Ride 2.** The client boards again, and the beam ducks its seated camera. **The throw**: 2 s after the joiner's Ready the server
+   checks that the train rolls with crew in W1 and no hero there, holds the answers, the crouches and the bots' fire (freeing a natural
+   boarder on W1's rim first) and boards a test hound on W1. It follows `ThrowLog`: the call, the glow, the throw of seat 5's crewman at
+   6.0 ± 0.3 s by physics frames and by its clock, no second throw; 1.5 s after the throw it kills the hound (about 7.5 s after it
+   boarded, before 10 s). Both clients must see the call (a `BarkMsg`, or the log's words), the `BoarderThrow` telegraph before the
+   throw's PropEvt, the PropEvt within −0.05..+0.5 s of the server's throw, the copy hidden 1.2 ± 0.3 s after it and seated nowhere
+   (`[net] ride: {name} thrown from wagon 1 here (PropEvt), hidden … s later, seated nowhere (…) (ok)`). Nobody cuts `r2_barricade`: the cart smashes it, and the client prints `[net] ride: barricade r2_barricade smashed here (PropEvt), plating {a} -> {b}` from the party cart's plating in the cart states just before and just after the PropEvt (the script wants a drop of 24.5–25.5). The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`), and, since plan 14, the crew too (`JoinerTrainWhy`): W1..W4 coupled, stop 1's two crew in W1's bench with the copies and the books agreeing, cage 1 open and two crew in each locked cage.
 5. **Ride 3.** Stops 2 to 4 are left with their cages locked: a client seated in the held cart sends the held intent (`hold:cart:0`) the moment the hold shows (`RideLeaveCrew`), so the departures keep their timing. The script checks that a client left stop 2's prisoners through the intent and the server logged it (`[rails] the prisoners at stop 2 are left behind (`), and that the server left stop 3's and stop 4's for the first client (`(Rider)`). The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat through the seated window (no aim, the
 first offer beyond the plain reach plus the seated lag allowance; the server logs `seated window yes`), and the cart crosses on
 both sides. As the throw shows on the joiner's screen, the joiner presses "Set the switch back" from its seat, and the server
 refuses it within 1 s of the first client's toggle (`seated window: set back … ignored`); the joiner's get-out waits for that press. Across, the live switch back is offered in the client's seated window only now (plan 11): the client presses it on the window's first frame through the intent (`[net] ride: ride 3's switch_back offers "Throw the switch" in the seated window … thrown through the intent from the seat`), the server traces `prop:switch:{back}:thrown` and takes it (`[rails] switch r3_switch_back taken at S=…: back from …`), and the cart comes home. Each client (the joiner, thrown and resynced, from its own screen) prints the first time its cart state's `CrossBack` turns from NaN to a number on ride 3, with the lane blend read `SwitchStretch` + 2 m on: `[net] ride: crossed back here: CrossBack {cb} told at front S={f} (the back's points {p}), blend {b} at S={s}`; the script wants `|cb − p|` ≤ 0.5 and the blend ≤ 0.01 on both, and no `[rails] the cart runs off the broken bridge` anywhere in the server's log. Home with the back taken (its `CrossBack` here), the client presses it once more from the seat, the intent a mashed second press would send (`[net] ride: ride 3's switch_back pressed once more from the seat after the cart took it (a mashed press, switch:{back}) …`, plan 12 Ruling 21): after the server's `back from` it must print `[net-server] interact switch:{back} from Rider: the deadly lever was thrown (taken …): ignored quietly`, and `Too late to throw it.` must never appear in the client's log. Ride 3's buckets pour on the server's schedule.
-6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`).
-7. **Ride 4, both aboard.** At stop 3 the server puts the thrown joiner beside the cart; it boards again through its intent, and only then do stop 3's holders die, so the cart leaves for real with both clients aboard (`the cart departs stop 3 with 2 player(s) aboard`). On a longer line every stop up to the one before the kiln's goes the same way. Ride 4's dark, runaway and split (plan 12) are real in the pass (no hold), and the script checks them before the clock checks:
+6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`), with one of stop 1's crew left in W1 and the thrown one gone, no corpse (`[net] ride: after the rebuild the thrown … gone here: no corpse (ok)`).
+7. **Ride 4, both aboard.** At stop 3 the server puts the thrown joiner beside the cart; it boards again through its intent, and only then do stop 3's holders die, so the cart leaves for real with both clients aboard (`the cart departs stop 3 with 2 player(s) aboard`). On a longer line every stop up to the one before the kiln's goes the same way. **The double press** (plan 14): 6 m out of stop 3 both clients turn back and press "Climb back to wagon 1" on their first offered frame (a client whose screen already shows W1 taken sends it in flight); the next two server lines for `wagon:1` must be one `move accepted` and one `move refused (the place is booked)`, from different names, and the winner climbs forward into the cart again a second later. Each client prints the train as it rolls out of the cavern's stop: four wagons, the rear the front less `TrainRules.Length` (`[net] ride: cavern: the train rolls out of stop 3 here with 4 wagon(s) coupled (Train [1, 2, 3, 4]), its rear at S=758.6, 12.6 m behind its front`); every rear in the cavern, runaway and take code reads `Party.FrontS − TrainRules.Length(Train.Count)`. Ride 4's dark, runaway and split (plan 12) are real in the pass (no hold), and the script checks them before the clock checks:
    - **The dark.** Each client prints `[net] ride: dark stretch here from S={from} lamps out {n} ({k} pocket light(s) hidden here)` from its own build, and its start and count must be the server's `[rails] dark r4_dark from party S={from} to …: {n} pocket lamp(s) out` (n > 0). Its own scene must have k = n of those lamps' lights hidden.
    - **The runaway.** The server prints `[rails] t=… runaway r4_runaway breaks loose …`, and each client, from the server's cart corrections, `[net] ride: the runaway runs behind the train here (cart {id}, r4_runaway; its S=…, our train's rear S=…, … m between)`. The ride's runaway carries its set piece's id as its `CartStateDto.EncounterId` (`RailNet.ClientRideRunaway`), so a traffic runaway, which goes unnamed, is never taken for it. On the grid (`ride cart={id} kind=Runaway`, the server's at `armed=4`), that cart needs at least 8 pairs on the party line on each client (S ≥ 100: the spur's own S is short), each within 2 m.
    - **The split from the remote seats.** The joiner sends its seat's press (the lever's `InteractIntent`) with its front 2.5 m short of the window's start, as a cart running ahead of the server's would on its first window frame (`[net] ride: the joiner presses ride 4's split from the seat … m short of the points here, short of its window …`). The server must take it (`seated window yes`), hold it with its own front in its early lead, short of its window and within 5 m before it (`[net-server] ride: ride 4's split held to the points for Joiner with the server's front {d} m short of them …`, read within a tick of the press; the window from the split's build line), pass the points straight (`[rails] split r4_split: the train passes straight`) and then throw it behind the train (`[rails] split r4_split: {name}'s throw held to the points (… m short): thrown behind the train`, or `(pressed … m past them, the branch not yet decided)`; `{name}` is the last presser's, the Joiner's or the first client's when its press re-held the throw). The first client presses it on its own first frame with its front past the points, through `VrUse` (`[net] ride: ride 4's split offers "Throw the split behind us" | "Set the split back" in the seated window, … through the intent from the seat ({past} m past the points here) as switch:{split}`: which it offers depends on whether the held throw shows there yet). The server must take that press too and keep the lever thrown. A throw that lands while the server is still short of the points (the client's cart ahead) is held again, and the server echoes it as `Rider used switch:{split}: now straight`, since a held lever stands straight. A set-back is refused by plan 8's guard or the held throw's 1 s guard. So the script fails only on a `Rider used switch:{split}: now straight` after the held throw went in, which would be a set-back that went through. The party must never take the spur (no `the train takes the spur` or `The cart takes the spur`). Then the runaway takes the spur and goes into the crevasse (`[rails] split r4_split: the runaway takes the spur at S=…`, then `[rails] t=… runaway r4_runaway goes off the split's spur into the crevasse …`, in that order after the throw).
@@ -2967,7 +3302,7 @@ refuses it within 1 s of the first client's toggle (`seated window: set back …
      it; "Leap across" 0.1–0.2 m into the stretch (along −0.57 and −0.48 m); the joiner's leap back 0.33 m short of the offer's close; every
      cell gone 1.8 s before the arrival; 819–820 frames watched after the call.
    - **Measured** (plan 12 Task 8, `performance` profile, four runs): the dark 10 lamps out from S 792.9 on every peer (10 lights hidden on each client); the runaway loose at S 793.1, 15.0 m behind with one wagon at 6.6 m/s, 14.9–15.0 m behind on both clients, 21–22 pairs within 0.15 m; the joiner's press held with the server's front 7.3–7.4 m short (the window 5.0 m), the train straight at front 863.0 and the held throw in at once; the first client's cart ran a little behind the server's there, so by its first frame past the points (0.1 m) the throw already showed and it pressed "Set the split back", refused by plan 8's guard 0.02 s after the joiner's throw; the runaway at the points at S 863.1 and off the spur's end (spur S 12.1 of 13.6) about 12.6 s after it broke loose. Before the joiner's early press was added, the first client's press 0.1 m past the points reached a server already past them and was thrown at once.
-8. **The kiln and the chase.** Held at stop 4, the kiln's, the first client, back from its fall with r4_slag, boards again through its intent, and the joiner gets out with a tap (the cage hold's seat still lets it out). On foot beside the spare, it is offered nothing while the train is held there. The train leaves on ride 5 with the client pumping. The joiner takes `spare:4`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
+8. **The kiln and the chase.** Held at stop 4, the kiln's, the first client, back from its fall with r4_slag, boards again through its intent, and the joiner gets out with a tap (the cage hold's seat still lets it out). On foot beside the spare, it is offered nothing while the train is held there. The train leaves on ride 5 with the client pumping. The joiner takes `spare:4`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train's last body at the end of the line (`chase-done`, which must name `4 wagon(s)`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
 9. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.
 10. **The wrecks.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 to 3 unused, and spare 3 takes over (`SpareRules.Pick`: the nearest unused stop). The heap stands on ride 3, so 3 s later the server wrecks it again and spare 2 takes over, Held at stop 2 (`wreck-spare`): on a line of any length it wrecks every 3 s until the spare of the stop the heap's ride leaves stands (`NetTestFlow.HeapStop`). The joiner sees each Wrecked state (two) and the takeover at stop 2, and must hear `cart_wreck` once: the end's wreck stands beside it, the second far out of a wreck's 30 m earshot (`RideAudio.At`).
 11. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).
@@ -2996,7 +3331,39 @@ SlagLineDropped False (ok)` (plan 13). The script fails with "the wipe did not s
 
 The kiln's first hammer (`HammerIndexOf(LastRide)`) is paired all through the pass.
 
-**The riders fight back.** Seated in the party's cart, both clients swing every 0.5 s at the nearest hound on its rim, or on a coupled wagon's roof within 3.9 m (`FightBoarders`: `Adventurer.AimAt`, then `Attack`, so the server's melee judges a seated `AttackIntent`). The server's log shows the Rider's blows landing on a hound on wagon 1's roof 3.8 m away (nothing asserts it). The top-up stays: on the fix wave's first run the lone warrior killed every boarder, but ride 2's Forge Priest, shooting from its slag cart 5–6 m off, took it from 129 hp to 23 by stop 2, out of a melee rider's reach.
+**The riders fight back.** Seated in the train, both clients swing every 0.5 s at the nearest boarder of their own car (the cart's rim,
+or their wagon's rim spot: `FightBoarders` filters by `BoarderRules.Strikes`, then `Adventurer.AimAt` and `Attack`, so the server's melee
+judges a seated `AttackIntent`), and hold while a move turns the yaw. The top-up stays: on plan 11's fix wave's first run the lone warrior
+killed every boarder, but ride 2's Forge Priest, shooting from its slag cart 5–6 m off, took it from 129 hp to 23 by stop 2, out of a
+melee rider's reach.
+
+**The hound carts' frees on the wire** (plan 14, Ruling 19). The server prints every `freed:` entry of its `SlagLog` at `NetSession.Now`
+(`[net-server] ride: slag cart {id} ({enc}) freed: {why} at t=…`) and each client every slag copy that goes at `ServerNow` (`[net] ride:
+slag cart {id} ({enc}) gone here at t=…`). The script pairs them by cart id for the first client, before `Rider left while seated`, each
+within −0.05..+0.5 s, and requires `r1_hounds`' free by the linger (`its hounds are gone`). A free by the golem's burst is paired the same
+way if one comes (the line says `by the golem burst N` or `none in this pass`); with `r5_hounds` at S 1080.0 the linger frees its cart
+first, so none came in the runs.
+
+**The books.** An awk (`TRAINS`) compares the grid's book points: every compared point must read `train=1,2,3,4` on both sides, the
+first client's all along and the joiner's from 1 s after each Ready, with at least 20 client points and 10 joiner points.
+
+**Measured** (plan 14 Task 7, the controller's runs 2 and 3, `performance` profile, load about 1.2; both `NET TEST: ok`):
+- the move: "Climb back to wagon 1" offered 0.02 s after the turn (S 91.2) and pressed on that frame; the server's landing 0.60 s after
+  the press, the client's SeatMsg 0.63 s after it, the seat yaw 150° kept; back into the cart the same way (0.62–0.63 s);
+- the knock-off: the test hound boarded W1 at S 122.3–122.4 (as `r1_hounds` leapt onto W3), knocked off by three blows 2.2 s later, alive
+  (14–15 of 68 hp), shown off W1 on the client 0.024–0.027 s after the server's;
+- stop 1's crew seated in W1 on the server and the client 0.001–0.004 s apart; the end-on revive 3.72 m from W1's origin and 2.43–2.44 m
+  from its tub (the server's interact line 2.4 m, reach 3.5);
+- the throw: the call 0.015 s after the boarding, the glow 4.50 s and the throw (seat 5's Hob Tallow) 6.00 s after the call; on both
+  clients the glow 1.50 s before the PropEvt, the PropEvt 0.005–0.008 s before the server's throw line (the same tick), the copy hidden
+  1.22–1.23 s after it;
+- the double press: the first client turned back at S 776.1 and pressed at 776.2, the joiner at 776.3; the server accepted the first and
+  refused the second "the place is booked"; the winner back in the cart from S 784.8;
+- the frees: the four hound carts' (`r1_hounds`, `r3_hounds`, `r4_hounds`, `r5_hounds`), each by the linger, gone on the first client
+  −0.002..+0.012 s from the server's free; none by the golem's burst;
+- the cavern: the train out of stop 3 with four wagons, its rear at S 758.6, 12.6 m behind its front; the chaser halted 1.50 m behind the
+  train's last body at stop 5 (S 1231.7) with 4 wagons;
+- the staging: 3 natural hounds freed off crewed wagons by the guard (below), the crew topped up twice.
 
 **The markers the script pairs.** Both sides print on a shared 0.5 s server-time grid:
 - `ride t=… S=… mode=… stop=… armed=…`;
@@ -3016,6 +3383,11 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 
 **Test hooks used.** Every departure is a real one. The pass leans on these hooks:
 - the server keeps every player's hero above 75% hp, and keeps the cart's plating up from ride 4 on (it checks the wire, not the fight). Each top-up is logged and counted in the RESULT;
+- the long train's staging (plan 14 Task 7, ruled): the pass has no companions to answer a boarded crewed wagon (Rider and the Joiner
+  only; Brand comes after the last wreck), so the server frees any natural hound on a crewed wagon 1 s after it boards, before its glow
+  (`[net-server] ride: guard: …`), and keeps the crew seated in the rolling train above half their hp, reviving a downed one at most once a
+  second (`[net-server] ride: crew top-up: …`); only the scripted throw is seen on the wire;
+- `DebugBoard`, `DebugHoldAnswers`, the hero bots' `DebugHoldFire`, `DebugHoldCrouches` and `DebugKill` for the knock-off and the throw;
 - the shoves that put a hero within reach;
 - `DebugKillHolders`, `DebugWreck` and `TestAskFloorAgain`;
 - `RailNet.RideTraceOff` (before the wrecks, and for good from the bridge's take on);
@@ -3027,14 +3399,14 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - real latency and jitter: the pass runs on localhost, and ±150 ms of jitter is tested only in `CartFollowerTests`;
 - on a client: a seat taken by another occupant, a missed leap, and the catch-up re-flying a leap in the air;
 - a bot hopping in with its owner online, and two players pumping or braking together;
-- a winch cranked through the intent, "Let them out", "Open the cage (Grisel)", the forgiven branch, and the "free" lever event;
+- a winch cranked through the intent, "Open the cage (Grisel)", the forgiven branch, and the "free" lever event;
 - on a client: the heap's lantern alarm and the golem's fist glow;
 - for the chaser: its warning, a rider's "Get out" (and the 2 s it is hidden at the countdown's start), the spare given back when its riders get out before it rolls, a halt at a live heap, a chase ended by a wreck or a load, a joiner arriving mid-chase, an escort on its bench, a body run over on a hop's landing, and a hop with no room past the hole (floor 12 never needs one);
 - a floor change with a hero seated in the chaser: it relies on the `Teleport` unseat, the same path the party cart's riders take live;
 - a downed rider's "Get out" intent and a seated pose's Dodge flag, both now refused on the server (code and rule tests only);
 - the rim-spot cap with one awake rider (the RIDE pass's hounds went to the crewed wagon), and a remote seated body's presentation (no run gait or footsteps; nothing checks animation or audio);
 - a wipe's reload mid-ride. The pass's wipe (step 13) comes with the cart wrecked and held, and the resync runs the same `OnFloorReady` catch-up;
-- a fall on a client: the plunge (`CartStateDto.Fell`), the lost wagons (`LostCages`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire. A remote player's own fall is proven over the wire (step 13's walk-off): a walk off a lip on the joiner's own input, judged by the server, shown Fallen on the joiner's sheet and brought back by the wipe's rise. A return at a stop arrival for a remote player is proven too (the first client's fall with r4_slag, back at stop 4's arrival and boarded again). A return at a platform step for a remote player, and a jump across a chasm (its airborne poses above the lip are dropped until it lands), are not;
+- a fall on a client: the plunge (`CartStateDto.Fell`), the lost wagons (`LostWagons`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire. A remote player's own fall is proven over the wire (step 13's walk-off): a walk off a lip on the joiner's own input, judged by the server, shown Fallen on the joiner's sheet and brought back by the wipe's rise. A return at a stop arrival for a remote player is proven too (the first client's fall with r4_slag, back at stop 4's arrival and boarded again). A return at a platform step for a remote player, and a jump across a chasm (its airborne poses above the lip are dropped until it lands), are not;
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
 - a thrown remote player's run-over damage. The pass checks only its landing;
 - plan 11 on a client: the train's fall at the broken bridge (the pass takes the live back; the fall is proven solo by `--test-switch-back=wrong`), a slag or traffic cart plunging through the gap (and a ride's slag cart reaching it with a living rider, end to end), a barricade cut on foot or with a spell over the wire, a slag-line barricade's smash watched on a client, and a barricade smashed while its ride is not armed standing again at its arming (rule-tested only);
@@ -3048,6 +3420,31 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - plan 12 on a client: the party's train down the split's spur and its fall (on floor 12 no press can put it there; proven solo by `--test-split=early` through the test's hook), the runaway's ram (the pass's runaway takes the spur; the server's ram is `--test-runaway=ram`'s, a client's showing it rule-tested by `RunawayRules.ShowsRam`), the runaway halting behind a held train, its bell, the "Not yet" call (it fires with the lever thrown 12–5 m short of the points on floor 12, and no press throws it there), the arrival's reset waiting for the runaway, and the dark as a client draws it (the pass's clients are headless: they compare the lamps put out, not the view; the view is Task 7's windowed `--test-split=after --screenshot`);
 - a refused seated press: the server refuses a seated `InteractIntent` it does not accept (out of its window and the 5 m lead, past the points, taken, or a set-back inside the guard) with its own log line. On a deadly lever a press refused as too late (taken, or the server's front at or past a live back's points, with the lever straight) tells that player "Too late to throw it." (`SwitchBackRules.Late` returning `TooLate`, `SwitchBackRules.TooLateLine`, a `LogMsg` to the one peer); any other refusal still gives the client no feedback. Neither is run over the wire (plan 8's measured client leads all had the client ahead; at ride 4's split in plan 12's runs the client ran behind). The quiet case, a press on a thrown deadly lever after its moment (`AlreadyThrown`), is run: the RIDE pass's mashed press on ride 3's taken back (step 5).
 
+- **plan 14, the long train** (what its flows and the RIDE pass leave unverified):
+  - no flow forces the countdown's hold to its end or the `SeatsAtOnce` sit-in at 8 s (`BoardMax`): the cages stand beside the train, so
+    every walk ends inside the 2 s `MinWait`, and only `--test-chase`'s stop 3 holds a departure (to 2.4 s); both are unit-tested only;
+  - the straggler's `SeatedLeadCatchUp` set-down is unexercised (`--test-crew`'s straggler walks back by its own path);
+  - the hero-bot seat answer is not seen on the wire: no hero bot rides the RIDE pass's train when a crewed wagon is boarded, and
+    `BoarderRules.PickAnswerer`'s bot branch is unit-tested only (a bot is told by `NetSession.IsServer && hero.Leader != null`);
+  - the golem-burst free, and a hound in the air when its cart is freed, are not seen on a client: with `r5_hounds` at S 1080.0 the linger
+    frees its cart before the burst;
+  - the RIDE pass's same-frame Fallen branch (`RideCavernWatch`, a copy going on the frame its leaper's Fallen sheet lands) has not fired
+    yet: runs 2 and 3 took the later-frame path, and a Fallen-and-shown hero on that frame would fail a healthy run;
+  - the pumped `r5_hounds` margin is estimated at 2.3–2.7 s before the golem's burst, not measured (both flows ride that stretch
+    unpumped, 4.55 s);
+  - a caster out of mana still counts as having a shot (`CompanionBrain.HasShot` checks arrows only, as `CanStrike` does), so it may hold a
+    seat answer it cannot fire, until the 0.5 s grace or the wagon clears;
+  - the 2.0 m `WagonReach` for a hero on foot beside the train is unmeasured (`=reach` measures seated reaches only);
+  - a natural throw is not seen on a client: the pass's guard frees every natural hound on a crewed wagon 1 s after it boards, so only the
+    scripted throw goes over the wire, and "only the scripted throw takes a prisoner" is not asserted;
+  - `--test-chase`'s section-2 leap gate has nothing to check (its floor build after the mid-kiln load has no golem and no leap); section 1
+    carries the chase's leap coverage;
+  - a miss's flight is uncapped in game code (bounded by the crouch-within-reach rule); no miss has occurred in any run, so the gate's
+    miss branch is unexercised;
+  - never exercised by any flow: the `Reseat` fall-back (`(seat … taken: first empty)`) and the `[rails] train: the save had wagons [..]
+    lost` print (every load in the flows has `LostWagons` null);
+  - unmeasured: the thrown prisoner's arc on a sharp curve (it ignores the train's speed: 3.6–4.4 m out of line on the measured straight).
+
 **Known differences, accepted for now:**
 - A partly knocked heap shows whole on clients, and so does a barricade with one or two hits in it (only "cut", "smashed" and "standing" go on the wire).
 - **The RIDE pass's set-piece clocks and party pairs need an unclamped CPU.** Under the laptop's ACPI `low-power` profile the cores clamp to about 600 MHz once the third godot starts (ride 2), the server's physics falls behind its clock, and the clock and pairs checks fail. That was measured, not a code change: a890483 lags the same way, and every code section slows at once (see "The RIDE net test"). Run it on `balanced` or `performance`. The check is not loosened.
@@ -3055,11 +3452,31 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - A slag cart first seen through a correction on a bend may put its brake shoe on the other side.
 - A boarder freed silently at a ride's end stands as a ghost for up to about 4 s.
 - Hammers step at 60 Hz in a headset.
+- **The long train** (plan 14's deferred Minors a player can meet):
+  - a client plays a move's `cart_jump` and `cart_land` both at the landing, as the leap does (the server and solo play the jump at the
+    press); an owner's feel call;
+  - the throw's glow runs 1.5 s of real time: a lever window opening mid-glow, or an `Enemy.Stagger` (a seat answerer's arrow in the last
+    1.5 s), lets it go out while the clock runs on, so a throw can come with no glow showing; a client's glow is not cleared when the hound
+    is knocked off mid-glow (it ends by itself within 1.5 s);
+  - when a hero speaks the throw's call, nothing names the wagon (the log names it only when nobody speaks), and two wagons turning alone
+    on one tick are called by the same hero at once;
+  - an answerer on a crew bench stays there through a stop (arrivals do not end answers and moves are refused while held), so with two
+    such answerers boarding crew could find a seat short;
+  - "the place is booked" is also the refusal for a place simply occupied or a full cart, and a refused companion hop-in may walk to a held
+    wagon;
+  - a thrown prisoner's set-down is clamped 1.5–4.5 m out, so on a wide gap it can land on the enemy lane's cell short of its set-aside cell;
+  - an emptied hound cart vanishes in view at the crossing (Ruling 19's cost);
+  - a pumping shooter hands its seat answer on, and with both shooters pumping (a climb, a slow cart, before a jump) the wagon goes to a
+    climbing blade;
+  - the HUD's cart bar reaches a W4 rider only because its seat (10.4 m off) is inside `HudRange` (12 m);
+  - a joiner on a floor whose train is lost shows the four wagons from the build until its first cart state lands;
+  - `r4_hounds` boards at S 853.6, 5 m before the split's window, so its throw clock runs about 1 s before the window pauses it;
+  - `r5_hounds`' cart (pace point S 1080.0) spawns inside plan 15's pit stretch (about S 1045–1089), which re-measures it.
 - **The chaser:**
   - it does not take crew on foot;
   - held short of a hole whose far side its limit cannot clear, it waits at the near lip; behind a train held at the end of the line it would wait there for good (its riders may get out).
   - its hop (`SpareRules.Hop`) handles one hole at a time: holes closer together than a cart length are not handled (floor 12 has none).
-- **A lone remote rider** now faces one rim hound at a time and can reach a wagon's roof hound with its own blade, but a ranged enemy riding a slag cart alongside (ride 2's Forge Priest) is out of a melee rider's reach and wears it down at lethality 1. The pass still tops heroes up.
+- **A lone remote rider** now faces one rim hound at a time and reaches only its own car's boarder with its blade (it climbs to a boarded wagon to fight there), but a ranged enemy riding a slag cart alongside (ride 2's Forge Priest) is out of a melee rider's reach and wears it down at lethality 1. The pass still tops heroes up.
 
 **VR, not tried in a headset:**
 - whether the eyes fuse the vignette;
