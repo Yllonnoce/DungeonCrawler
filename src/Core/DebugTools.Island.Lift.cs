@@ -19,12 +19,16 @@ namespace DungeonCrawler.Core;
 // regroups), and stop 1's first crew member put on foot 10 m short of its cart (ctrl.DebugPutOnFoot). The prompt: "Board the cart" from its W4 and
 // from its cart alike. The press (its cart's): the lead and the near companion in its cart, the crew member in its W1 seat 4 at once and not Home
 // there, the far one on foot. The countdown: 5 s, Get out closed for its first 2 s. Getting out in it (Task 8, Task 6's ⚠️5): on the first frame
-// Get out is offered the lead presses it: set down outside with nobody left in the lift, which stands on at its place (no run), every frame for
-// 1 s (fix round 1, M1); then the lead boards again by whichever of its bodies offers "Board the cart", with the near companion and the crew member,
+// Get out is offered the lead presses it: set down outside with nobody left in the lift, the lead, the near companion and the crew member each
+// outside on a cell that takes a body (Task 9, Minor 1), the lift standing on at its place (no run), every frame for
+// 1 s (fix round 1, M1); then the lead boards again by whichever of its bodies offers "Board the cart" after that second (read once; beside its cart
+// if none does from where the lead stands), with the near companion and the crew member,
 // and the countdown is judged again from that press. The bridge: while the lift is over it the lead's prompt is ""
 // and a forced Get out does nothing. The save (Review Focus 4) at mid-bridge and a load: the lead beside the parked train outside, up and not
 // fallen, the lift standing; the lead boards again. The halt: 1.5 +- 1.5 m behind the held train's last body, inside, every rider on island cells;
 // hidden 2 s later and standing again 1 s after that. Regroup (Ruling 35): the far companion on an island cell that may take a body within 10 s.
+// Last (Task 9, Minor 12): the lead boards the standing lift again from beside it and rc.DebugEndChase ends that chase: its place Gone at once and
+// the lift hidden, standing again at its place within 1 s.
 // =takeover (Review Focus 1): rc.Restore(2) with every spare spent (rc.DebugSpendSpares), ridden out and wrecked on ride 3 (rc.DebugWreck: "No
 // carts left. The rest is on foot."); the party put beside the parked train; stop 4's holders are spared by the cull (its gate stays down) and its
 // cage stays locked. Refused while a chaser stands (rc.DebugPlaceChaser, then rc.DebugEndChase). The double press (Review Focus 5) in one tick:
@@ -45,6 +49,8 @@ public partial class DebugTools
     private bool _ilOutDone, _ilReboarded;
     /// <summary>Fix round 1 (M1): when the lead got out in the countdown, and the frames it was then seen outside before boarding again.</summary>
     private float _ilOutT = float.NaN;
+    /// <summary>Task 9 (Minor 12): when DebugEndChase ended the lift the lead boarded again at the flow's end.</summary>
+    private float _ilEndT = float.NaN;
     private int _ilOutFrames;
     private int _ilSmashesBefore;
     private float _ilSpanWreckT = float.NaN;
@@ -334,7 +340,27 @@ public partial class DebugTools
                 if (!regrouped && _isTime - _ilSetDownT > 10f) { Fail($"{far?.State.Name} (40 m short) did not regroup inside within 10 s of the lead's set-down (at {farCell}, fallen {far?.State.Fallen})"); return; }
                 if (!standing || !regrouped) { if (_isClock > 15f) Fail("the lift never stood again or the far companion never regrouped"); break; }
                 GD.Print($"[island] lift: standing again {_isTime - _ilHideT:0.00} s or less after it was hidden; {far!.State.Name} regrouped onto {farCell} inside");
-                Pass($"a no-spare plain wreck in the parked train's span uncoupled the party's wagons and the lift stood (ClearTheLiftsSpan); the prompt from its W4 and its cart; the press seated the lead and a companion in its cart and a crew member on foot in its W1 seat 4 at once (not Home there), the far companion left on foot; the lead got out in the countdown (set down outside, the lift standing on, no run) and boarded again; a 5 s countdown with Get out closed for its first 2 s; over the bridge no prompt and a forced Get out did nothing; a save at mid-bridge loaded the lead beside the parked train outside with the lift standing, and the lead boarded again; it halted {rc.LastLiftGap:0.00} m behind the held train's last body inside, every rider set down on island cells; hidden 2 s later and standing again within 1 s; the far companion regrouped inside");
+                _isStep++; _isClock = 0f;
+                break;
+            }
+            case 8:
+            {
+                // Task 9 (the Task 6 review's Minor 12): the lead boards the standing lift from beside it again and the test hook ends that chase: its
+                // place is Gone at once (as a rolled lift's), the lift is hidden, and it stands again at its place within 1 s
+                if (float.IsNaN(_ilEndT))
+                {
+                    me.Teleport(BesideLift(main, layout, rc, enc, train.Cart), train.Cart.GlobalPosition + Vector3.Up * 0.9f);
+                    if (!rc.DebugBoardLift(me) || rc.Lift == null) { Fail($"the lead beside the lift again: seated {me.Seated}, the lift runs {rc.Lift != null}"); return; }
+                    rc.DebugEndChase();
+                    if (rc.Lift != null || enc.ParkedNow != ParkedState.Gone || train.Standing || me.Seated) { Fail($"DebugEndChase on the lift: it runs {rc.Lift != null}, its place {enc.ParkedNow}, standing {train.Standing}, the lead seated {me.Seated}"); return; }
+                    _ilEndT = _isTime;
+                    GD.Print($"[island] lift: the lead boarded it again and DebugEndChase ended it: its place {enc.ParkedNow}, hidden");
+                    break;
+                }
+                var again = enc.ParkedNow == ParkedState.Lift && train.Standing && train.Cart.GlobalPosition.DistanceTo(rc.Party.Track.Point(ParkedRules.CartS(enc.ExitFromS))) < 1f;
+                if (!again) { if (_isTime - _ilEndT > 1f) Fail($"{_isTime - _ilEndT:0.00} s after DebugEndChase the lift is {enc.ParkedNow}, standing={train.Standing}"); break; }
+                GD.Print($"[island] lift: standing again {_isTime - _ilEndT:0.00} s after DebugEndChase");
+                Pass($"a no-spare plain wreck in the parked train's span uncoupled the party's wagons and the lift stood (ClearTheLiftsSpan); the prompt from its W4 and its cart; the press seated the lead and a companion in its cart and a crew member on foot in its W1 seat 4 at once (not Home there), the far companion left on foot; the lead got out in the countdown (set down outside, the lift standing on, no run) and boarded again; a 5 s countdown with Get out closed for its first 2 s; over the bridge no prompt and a forced Get out did nothing; a save at mid-bridge loaded the lead beside the parked train outside with the lift standing, and the lead boarded again; it halted {rc.LastLiftGap:0.00} m behind the held train's last body inside, every rider set down on island cells; hidden 2 s later and standing again within 1 s; the far companion regrouped inside; a lift ended by DebugEndChase went Gone and stood again within 1 s");
                 return;
             }
         }
@@ -358,8 +384,15 @@ public partial class DebugTools
         if (rc.Lift != null) problems.Add($"the lift still runs at S={rc.LiftS:0.0}");
         if (anyone > 0) problems.Add($"{anyone} still seated in it");
         if (enc.ParkedNow != ParkedState.Lift || !train.Standing || train.Cart.GlobalPosition.DistanceTo(place) > 0.5f) problems.Add($"the parked train is {enc.ParkedNow}, standing={train.Standing}, its cart {train.Cart.GlobalPosition.DistanceTo(place):0.00} m from its place");
+        // Task 9 (the Task 6 review's Minor 1): the lead, the near companion who got out with them and the crew member set down after, each outside on a
+        // cell that takes a body (beside the parked train's place one cell is free, so they share it: ParkedRules.SetDownOrder gives each its own spot)
+        var crewOut = ObjectiveController.Instance is CrewRescueController ctrlOut ? ctrlOut.Crew.FirstOrDefault(n => n.Id == _ilCrewId) : null;
+        var outCells = new List<(string, GridPos)> { (Who(me), cell) };
+        if (_ilNear != null) outCells.Add((Who(_ilNear), DungeonBuilder.WorldToCell(_ilNear.GlobalPosition)));
+        if (crewOut != null) outCells.Add((Who(crewOut), DungeonBuilder.WorldToCell(crewOut.GlobalPosition)));
+        if (outCells.Count != 3 || outCells.Any(o => layout.InIsland(o.Item2) || !CrevasseRules.SetDownOk(layout, o.Item2))) problems.Add($"set down on [{string.Join(", ", outCells.Select(o => $"{o.Item1} {o.Item2}"))}], not three outside on cells that take a body");
         if (problems.Count > 0) { Fail($"the Get out {since:0.00} s into the countdown: {string.Join("; ", problems)}"); return true; }
-        GD.Print($"[island] lift: the lead got out {since:0.00} s into the countdown: set down outside at {cell}, nobody left in the lift and no run; it stands on at its place ({enc.ParkedNow})");
+        GD.Print($"[island] lift: the lead got out {since:0.00} s into the countdown: set down outside at {cell}, nobody left in the lift and no run; it stands on at its place ({enc.ParkedNow}); set down: {string.Join(", ", outCells.Select(o => $"{o.Item1} {o.Item2}"))}");
         _ilOutT = _isTime;
         _ilOutFrames = 0;
         return true;
@@ -367,8 +400,9 @@ public partial class DebugTools
 
     /// <summary>
     /// =lift step 3 after the Get out (fix round 1, M1): every frame for 1 s the lead stands outside, up and on foot, nobody sits in the lift, it runs
-    /// no run and stands at its place as a lift offering "Board the cart" from one of its bodies; then the lead boards again by that body (beside its cart
-    /// first if none offers it), the near companion and the crew member with it (asserted), and the countdown is judged again from that press.
+    /// no run and stands at its place as a lift. After that second its bodies' prompts are read once: the lead boards again by the first that offers
+    /// "Board the cart" (if none does from where the lead stands, the lead is first put beside its cart and they are read again), the near companion and
+    /// the crew member with it (asserted), and the countdown is judged again from that press.
     /// </summary>
     private void IslandLiftOutside(Main main, FloorLayout layout, RailController rc, RailEncounterController enc, ParkedTrain train, PartyController party, Adventurer me, Action<string> Fail)
     {

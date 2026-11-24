@@ -290,7 +290,7 @@ public partial class RailController
         if (SpareRules.ChaseDone(c.Boarded, run.State.Mode == CartMode.Held, TrainStoppedAhead, run.State.S, trainLimit))
         {
             NoteChaseDone(c, trainLimit); // the last body's back (or the parked train's place) to the chaser's front
-            EventBus.Instance.Log("The spare cart pulls up behind the train.");
+            EventBus.Instance.Log(SpareRules.PullUpLine(relief: false, LastChaseAtParked));
             EndChase(atOnce: false);
         }
     }

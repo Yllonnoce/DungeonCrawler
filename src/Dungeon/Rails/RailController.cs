@@ -1099,33 +1099,20 @@ public partial class RailController : Node
     /// The cell a body steps out onto by the party lane near <paramref name="at"/>: <see cref="CartSeats.ExitCell"/>'s, passed through
     /// <see cref="ExitBridgeRules.SafeExitCell"/> (plan 15, Ruling 12), so it is never a drop (a body by the exit bridge's span or the cavern's
     /// decks stands at the nearer end instead), on the body's own side of the exit island: <paramref name="inside"/> when given, else the
-    /// side of <paramref name="at"/>'s cell (a bridge cell is outside).
+    /// side of <paramref name="at"/>'s cell, the nearer end's over the exit bridge (<see cref="ExitBridgeRules.SideOfBody"/>).
     /// </summary>
     private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken, bool? inside = null)
     {
         bool Free(GridPos c) => CrevasseRules.SetDownOk(_layout, c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c); // never a drop: a plank is walkable, not a place to put someone
         var lane = _layout.Rail!.Party;
         var here = DungeonBuilder.WorldToCell(at);
-        var side = inside ?? SideOfBody(lane, here); // plan 15 Task 6 (the Task 3 and Task 5 carries): a body over the exit bridge keeps the nearer end's side
+        var side = inside ?? ExitBridgeRules.SideOfBody(_layout, lane, here); // plan 15 Task 6 (the Task 3 and Task 5 carries): a body over the exit bridge keeps the nearer end's side
         var best = NearestOf(lane, here);
         if (!useTaken) return ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, atStop, side);
         var cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop, side);
         // every free cell nearby taken: share the first one rather than land on the track
         if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, true, side);
         return cell;
-    }
-
-    /// <summary>
-    /// The side of the exit island a body at <paramref name="here"/> stands on (true inside; null without an island): its cell's, and over the exit
-    /// bridge's span (its cells count as outside) the nearer end's, so a rider set down from a car over the bridge never lands across it.
-    /// </summary>
-    private bool? SideOfBody(IReadOnlyList<GridPos> lane, GridPos here)
-    {
-        if (_layout.Rail?.Island is not { } island) return null;
-        var i = -1;
-        for (var k = island.Bridge.From; k <= island.Bridge.To && k < lane.Count; k++) if (lane[k] == here) { i = k; break; }
-        if (i < 0) return _layout.InIsland(here);
-        return i - island.Bridge.From > island.Bridge.To - i;
     }
 
     // ---- the ride --------------------------------------------------------------------------------

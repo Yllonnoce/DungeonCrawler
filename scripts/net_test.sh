@@ -231,7 +231,8 @@ if [ "${RIDE:-}" = 1 ]; then
   echo "--- the lift in the books: $LIFT_BOOKS"
   if [ $LIFT_BOOKS_RC -ne 0 ]; then echo "NET TEST: FAIL (the seat books did not carry the lift (L) with the joiner in it on the server and the joiner alike: $LIFT_BOOKS)"; exit 1; fi
   # plan 15 Task 8 (B.10): no remote Get out over the exit bridge. While its train has a car over the bridge the first client's cart offers "" on every frame
-  # here; it presses Get out through the intent (cart:0) on the first: the server refuses it, and the client stays seated
+  # here; it presses Get out through the intent (cart:0) once its front is 2 m into the span and the hold 0.5 s old (so the server holds too): the
+  # server refuses it, and the client stays seated
   echo "--- the exit bridge"; grep -h "\[net\] ride: over the exit bridge\|get out refused (the train is on the exit bridge)" "$TMP/server.log" "$TMP/client.log" 2>/dev/null | head -4
   if ! grep -q "\[net\] ride: over the exit bridge here (front S=[0-9.]*, the bridge S=[0-9.]*\.\.[0-9.]*): the cart offers \"\"; pressed Get out through the intent anyway (cart:0)" "$TMP/client.log" \
      || ! grep -q "\[net-server\] interact cart:0 from Rider: get out refused (the train is on the exit bridge)" "$TMP/server.log" \

@@ -79,7 +79,8 @@ public static class CrewRules
     /// How one hero counts for the island's rules (fix round 3): <c>Up</c> for a human's hero that is not parked, fallen or down; <c>Outside</c> for one
     /// not parked or fallen standing off the island's cells, down or not. A downed one (a Mangled one too: it can be pulled free or revived where it
     /// lies) is not up but holds the outside; a fallen one (only the crevasse's return brings it back), a parked one or a companion counts as neither.
-    /// <paramref name="mangled"/> needs <paramref name="downed"/> (a Mangled hero is down) and changes nothing beyond it.
+    /// A Mangled hero is always down in play (Mangled is set only at 0 HP); <paramref name="mangled"/> alone, with <paramref name="downed"/> false, still
+    /// counts as not up (and outside when outside), as a downed one does (Task 9, the Task 7 re-review 3's Minor 3).
     /// </summary>
     public static (bool Up, bool Outside) PlayerCount(bool human, bool parked, bool fallen, bool downed, bool mangled, bool inIsland)
     {

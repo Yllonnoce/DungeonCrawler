@@ -206,6 +206,34 @@ public partial class DebugTools
 
     // ---- =stranded ------------------------------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// =stranded's still-pin cell (Task 9): the outside cell nearest <paramref name="lead"/> that may take a body (off the rails, no prop, no barrel)
+    /// whose straight line to the lead crosses no drop, with the cell a step along that line open outside ground too. Null when there is none.
+    /// </summary>
+    private static GridPos? IslandHoldPinCell(Main main, FloorLayout layout, Vector3 lead)
+    {
+        var b = main.Builder;
+        var leadCell = DungeonBuilder.WorldToCell(lead);
+        bool Open(GridPos c) => c.X >= 0 && c.Y >= 0 && c.X < layout.Width && c.Y < layout.Height && !layout.InIsland(c) && CrevasseRules.SetDownOk(layout, c)
+            && !layout.IsRail(c) && !b.IsCellBlocked(c) && !layout.BreakableSpawns.Contains(c);
+        GridPos? best = null;
+        var bestD = float.MaxValue;
+        for (var y = leadCell.Y - 30; y <= leadCell.Y + 30; y++)
+            for (var x = leadCell.X - 30; x <= leadCell.X + 30; x++)
+            {
+                var c = new GridPos(x, y);
+                if (!Open(c)) continue;
+                var at = b.Surface(c);
+                var flat = new Vector2(lead.X - at.X, lead.Z - at.Z);
+                if (flat.Length() < 3f * DungeonBuilder.CellSize || b.DropAlong(at, lead)) continue;
+                var step = at + new Vector3(flat.X, 0f, flat.Y).Normalized() * DungeonBuilder.CellSize;
+                if (!Open(DungeonBuilder.WorldToCell(step))) continue;
+                var d = flat.Length();
+                if (d < bestD) { bestD = d; best = c; }
+            }
+        return best;
+    }
+
     private void IslandStranded(Main main, FloorLayout layout, RailController rc, RailEncounterController enc, PartyController party, Adventurer me, Action<string> Fail, Action<string> Pass)
     {
         var shape = Shape(rc);
@@ -276,6 +304,15 @@ public partial class DebugTools
                 if (_ihArriveT is float.NaN) { _ihArriveT = _isTime; GD.Print($"[island] stranded: arrived at stop {rc.StopIndex} with the lead inside {Inside(layout, me)}; {IslandCrewStates(ctrl)}"); }
                 if (ctrl.StateOf(_ihB!) != CrewState.Lost) { if (_isTime - _ihArriveT > 1f) Fail($"{_ihB!.NpcName}, stranded outside, is {ctrl.StateOf(_ihB)} 1 s after the arrival"); break; }
                 GD.Print($"[island] stranded: {_ihB!.NpcName} Lost {_isTime - _ihArriveT:0.00} s after the arrival, at {At(_ihB)}; {_ihA!.NpcName} {ctrl.StateOf(_ihA)}; completed {ctrl.Completed}");
+                // Task 9 (the Task 7 re-review 3's Minor 1): the pin must be able to fail. Beside the lava the straight way to the lead crosses a drop, where
+                // PathMover.Next answers null and a follower walking while held would stand still too; so the held outsider is moved to an outside cell whose
+                // straight line to the lead crosses no drop (rock between them), with open ground a cell along it: there a held follower that walked at its
+                // lead (fix round 2's code) would move more than 0.5 m, and one that holds where it is moves nothing
+                if (IslandHoldPinCell(main, layout, me.GlobalPosition) is not { } pin) { Fail($"no outside cell near the lead whose straight line to it crosses no drop"); return; }
+                _ihB.GlobalPosition = main.Builder.Surface(pin) + Vector3.Up * 0.1f;
+                _ihB.Velocity = Vector3.Zero;
+                _ihLast = _ihB.GlobalPosition;
+                GD.Print($"[island] stranded: {_ihB.NpcName}, held, moved for the pin to {pin} ({new Vector2(me.GlobalPosition.X - _ihB.GlobalPosition.X, me.GlobalPosition.Z - _ihB.GlobalPosition.Z).Length():0.0} m from the lead, no drop on the line; inside {Inside(layout, _ihB)})");
                 _ihHoldAt = _ihB.GlobalPosition; // fix round 3: held, it holds where it is (Ruling 35)
                 _ihHoldDrift = 0f;
                 _isStep++; _isClock = 0f;

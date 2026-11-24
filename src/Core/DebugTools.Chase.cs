@@ -1519,7 +1519,7 @@ public partial class DebugTools
     /// <summary>
     /// Plan 14 Task 6 fix round 1: every hound leap of this floor build onto a body within TrainRules.LeapReach (a miss: its length printed only,
     /// its take-off within the reach of the nearest body, Task 8 fix round 1), each printed with its length, and r5_hounds'
-    /// two landing 1.5 s or more before the golem's burst at the chase's speed (<see cref="BoardingLeapChecks"/>); r4_hounds' boarding S and its
+    /// two landing BdGolemMargin (0.4 s) or more before the golem's burst at the chase's speed (<see cref="BoardingLeapChecks"/>); r4_hounds' boarding S and its
     /// roll-up (its spawn to its first leap) printed.
     /// </summary>
     private bool ChaseLeapReport(RailEncounterController enc, string section, Action<string> fail)

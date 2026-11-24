@@ -128,7 +128,7 @@ public partial class NetTestFlow
         _exitTold = true;
         if (!_exitPressed) return RideFail(net, $"the hold over the exit bridge ended here after {_exitFrames} frame(s) before our front was {ExitPressInto:0} m into it and the hold {ExitPressAfter:0.0} s old: no Get out was pressed");
         var seated = me.Seated && me.Cart == rc.Cart;
-        GD.Print($"[net] ride: over the exit bridge: {_exitFrames} frame(s), the cart's prompt \"\" on every one; {(seated ? $"still seated in seat {me.Seat}" : "NOT SEATED")} ({(seated ? "ok" : "FAIL")})");
+        GD.Print(FormattableString.Invariant($"[net] ride: over the exit bridge: {_exitFrames} frame(s), the cart's prompt \"\" on every one; {(seated ? $"still seated in seat {me.Seat}" : "NOT SEATED")} ({(seated ? "ok" : "FAIL")})"));
         return !seated && RideFail(net, "the Get out pressed over the exit bridge let our hero out");
     }
 

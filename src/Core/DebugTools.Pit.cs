@@ -412,8 +412,8 @@ public partial class DebugTools
 
     /// <summary>
     /// =late: the lead's press arrives as the server takes a seated press (its seated window, then its late check, <see cref="RailEncounterController.LateFor"/>):
-    /// on the tick the front reaches the points, and again 1 m past them. Each must be too late (the presser told "Too late to throw it."), a local press
-    /// there moves nothing, and the lever stays straight. True when it failed.
+    /// on the tick the front reaches the points, and again 1 m past them. Each must read too late by the server's late check (a remote presser would be
+    /// told "Too late to throw it."; nobody is told in solo), a local press there moves nothing, and the lever stays straight. True when it failed.
     /// </summary>
     private bool PitLatePresses(Main main, RailController rc, RailEncounterController enc, TrackSwitch lever, Adventurer me, Action<string> fail)
     {
@@ -427,7 +427,7 @@ public partial class DebugTools
         main.Party.VrUse(false);
         _ptLate++;
         var told = late == LatePress.TooLate ? SwitchBackRules.TooLateLine : late == LatePress.AlreadyThrown ? "(ignored quietly)" : "(taken)";
-        GD.Print($"[pit] late press {_ptLate}: at front S={front:0.0} ({front - lever.PointsS:0.0} m past the points, taken {lever.Taken}): the seated window {(window ? "yes" : "no")}, the late check {late}: told \"{told}\"; the lever {(lever.Thrown ? "thrown" : "straight")}");
+        GD.Print($"[pit] late press {_ptLate}: at front S={front:0.0} ({front - lever.PointsS:0.0} m past the points, taken {lever.Taken}): the seated window {(window ? "yes" : "no")}, the late check {late}: a remote presser would be told \"{told}\"; the lever {(lever.Thrown ? "thrown" : "straight")}");
         if (late != LatePress.TooLate || lever.Thrown) { fail($"late press {_ptLate} at front S={front:0.0}: {late}, thrown {lever.Thrown} (want TooLate, straight)"); return true; }
         return false;
     }

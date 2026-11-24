@@ -172,15 +172,14 @@ public partial class RailController
     {
         if (_chase is not { Lift: true, Ended: false } c || Exit is not { } enc || !IsInstanceValid(actor)) return;
         if (LiftOverBridge(enc, c.Run.State.S) || SpareRules.ChaserPrompt(actor.Cart == c.Cart, c.Run.State.Mode == CartMode.Held, actor.Downed, ChaserBoardingLeft).Length == 0) return;
-        actor.GetOut(LiftSetDownSpot(c, actor), Vector3.Zero);
-        if (IsPlayer(actor))
-        {
-            _chaseRiders.Clear();
-            foreach (var rider in c.Cart.Riders.Values) _chaseRiders.Add(rider);
-            foreach (var rider in _chaseRiders)
-                if (rider is Adventurer mate && IsInstanceValid(mate) && OwnCompanion(mate, actor)) mate.GetOut(LiftSetDownSpot(c, mate), Vector3.Zero);
-            _chaseRiders.Clear();
-        }
+        _chaseRiders.Clear();
+        _chaseRiders.Add(actor);
+        if (IsPlayer(actor)) // their own companions in its cart get out with them
+            foreach (var rider in c.Cart.Riders.Values)
+                if (rider is Adventurer mate && mate != actor && IsInstanceValid(mate) && OwnCompanion(mate, actor)) _chaseRiders.Add(mate);
+        var spots = LiftSetDownSpots(c, _chaseRiders); // taken once, before anyone leaves the book: each on its own spot
+        for (var i = 0; i < _chaseRiders.Count; i++) _chaseRiders[i].GetOut(spots[i], Vector3.Zero);
+        _chaseRiders.Clear();
         if (!PlayerIn(c.Cart)) EndChase(atOnce: !c.Departed);
         RefreshHud();
     }
@@ -255,7 +254,7 @@ public partial class RailController
         LastLiftHaltS = s;
         LastLiftGap = gap;
         LastLiftSetDown = n;
-        GD.Print($"[rails] lift: halted at S={s:0.0}, {gap:0.0} m behind the train ahead; {n} rider(s) set down inside");
+        GD.Print($"[rails] lift: halted at S={s:0.0}, {gap:0.0} m {ParkedRules.LiftHaltWhat(PartyLiveCart, !float.IsNaN(bufferFace))}; {n} rider(s) set down inside"); // no train ahead: what it stopped at
         EndChase(atOnce: false);
     }
 
@@ -266,17 +265,18 @@ public partial class RailController
         if (rider is Npc { Escorting: false, Downed: false, Dead: false, Crew: true } npc) npc.StartFollowing();
     }
 
-    /// <summary>Every rider still in the lift's five bodies is set down by <see cref="LiftSetDownSpot"/> (its end: at once, or after the halt), each on its own cell.</summary>
+    /// <summary>Every rider still in the lift's five bodies is set down by <see cref="LiftSetDownSpots"/> (its end: at once, or after the halt), each on its own cell.</summary>
     private void SetDownLift(Chase c, string why)
     {
         CollectLiftRiders(c);
         if (_liftRiders.Count == 0) return;
         var riders = _liftRiders.ToList();
         _liftRiders.Clear();
-        foreach (var rider in riders)
+        var spots = LiftSetDownSpots(c, riders); // taken once for the whole list: a rider who has left no longer moves the next one's place in the book
+        for (var i = 0; i < riders.Count; i++)
         {
-            if (rider is GodotObject o && !IsInstanceValid(o)) continue;
-            SetDownLiftRider(rider, LiftSetDownSpot(c, rider));
+            if (riders[i] is GodotObject o && !IsInstanceValid(o)) continue;
+            SetDownLiftRider(riders[i], spots[i]);
         }
         GD.Print($"[rails] lift: {riders.Count} rider(s) set down ({why})");
     }
@@ -310,31 +310,46 @@ public partial class RailController
     private static bool LiftOverBridge(RailEncounterController enc, float cartS)
         => ExitBridgeRules.Holds(true, cartS + CartRules.HalfLength, LiftRearS(cartS), enc.ExitFromS, enc.ExitToS);
 
+    /// <summary>Where one rider of the lift steps out (<see cref="LiftSetDownSpots"/>), by its place in the lift's book now (a save's pose, a single unseat).</summary>
+    private Vector3 LiftSetDownSpot(Chase c, ICartRider rider) => LiftSetDownSpots(c, new[] { rider })[0];
+
     /// <summary>
-    /// Where a rider of the lift steps out (its end, a quiet unseat, a save's pose): on the island's set-down spots once the lift's rear is past the bridge's
-    /// far edge, else beside the parked train's place, outside (<see cref="ParkedRules.SavePoseS"/>): never over the bridge, never across it. Each rider of
-    /// the lift has its own spot, by its place in the lift's book.
+    /// Where riders of the lift step out (its end, a quiet unseat, a save's pose): on the island's set-down spots once the lift's rear is past the bridge's
+    /// far edge, else beside the parked train's place, outside (<see cref="ParkedRules.SavePoseS"/>): never over the bridge, never across it. The lift's book
+    /// is read once for the whole list (as <see cref="LiftHalts"/> takes its spots), so riders set down one after another each have their own spot, by their
+    /// place in it (one not in it: after the book's last).
     /// </summary>
-    private Vector3 LiftSetDownSpot(Chase c, ICartRider rider)
+    private List<Vector3> LiftSetDownSpots(Chase c, IReadOnlyList<ICartRider> riders)
     {
-        if (Exit is not { } enc || c.Train is not { } train) return ((Node3D)rider).GlobalPosition;
+        var spots = new List<Vector3>(riders.Count);
+        if (Exit is not { } enc || c.Train is not { } train)
+        {
+            foreach (var r in riders) spots.Add(r is Node3D n && IsInstanceValid(n) ? n.GlobalPosition : Vector3.Zero);
+            return spots;
+        }
         train.CollectRiders(_liftRiders);
-        var index = Math.Max(0, _liftRiders.IndexOf(rider));
-        var count = Math.Max(_liftRiders.Count, index + 1);
+        var indices = ParkedRules.SetDownOrder(_liftRiders, riders, out var count);
         _liftRiders.Clear();
         var parked = ParkedRules.CartS(enc.ExitFromS);
         var s = ParkedRules.SavePoseS(c.Run.State.S, LiftRearS(c.Run.State.S), enc.ExitToS, parked);
-        if (s != parked) return enc.IslandSetDown(count)[index] + Vector3.Up * 0.1f;
-        _exitTaken.Clear();
-        var at = Party.Track.Point(parked);
-        var cell = ExitCellNear(at, atStop: true, useTaken: true, inside: false);
-        for (var i = 0; i < index; i++)
+        if (s != parked)
         {
+            var island = enc.IslandSetDown(count);
+            foreach (var k in indices) spots.Add(island[k] + Vector3.Up * 0.1f);
+            return spots;
+        }
+        var at = Party.Track.Point(parked);
+        var cells = new List<Dungeon.Generation.GridPos>(count);
+        _exitTaken.Clear();
+        for (var i = 0; i < count; i++)
+        {
+            var cell = ExitCellNear(at, atStop: true, useTaken: true, inside: false);
+            cells.Add(cell);
             _exitTaken.Add(cell);
-            cell = ExitCellNear(at, atStop: true, useTaken: true, inside: false);
         }
         _exitTaken.Clear();
-        return _builder.Surface(cell) + Vector3.Up * 0.1f;
+        foreach (var k in indices) spots.Add(_builder.Surface(cells[k]) + Vector3.Up * 0.1f);
+        return spots;
     }
 
     /// <summary>
@@ -387,8 +402,9 @@ public partial class RailController
     }
 
     /// <summary>
-    /// A no-spare plain wreck (Task 5 review 7): any party wagon left shown within the parked train's span is uncoupled (lost: hidden, as an inside wreck's
-    /// train), so the lift that stands on the next tick shares its place with no party body. A restore or a takeover couples them fresh.
+    /// A no-spare plain wreck (Task 5 review 7): when any part of the wrecked train (its cart's front back to its last wagon's rear) overlaps the parked
+    /// train's span, every party wagon is uncoupled (lost: hidden, as an inside wreck's train), those outside the span too; the party's cart stays where it
+    /// wrecked. So the lift that stands on the next tick shares its place with no party wagon. A restore or a takeover couples them fresh.
     /// </summary>
     private void ClearTheLiftsSpan()
     {
@@ -431,10 +447,11 @@ public partial class RailController
         RefreshHud();
     }
 
-    /// <summary>Test hook: the chase ends at once and the chaser is hidden at once (a spare it took stays spent: it counts as having rolled).</summary>
+    /// <summary>Test hook: the chase ends at once and the chaser (or the lift) is hidden at once (a spare it took stays spent: it counts as having rolled; a lift's place is Gone first).</summary>
     internal void DebugEndChase()
     {
         if (NetSession.IsClient || _chase is not { } c) return;
+        if (c.Lift && !c.Departed) Exit?.ParkedLiftDeparts(); // a lift ended so goes as a rolled one does: its place says Gone, and stands it again (Task 6 review, Minor 12)
         c.Departed = true;
         EndChase(atOnce: true);
         FreeChaser();

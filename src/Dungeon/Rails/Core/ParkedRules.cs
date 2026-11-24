@@ -98,6 +98,31 @@ public static class ParkedRules
 
     private static float Nearest(float a, float b) => float.IsNaN(a) ? b : Math.Min(a, b);
 
+    /// <summary>
+    /// Each of <paramref name="riders"/>'s spot index for a set-down taken once for the whole list (Task 9, the Task 6 review's Minor 1): its place in
+    /// <paramref name="book"/> (the lift's riders before anyone leaves), one not in it after the book's last, in turn. <paramref name="count"/> is how
+    /// many spots to take.
+    /// </summary>
+    public static int[] SetDownOrder<T>(IReadOnlyList<T> book, IReadOnlyList<T> riders, out int count)
+    {
+        var order = new int[riders.Count];
+        count = book.Count;
+        for (var i = 0; i < riders.Count; i++)
+        {
+            var k = -1;
+            for (var j = 0; j < book.Count; j++) if (EqualityComparer<T>.Default.Equals(book[j], riders[i])) { k = j; break; }
+            order[i] = k >= 0 ? k : count++;
+        }
+        return order;
+    }
+
+    /// <summary>
+    /// What the lift's halt line measures its gap to, as <c>LiftHalts</c> measures it (Task 9, the Task 6 review's Minor 3): the party train's last body
+    /// while it has a live cart ahead (<paramref name="trainAhead"/>), else the standing buffer (<paramref name="bufferAhead"/>), else the last stop.
+    /// </summary>
+    public static string LiftHaltWhat(bool trainAhead, bool bufferAhead)
+        => trainAhead ? "behind the train ahead" : bufferAhead ? "short of the standing buffer" : "short of the last stop";
+
     /// <summary>A board takes the lift over as the party's train (Ruling 27): the party has no live cart, and its last wreck was not past the bridge's start.</summary>
     public static bool TakesOver(bool partyLiveCart, bool wreckedInside) => !partyLiveCart && !wreckedInside;
 

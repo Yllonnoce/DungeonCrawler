@@ -333,7 +333,6 @@ public partial class RailEncounterController
         train.Stand();
     }
 
-    /// <summary>Client: its ride armed (anew): it stands in the way, as the server's arming stands it.</summary>
     /// <summary>
     /// Client: its ride armed (anew): it stands in the way, as the server's arming stands it, only while our cart's front is short of its rear face. A ride armed
     /// from past it (the lift's takeover, Ruling 27) leaves it as the server has it, and so does a joiner's first state between the smash and the last stop (the

@@ -69,6 +69,19 @@ public static class ExitBridgeRules
     /// <summary>The side of the exit island a body at <paramref name="cell"/> stands on (true inside), or null on a floor without one.</summary>
     public static bool? SideOf(FloorLayout l, GridPos cell) => l.Rail?.Island == null ? null : l.InIsland(cell);
 
+    /// <summary>
+    /// The side of the exit island a body at <paramref name="here"/> stands on as a set-down reads it (true inside; null without an island): its cell's,
+    /// and on the exit bridge's span (party-lane cells <c>Bridge.From..Bridge.To</c>, which <see cref="SideOf"/> counts as outside) the nearer end's, ties
+    /// outside: so on floor 12 cells 311 and 312 are outside and 313 and 314 inside, and a rider set down from a car over the bridge never lands across it.
+    /// </summary>
+    public static bool? SideOfBody(FloorLayout l, IReadOnlyList<GridPos> lane, GridPos here)
+    {
+        if (l.Rail?.Island is not { } island) return null;
+        for (var k = island.Bridge.From; k <= island.Bridge.To && k < lane.Count; k++)
+            if (lane[k] == here) return k - island.Bridge.From > island.Bridge.To - k;
+        return l.InIsland(here);
+    }
+
     /// <summary>How far (cells, each way) a hold's step off the rails may look (<see cref="HoldStepOff"/>).</summary>
     public const int HoldStepReach = 4;
 
@@ -76,9 +89,10 @@ public static class ExitBridgeRules
     /// Where a follower whose catch-up hold starts at <paramref name="here"/> steps first (Ruling 35 as plan 15 Task 8 ruled; fix round 1, M2 and M3):
     /// on a rail cell, the nearest cell (straight distance, ties by (Y, X)) off the rails, on its own side of the island (<paramref name="inside"/>), that
     /// may take a body (<see cref="CrevasseRules.SetDownOk"/>), holds no barrel (<see cref="FloorLayout.BreakableSpawns"/>), is not <paramref name="blocked"/>
-    /// (a prop) and not <paramref name="taken"/> (another body's), within <see cref="HoldStepReach"/> cells and reached from <paramref name="here"/> by
-    /// 4-neighbour steps over cells that take a body, all within that reach: so a held follower never stands where the lift stands again or a cart runs, and
-    /// never steps across a drop. Null off the rails (it holds where it is) or with no such cell near.
+    /// (a closed door or a solid prop) and not <paramref name="taken"/> (another body's), within <see cref="HoldStepReach"/> cells and reached from
+    /// <paramref name="here"/> by 4-neighbour steps over such cells (rail cells may be walked over, never answered), all within that reach: so a held follower
+    /// never stands where the lift stands again or a cart runs, and never steps across a drop, through a door or a prop, or past a barrel or a body (Task 9,
+    /// the Task 8 re-review's N1). Null off the rails (it holds where it is) or with no such cell near.
     /// </summary>
     public static GridPos? HoldStepOff(FloorLayout l, GridPos here, bool inside, Func<GridPos, bool>? blocked = null, ISet<GridPos>? taken = null)
     {
@@ -94,9 +108,10 @@ public static class ExitBridgeRules
             var at = queue.Dequeue();
             foreach (var n in new[] { new GridPos(at.X + 1, at.Y), new GridPos(at.X - 1, at.Y), new GridPos(at.X, at.Y + 1), new GridPos(at.X, at.Y - 1) })
             {
-                if (!InReach(n) || !seen.Add(n) || !CrevasseRules.SetDownOk(l, n)) continue; // walk-connected: only over cells that take a body
+                if (!InReach(n) || !seen.Add(n) || !CrevasseRules.SetDownOk(l, n)) continue; // walk-connected: only over cells that take a body,
+                if (l.BreakableSpawns.Contains(n) || blocked?.Invoke(n) == true || taken?.Contains(n) == true) continue; // with nothing standing in them
                 queue.Enqueue(n);
-                if (l.IsRail(n) || l.InIsland(n) != inside || l.BreakableSpawns.Contains(n) || blocked?.Invoke(n) == true || taken?.Contains(n) == true) continue;
+                if (l.IsRail(n) || l.InIsland(n) != inside) continue;
                 var d = (n.X - here.X) * (n.X - here.X) + (n.Y - here.Y) * (n.Y - here.Y);
                 if (d < bestD || d == bestD && best is { } b && (n.Y < b.Y || n.Y == b.Y && n.X < b.X)) { bestD = d; best = n; }
             }

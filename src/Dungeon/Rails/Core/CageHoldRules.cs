@@ -19,7 +19,7 @@ public static class CageHoldRules
     /// never has a wagon, so its <paramref name="cageHolds"/> is false. A cart standing past its stop as the lift's takeover (<paramref name="standingPast"/>,
     /// plan 15 Ruling 27) is held by no cage.
     /// </summary>
-    public static bool Held(CartMode mode, bool halted, int stopIndex, int stopCount, bool waived, bool cageHolds, bool standingPast = false)
+    public static bool Held(CartMode mode, bool halted, int stopIndex, int stopCount, bool waived, bool cageHolds, bool standingPast)
         => mode == CartMode.Held && !halted && !standingPast && stopIndex < stopCount - 1 && !waived && cageHolds;
 
     /// <summary>

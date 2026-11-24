@@ -171,8 +171,10 @@ public partial class RailController
         if (c.Phase == ReliefPhase.Riding && SpareRules.ChaseDone(c.Boarded, held, TrainStoppedAhead, run.State.S, trainLimit))
         {
             NoteChaseDone(c, trainLimit); // the last body's back (or the parked train's place) to the relief's front
-            EventBus.Instance.Log("The relief cart pulls up behind the train.");
-            GD.Print($"[rails] the relief cart pulls up behind the train at S={run.State.S:0.0}, {LastChaseGap:0.00} m short of its last body");
+            EventBus.Instance.Log(SpareRules.PullUpLine(relief: true, LastChaseAtParked));
+            GD.Print(LastChaseAtParked
+                ? $"[rails] the relief cart halts short of the exit bridge at S={run.State.S:0.0}, {LastChaseGap:0.00} m behind the parked train's place"
+                : $"[rails] the relief cart pulls up behind the train at S={run.State.S:0.0}, {LastChaseGap:0.00} m short of its last body");
             EndChase(atOnce: false);
         }
         else if (c.Phase == ReliefPhase.Leaving && held)

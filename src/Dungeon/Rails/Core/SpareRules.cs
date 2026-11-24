@@ -82,6 +82,13 @@ public static class SpareRules
 
     private static float Nearest(float a, float b) => float.IsNaN(a) ? b : Math.Min(a, b);
 
+    /// <summary>
+    /// The log line when a chaser (or a relief, <paramref name="relief"/>) ends its chase: behind the train, or, halted at the parked train's place
+    /// (<paramref name="atParked"/>, Ruling 29: the train is across the lava, past the exit bridge), short of the bridge (Task 9, the Task 6 review's Minor 4).
+    /// </summary>
+    public static string PullUpLine(bool relief, bool atParked)
+        => $"The {(relief ? "relief" : "spare")} cart {(atParked ? "halts short of the exit bridge" : "pulls up behind the train")}.";
+
     /// <summary>Where the chaser is placed: at its stop, or back at its limit while the train's tail still stands there; never before the line's start.</summary>
     public static float ChaserStart(float stopS, float limit) => Math.Max(0f, Math.Min(stopS, limit));
 
