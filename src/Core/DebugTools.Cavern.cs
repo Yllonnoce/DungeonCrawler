@@ -527,6 +527,9 @@ public partial class DebugTools
     /// <summary>After the arrival at stop 4: every party cell gone within 6 s, then (=bridge) a restore stands it whole.</summary>
     private void CavernAfterArrival(FloorLayout layout, RailController rc, RailEncounterController enc, Action<string> Fail, Action<string> Pass)
     {
+        // the train may leave stop 4 on ride 5 while the collapse runs on (=stall's grind arrives with most of the bridge still standing): its lava
+        // pit's switch is thrown from the seat on the way (plan 15 Task 4), or the train falls into the pit and the collapse stops where it stands
+        if (Main.Instance is { } main) ThrowPitOnTheWay(main, rc, "cavern");
         if (float.IsNaN(_cvAllGoneT) && enc.BridgeGone == enc.BridgeCells) _cvAllGoneT = _cvTime;
         // within 6 s of the arrival (=bridge, =runaway); after a stall's grind the front runs on from where it stood to the end at its pace (Ruling 5)
         var within = _cvVariant == "stall" ? (enc.BridgeToS - _cvFrontAtArrival) / BridgeRules.Pace(rc.Train.Count) + 1f : 6f;
