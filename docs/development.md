@@ -561,6 +561,9 @@ seconds, then gets up at 1 HP; if the lead goes down, control passes to the next
 
 The shipped campaign, The Gullet of Gorm (replaced on 2026-11-12; design `docs/superpowers/specs/2026-11-12-gullet-story-arc.md`, cast sheets `docs/story/character-sheets.md`, readable scripts `docs/story/act-N.md` and `after.md`, made by `scripts/story_script.py`): a good god, Gorm, sleeps under the town of Dunmarrow and his dreams keep the evil god, the Sleepless, out; water running down through the mines drains feeds him, and the town's drain-wardens always kept the drains clear. The orc Morg Ashtusk, the Herald of the Sleepless, has seized the mines and filled them with traps and minions, so the drains back up, the god starves and stirs and the mines shake. The town hires the party to clear them. If the god wakes the Sleepless breaks through and the town is destroyed (the god does not do it on purpose); if the party fails the mines collapse. Four acts end at four great drains, one per tier boss (Canon Ludd, Mother Nit, the Bellows, Morg Ashtusk). The cast: Alderman Crane (the employer, whose council dropped the wardens to save money, owned on floor 17), Master Pellet (the merchant who lent the council the hire money), Deacon Tobit, Grisel Thorn (the last warden), Old Ulf (the pump works, now a foundry), Maud Sorrel (a drowned warden the god speaks through) and Absalom Quill, the Verger (who let the orc in; met on floor 19), plus the companions Foehammer, Tamsin Rook, Oskar Vell and Sister Ione. The choices keep their flag ids: floor 3 `told_tobit` / `kept_his_saint` (pays on 14, 16 and 19), floor 9 `grisel_forgiven` / `grisel_condemned` (pays on 12, where a condemned Grisel is found dead), floor 18 `let_him_dream` / `wake_gorm` (pays on 19 and 20). The four clues are the wardens' log (4), the dismissal order (9), the moulds (13) and the Verger's letter (16). Floor 9 deals no objective on the shipped seed and is written as an ordinary floor (the generated objective of every floor is listed in `scripts/story_script.py`, which marks the lines the engine never plays). Each tier opens with the narrator's tier line on the first visit to floors 1, 6, 11 and 16, before the floor's opening. The whole campaign is voiced: the rewritten lines were recorded on 2026-11-12 (393 lines) and topped up the same day by the final fix wave.
 
+**Saves from before plan 15 keep the old floor 12.** The same holds for the exit island (plan 15): a Story run saved before it carries its
+own campaign and floor plans, so its floor 12 has no exit island, no parked train and no lift. A new Story run is needed to see the island.
+
 **Saves from before the rewire keep the old story.** A save carries its own copy of the campaign and its floor plans (`AdventureDto.Campaign` and `FloorPlans`), and a load never re-reads the shipped files, so a Story run saved before 2026-11-12 continues the old story, with many of its lines now silent (their recordings were swept from the bank). Start a new Story run to play this one. On the server the same holds: `game.sh restart` resumes the saved world with the old story, so start it with `game.sh fresh`.
 
 A campaign has a recurring **Cast** (four to six people with a role and a secret), a **Mystery** (a question, its hidden truth, clues spread over the descent, a payoff floor) and per-floor **Story** beats; about eight of the twenty floors carry the plot, the rest get one line of narration. Quest templates: KillTarget, Recover, Escort, HoldOut, and three story kinds: **Investigate** (clues lie in two to four rooms; bring them back), **Decide** (a dialogue choice sets a flag the run remembers and completes the quest), **Betrayal** (an NPC with a `Betrayal` turns when you take a `Betray` choice: they vanish, their creatures stand where they stood, the first wearing their name, and killing them completes the quest; a hand-authored `Betrayal.Escort: true` makes it an escort the NPC flees to instead: they leave alive, no creature wears their name, and the log and the quest say they fled). NPCs, quests, dialogue choices and narration can carry `RequiresFlag` / `ForbidsFlag`, so a floor can hold both branches of an earlier decision and only the matching one appears. Flags live in the campaign memory (saved) and reach the planner in the memory notes.
@@ -1524,11 +1527,14 @@ be revived or pulled free where it lies; a fallen one, a parked one or a compani
 - **Unopened cages** (`CrewRules.UnopenedLeftBehind`, Ruling 33, `ResolveUnopened`): with at least one human up, no player outside and the
   train held at the last stop or wrecked inside, every cage still locked is left behind (`RailController.LeaveCrewBehindAt`), once each:
   `[CrewRescue] island: cage at stop {s} left behind (never opened)`. Its crew are lost; the cages no longer block the win.
-- **Grisel brought in** (`CrewRules.BringEscortIn`, Ruling 36, `BringEscortsIn`): an escort alive, up, escorting and on foot outside, with
+- **Grisel brought in** (`CrewRules.BringEscortIn`, Ruling 36, `BringEscortsIn`): an escort alive, escorting and on foot outside, up or
+  downed (`CrewRules.EscortLeftOutside`; spec B.8: never stranded, and she does not bleed out), with
   at least one human up, no player outside and the train at the end or wrecked inside, is set down inside (`StandBesideLane(…, inside:
   true)`) beside the train's last coupled body, or after a wreck inside beside the last stop's platform, on the island's set-down spot
   nearest it (never a barrel's or a rail cell): "Grisel picks her way in over the bridge behind you." and `[CrewRescue] island: {name}
-  brought in beside the held train at {cell}`. She is brought in whether the floor is won or not.
+  brought in beside the held train at {cell}`. Downed, she is brought in downed and left down for a hero inside to revive ("Grisel is carried
+  in over the bridge, still down.", `GriselCarriedInLine`, subtitle only; `… brought in downed beside …`). She is brought in whether the
+  floor is won or not, once each time the condition starts.
 - **The follower's catch-up never crosses the edge** (Ruling 35, `CrewRules.CatchUpAllowed`, `Npc`'s follow block). An escorting follower's
   set-down beside its lead (or beside a seated lead's cart, `StandBesideCart`, with the follower's own side passed explicitly: a bridge cell
   counts as outside) is allowed only with the follower, its lead and the spot on one side. The catch-up fires once `PathMover.Unreachable`
@@ -1541,9 +1547,17 @@ be revived or pulled free where it lies; a fallen one, a parked one or a compani
   (`ExitBridgeRules.HoldStepOff`: the nearest cell within 4 off the rails, on its own side, that takes a body, reached by 4-neighbour steps
   over cells with no door, prop, barrel or other body: `[npc] {name}: held on the line at {cell}: steps off to {cell}`), so a held body
   never stands where the lift stands again or a cart runs.
-- **A Mangled body on an island floor** stays where it fell: `MangledRules.BoundCell` walks the critical path from the up stairs to the down
-  stairs, and on an island floor there is no such walk, so it finds no cell and an unrescued body is not bound anywhere. A Mangled human
-  outside, freed by nobody, holds the floor open (it counts as outside; an owner's feel call under "Known gaps").
+- **A Mangled body on an island floor** (co-op; the server's 30 s valve, `ServerWorld.TickBound`): `MangledRules.BoundCell` walks the
+  critical path from the up stairs to the down stairs, and on an island floor that walk crosses the lava, so a body outside is never bound
+  ahead (`MangledRules.IslandBind`). Once its valve has fired, while a human is up outside it stays where it fell, freeable there by them
+  (`[net-server] {name} lies crushed outside the island: a friend up outside can free them there`); with none (the last of them rode the
+  lift in, judged again every tick) it is bound, still Mangled, on one of the island's set-down spots no other body stands on, for anyone
+  inside to free (`{name} is bound in the dark ahead.`, `[net-server] {name}, crushed outside with nobody up outside, is bound inside the
+  island at {cell}`). Then it no longer holds the outside (cages, crew on foot, Grisel). A body inside, and every other floor, go on as
+  before. A client's banner (`MangledRules.Banner`) reads "Crushed. A friend out here can free you" while its body lies outside after the
+  valve, and the usual "Bound in the dark ahead; a friend can free you" once it is inside. In solo there is no valve: possession passes to
+  the next member up, and the crushed body is a companion's, which the island's rules count as no player (it holds nothing); it lies where
+  it fell until someone frees it.
 - **The arrival snapshot after an inside wreck** (`RailArrival.TakesSnapshot`): a wreck past the bridge's start takes the snapshot too, after
   `WreckInside` set the last stop, so a wipe after it rises at stop 5, inside (`[rails] arrival snapshot at stop 5: …`). `RailArrival.Merge`
   keeps the reward chest when the live state is completed or the arrival had it (`o.Completed || a.RewardChest == true`), so a won and
@@ -1555,7 +1569,8 @@ be revived or pulled free where it lies; a fallen one, a parked one or a compani
   (46,54)); a body on its cell steps off by `Shove` (`ClearChestCell`, a remote hero's client told), and the cell itself is body-blind so
   every peer builds it on the same cell. It goes to clients as `PropEvt(chest:9000, "stood")` (and again in the catch-up), is saved as
   `ObjectiveStateDto.RewardChest`, and a load stands it again, opened when `OpenedChests` lists it. An unopened reward chest is not in the
-  prop hash. Protocol stays 17.
+  prop hash; a client missing one is mended by the objective broadcast (every 2 s: `ApplyNet` stands it when `RewardChest` is true, forward
+  only and idempotent). Protocol stays 17.
 - `--test-island=onfoot|stranded|grisel|chest` and `=wreck` pin each of these (see `--test-island` at the end of "The five rides").
 
 The save. `FloorStateDto.SparesUsed` lists the stops whose spare is spent. `ObjectiveStateDto` adds `GatesUp`, `OpenCages` (stops),
@@ -2634,14 +2649,25 @@ party's train checks `RailController.WagonAt(w.Number) == w`; `=parked` pins it)
   alarm (`cart_bell`), calls it `CallAt` (35 m) before its rear ("Cart on the line — brace!", `BarkTrigger.ParkedCart`, `[rails] parked
   r5_parked called at front S=… (… m to its rear)`), and when the front reaches its rear the cart **smashes** it (`SmashParked`): "The cart
   smashes through the parked train!" logged first, any rider aboard thrown clear onto a free cell outside the island, the toll of a
-  barricade's smash (`SmashCost("The parked train", wholeTrain: true)`: the dent and the speed kept, and every seated up hero in the whole
-  train hurt, where r1's and r2's barricades hurt the cart's only), the five bodies tumbling off the line on layer 0 for
-  `TumbleSeconds` (6 s), then hidden: `[rails] the cart smashes the parked train at S=1170.7: plating a -> b, n hero(es) hurt, V v0 -> v1`.
-- **Gone**: smashed, or the lift rolled out of its place.
+  barricade's smash (`SmashCost("The parked train", wholeTrain: ParkedRules.SmashReachesWholeTrain)`: the dent and the speed kept, and
+  every seated up hero in the whole train hurt, where r1's and r2's barricades hurt the cart's only, `BarricadeRules.SmashReachesWholeTrain`
+  false and `BarricadeRules.SmashBooks`), the barricade's CC0 `timber_smash` at its lantern (server and solo in `SmashParked`; a client's
+  from its "smashed", `RideSound.PropCue("parked", "smashed")`, at the same point), the five bodies tumbling off the line on layer 0 for
+  `TumbleSeconds` (6 s, one helper with the party cart's wreck: `MineCart.Tumble`), then hidden: `[rails] the cart smashes the parked train
+  at S=1170.7: plating a -> b, n hero(es) hurt, V v0 -> v1`. A rider thrown clear is never left on its own rail footing or on a taken cell
+  (`ParkedSetDown` takes `SetDownNear`'s answer only on such a free cell, else the chosen one).
+- **Gone**: smashed, or the lift rolled out of its place. After a smash its place **stays Gone while its tubs tumble**
+  (`ParkedRules.Tumbling`, the 6 s from the smash; `ParkedTumbleLeft` for the flows): "smashed" always reaches the wire before "standing",
+  even when the smash wrecks the cart with no spare left and a lift is due in that same tick (`[rails] parked r5_parked: Gone (the smash)`,
+  6 s later `Lift (a lift is due)`), and the tumble copies never spawn inside a lift standing solid again.
 - **Lift**: once the party's train stands held at the last stop (or wrecked past the exit bridge's start) with its rear past the far edge
-  (`ParkedRules.LiftDue`), it stands again at its place as the lift: "Another cart rolls out onto the line by the lava." (`LiftLog`). Not
-  while a chaser or relief is on the line, and never while the takeover's latch is set (`ParkedRules.Next`, Ruling 25's order: `takenOver`
-  wins).
+  (`ParkedRules.LiftDue`), it stands again at its place as the lift. Not while a chaser or relief is on the line, not while its tubs tumble,
+  and never while the takeover's latch is set (`ParkedRules.Next`, in this order: `takenOver`, the smash, then a lift due). The latch clears
+  on the last stop's arrival, a restore and a wreck of the taken-over train (`ParkedRules.LatchHolds`), so a wrecked takeover lets the lift
+  stand again for anyone still outside. Its log line, "Another cart rolls out onto the line by the lava." (`LiftLog`), is said once as it
+  newly stands in play (`ParkedRules.SaysLiftLog`): not again after each lift run, not on the step right after a restore (a load at the last
+  stop stands it at once) and not with nobody standing (a fall that took everyone: the wipe comes next); a restore lets it come again. It is
+  still said at a no-spare wreck anywhere on the floor (the place was in the way, and now a lift: an owner's feel call).
 
 On the wire the state goes as a `PropEvt parked:{i}` word ("inway", "smashed", "gone", "standing"), sent again by name in a joiner's
 catch-up, and it is part of the props hash (`RailPropsDto.Parked`, hashed as `|Q{name}` only when set, so every other floor hashes as
@@ -2662,7 +2688,7 @@ rolls it ends and stands on as a lift.
   `ParkedLiftDeparts`): `[rails] lift: rolls from S=1182.2 with n rider(s), its limit S=1217.6`.
 - **Over the bridge** (`LiftOverBridge`, `ExitBridgeRules.Holds` on its own front and rear): no Get out, prompt or press.
 - **The halt** (`LiftHalts`): held at its limit with the train ahead stopped for good, it sets every rider down on the island's set-down
-  spots (`IslandSetDown`, each its own; crew follow): `[rails] lift: halted at S=1217.6, 1.5 m behind the train ahead; 1 rider(s) set down
+  spots (`IslandSetDown`, each its own, never a rail cell; with too few the rest share them in turn, `ExitBridgeRules.SpotIndex`; crew follow): `[rails] lift: halted at S=1217.6, 1.5 m behind the train ahead; 1 rider(s) set down
   inside` (with no train ahead it names what it stopped at, "short of the standing buffer" or "short of the last stop",
   `ParkedRules.LiftHaltWhat`). It is hidden `HideSeconds` (2 s) later and stands again at its place within a second (the parked train's
   next tick: `ParkedRules.Next`'s rule 2). `=lift` measures 1.50 m, and the RIDE pass 1.50 m on the server (`NetTestFlow.cs`'s lift check:
@@ -2674,7 +2700,7 @@ rolls it ends and stands on as a lift.
   parked train outside, with the lift standing (Ruling 31; `PartyController.CaptureState` and `FloorStateCapture` read `SavePose`).
 - **The takeover** (Ruling 27, `TakeOverAt`). With no live cart left (`ParkedRules.TakesOver`: every spare spent and the last wreck not
   past the bridge's start), a press on the lift makes it the party's train: the parked train goes with no tumble and its latch is set
-  (`TakenOver`, cleared on the last stop's arrival and on `Restored`), the party's cart stands Held at the lift's cart S (1182.2) with full
+  (`TakenOver`, cleared on the last stop's arrival, on `Restored` and on a wreck), the party's cart stands Held at the lift's cart S (1182.2) with full
   plating and four fresh wagons (`CoupleFresh`), at the last ride's stop by index and **standing past it** (`StandingPast`): no gate
   (`TrainRules.GateClear`) and no cage (`CageHoldRules.Held`'s `standingPast`) holds it, and the presser boards it as at a stop, its
   countdown at once. A second press in the same tick boards the party's cart. Its departure arms the last ride from its place
@@ -2787,19 +2813,23 @@ room's gathering stands inside the island), every enemy culled as it appears and
   and come back when the lead steps onto stop 0's platform.
 - `=bridge`: the last ride ridden (the pit thrown on the way); on every frame any car is over the exit bridge the lead's cart prompt is ""
   and no move is offered, a forced Get out does nothing and a forced move is refused "the train is on the exit bridge" (Task 9's sweep,
-  `/tmp/flows-task9-sweep/08-test-island=bridge.log`: 2124 held frames in all on the first ride, 4 rounds of presses; 1327 was Task 3's first run, of
-  the flow as it stood then); braked to a stop on the span the hold stands 8 s (1329 frames held, 3 presses); ridden again, it
-  still holds for 262 frames with the cart past the far edge and only wagons over the span, a round of presses refused there; a crew member on foot behind is never on a drop and never crosses inside; a
+  `/tmp/flows-task9-sweep/08-test-island=bridge.log`: 1329 held frames on the first ride, rolling on and the 8 s stop braked on the span, 4
+  rounds of presses, 3 of them stopped; 2124 in all with the second ride's 795); ridden again, it still holds for 262 frames with the cart past the far edge and only wagons over the span, a round of presses refused there; a crew member on foot behind is never on a drop and never crosses inside; a
   save there loads Held at stop 4 with everyone on footing.
 - `=wreck`: wrecked as its front passes `ExitFromS` + 0.5: no spare spent, the last stop taken, the cart and W1..W4 hidden, 8 riders (crew too)
   set down inside within 1 s, none fallen 3 s on; the crew set down Home, the unopened cages left behind, the win and the reward chest, the
-  arrival snapshot at stop 5; the parked train, smashed on the way, standing as a lift with no party body in its span; the lead put outside
+  arrival snapshot at stop 5; the parked train, smashed on the way about 3 s before, standing as a lift within 1 s of its tubs' tumble
+  ending and never before, with no party body in its span; the lead put outside
   boards the lift (no takeover) and is set down inside; a save and load give the cart Held at stop 5.
 - `=parked`: its build (the rear at `RearS(ExitFromS, 4)` ± 0.1, five solid bodies, its tubs never the party's); in the way at stop 4 the lead
   is offered nothing, and the guard (no Get out, move or revive from a parked tub); the sight (15.4 m to its lantern, clear); its call 33–35 m
   from its rear; a companion aboard thrown clear; the smash (plating −25, each other seated up hero −15 % of max HP, a W1 companion paid, the
-  crew's HP unchanged, V × 0.8); Lift within 1 s of the rear passing the far edge; a restore stands it in the way again.
-- `=lift` (115 s): first a no-spare plain wreck in its span uncouples the party's wagons (`ClearTheLiftsSpan`, within 0.02 s of the wreck: 0.01 s in Task 9's sweep); then
+  crew's HP unchanged, V × 0.8, `timber_smash` at its lantern); Lift within 1 s of the rear passing the far edge; a restore stands it in the
+  way again. Last, every spare spent and the plating set to 25 three metres short of its rear, the smash wrecks the cart: the next frame the
+  cart is wrecked and hidden, the place Gone "the smash", five tubs tumbling and only "smashed" told; Gone every frame while they tumble, then
+  Lift ("a lift is due", 6.02 s after the smash), "standing" told after "smashed"; the lift's line logged once a ride, `timber_smash` once a smash.
+- `=lift` (115 s): first a no-spare plain wreck in its span uncouples the party's wagons (`ClearTheLiftsSpan`, within 0.02 s of the wreck: 0.01 s in Task 9's sweep),
+  and the lift stands within 1 s of the smash's tumble ending (5.9 s after that wreck, which comes just past the smash); then
   held at the last stop, the prompt from its W4 and its cart; the press seats the lead and a companion in its cart and a crew member on foot
   in its W1 seat 4 at once, the far companion left on foot; the lead gets out in the countdown on the first frame Get out is offered (2.1
   s), set down outside with the others, and boards again 1 s later; a 5 s countdown (5.08 s measured) with Get out closed for 2 s; over the
@@ -2809,7 +2839,7 @@ room's gathering stands inside the island), every enemy culled as it appears and
 - `=takeover`: `Restore(2)` with every spare spent, wrecked on ride 3 ("No carts left. The rest is on foot."); refused while a chaser stands;
   the double press takes over once, both in the party's cart, nobody in the lift; the cart Held at the lift's cart S with W1..W4 fresh,
   `StandingPast`; the countdown at once with stop 4's gate down and its cage locked; armed from its place with the golem, the hounds and the
-  pit passed; Gone through the rear passing the far edge to the arrival, `TakenOver` cleared on it.
+  pit passed; Gone through the rear passing the far edge to the arrival, `TakenOver` cleared on it (a wreck clears it too: `ParkedRules.LatchHolds`'s rows).
 - `=onfoot`: the takeover with stops 1–2's crew aboard and stop 4's holders alive; inside, stops 3 and 4's cages left behind, the win and the
   chest.
 - `=stranded`: a crew member downed in W1 and one put on foot outside once the rear is past the bridge; at the arrival the outsider is Lost
@@ -2818,7 +2848,8 @@ room's gathering stands inside the island), every enemy culled as it appears and
   at 0.54 m); the lead outside makes it Freed, back inside Lost again; the lead downed inside with nobody else outside: no Lost, no win for
   2 s; the downed crewman revived (bleed clock under 50 s) is Home at once and the win fires when the lead rises, and stands.
 - `=grisel`: forgiven, Grisel put on foot on ride 5's lane cell at S 1150: her hold steps her off the rails first, then she is never
-  teleported until she is brought in within 1 s of the arrival, beside the train's last body; at the stairs `q_grisel_out` completes.
+  teleported until she is brought in within 1 s of the arrival, beside the train's last body; put back outside and downed, she is carried in
+  downed within 1 s onto an island cell off the rails, offering "Revive Grisel Thorn", and stands revived; at the stairs `q_grisel_out` completes.
 - `=chest`: the chest in room 9 at (45,54), table `vault`, index 9000, no mimic, no lock, within 1 s of the win; a companion on its cell steps
   off (`ClearChestCell moved 1`); opened, an item drops; a save and a load keep it opened; 40 s in the safe room, a group gathers inside.
 
@@ -3534,7 +3565,7 @@ move is refused with the same reason.
 **A wreck inside** (Task 3, Ruling 11; `ExitBridgeRules.WreckInside`). A plain wreck with the cart's front at or past the bridge's start
 (`ExitFromS`) spends no spare: "The cart is wrecked on the bridge. You scramble across onto the island." Every rider of the cart and the
 wagons, at or short of the far edge, is set down on the island's set-down spots (`IslandSetDown`, round the lane cell past the bridge,
-island cells only, off-rail cells first), one already past it where it is; heroes take the plain wreck's toll and crew none (F9), and the
+island cells only, never a rail cell, the overflow sharing them in turn), one already past it where it is; heroes take the plain wreck's toll and crew none (F9), and the
 crew follow. The train is uncoupled and hidden, the stop is the last (`StopIndex`), `LastWreckInside` is set (cleared by `Restore`), and the
 arrival snapshot is taken there. On the wire it is the usual Wrecked state; the joiner's screen shows it Wrecked with no takeover.
 
@@ -3561,8 +3592,9 @@ moved, it is near a body and aware, or its flags (alive, hostile, aware, boss, i
 far or unaware mover's move, and an enemy turning unaware while it stood still, only on the 2 s full snapshot (a client's revive rule,
 `RitualRules.ReviveTaken`, reads its copies' aware flag, so it could be 2 s stale). `EnemySnapshotMemory` now records, per (peer, net id),
 the place and flags each enemy was last sent to that peer, and each peer is judged against its own row: a second peer gets an unaware
-mover's move on the same tick the first does. A peer's rows go when it leaves or has the floor resent, and all go with a floor change.
-No message changed shape; Protocol stays 17.
+mover's move on the same tick the first does. A peer's rows go when it leaves or has the floor resent, a freed enemy's at that peer's next
+full snapshot (`EnemySnapshotMemory.Keep`: the full snapshot's roster is kept, so a long floor 12 of portal waves, hounds and slag riders
+never grows it), and all go with a floor change. No message changed shape; Protocol stays 17.
 
 #### The watchdog
 
@@ -4010,12 +4042,23 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
     - the lift has no HUD line of its own (no new text was invented; its countdown is the chaser's);
     - boarding beside the parked train is mostly by its W1, from (56,61), with little standing room beside it (the cart's nearest free cell,
       (55,60), is a lane cell);
+    - the lift's stand rule: the parked train stands as a lift whenever the party has no live cart, so at a no-spare wreck anywhere on the
+      floor (the party at stop 1, say) "Another cart rolls out onto the line by the lava." is logged though nobody is near it (`SaysLiftLog`
+      keeps it to once until a restore, never on a load and never before a fall's wipe; saying it only with a player outside is the owner's
+      option);
+    - after a smash that wrecks the cart with a spare left, the place is empty while the spare is held at stop 4: the parked train stands
+      in the way again only at the next arming (the spare's departure), as the barricades do (B.5 says "in the way while held at stop 4");
   - **not run end to end:**
     - the relief at the lift (Ruling 46): no solo flow drives a relief up to the parked place, since a relief is sent only while the line is
       live; its halt there is pinned engine-free (`SpareRules.ChaseLimit`, `PullUpLine`) and the online chaser's by the RIDE pass;
-    - a Mangled human outside the island, freed by nobody, holds the floor open: it counts as a player outside (it can be pulled free), so
-      the cages stay locked, crew outside stay Freed and Grisel outside, and there is no win until someone frees it or the party wipes; the
-      case rests on `CrewRules.PlayerCount`'s rows and on reading `ReadIsland`'s one call;
+    - a Mangled human outside the island (co-op): bound inside once its 30 s valve has fired and no human is up outside, else left where
+      it fell for the one who is (`MangledRules.IslandBind`, `Banner`); this rests on those rows and on reading `ServerWorld.TickBound`: no
+      solo flow runs the server's valve, and no co-op flow (the RIDE pass included) crushes a player outside on floor 12;
+    - two RIDE checks are tight under load: each client's parked-smash PropEvt within 1.0 s of the server's, and the exit-bridge press 2 m
+      and 0.5 s into the span. Both hold on an idle machine, which is why RIDE runs alone; if one ever goes red there, widen the window
+      (1.5 s) rather than chase it;
+    - a rider thrown from the parked train (only `DebugSeatParked` seats one: boarding is refused while it is in the way) and a client's
+      reward-chest mend from the objective broadcast rest on reading;
     - a second player's press just after a takeover rests on reading (a second takeover is impossible once the place is Gone; `=takeover`'s
       double press is in one tick, solo);
     - a remote late press on the pit lever ("Too late to throw it." told over the wire) and a client's revive pin (a wagon's withheld revive
