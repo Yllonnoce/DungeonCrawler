@@ -13,7 +13,7 @@ namespace DungeonCrawler.Adventure.Objectives;
 /// <summary>
 /// Home and lost on a floor with an exit island (plan 15 Task 7, Rulings 32-37; server and solo for every change, a client only stands the chest):
 /// home is anywhere in the island (<see cref="FloorLayout.InIsland"/> for the exit room), or seated in a coupled party wagon held at the last stop; once
-/// a human is up and no player is outside (a downed one counted; a fallen or Mangled one is no player) with the train at the end or wrecked inside, the
+/// a human is up and no player is outside (a downed or Mangled one counted; a fallen one is no player) with the train at the end or wrecked inside, the
 /// unopened cages are left behind (<see cref="ResolveUnopened"/>); a crew member on foot outside with nobody outside to fetch it is lost while that lasts (<see cref="CrewRules.Stranded"/>, judged live until the win);
 /// Grisel left outside is brought in beside the held train (<see cref="BringEscortsIn"/>); and the win stands a strongbox of the vault's table by the
 /// stairs (<see cref="StandRewardChest"/>), saved in <c>ObjectiveStateDto.RewardChest</c> and told to clients as <c>PropEvt chest:9000 "stood"</c>.
@@ -34,7 +34,7 @@ public partial class CrewRescueController
     private bool TrainAtEndOrWreckedInside => _trainAtEnd || _wreckedInside;
 
     /// <summary>
-    /// The players (every human's hero that is not parked, fallen or Mangled: <see cref="CrewRules.CountsAsPlayer"/>): how many are up (not down), and how many stand outside the island, a downed
+    /// The players, each counted by <see cref="CrewRules.PlayerCount"/>: how many are up (not down), and how many stand outside the island, a downed
     /// one too (it may be revived there: fix round 1, I2); and where the train is: held at the last stop, wrecked inside, or gone (wrecked and
     /// hidden). Read once a tick and at each judging. No allocation.
     /// </summary>
@@ -44,9 +44,11 @@ public partial class CrewRescueController
         if (Main.Instance?.Party is { } party && IsInstanceValid(party))
             foreach (var hero in party.Adventurers)
             {
-                if (!IsInstanceValid(hero) || !CrewRules.CountsAsPlayer(hero.Control is ControlKind.LocalHuman or ControlKind.Remote, hero.Parked, hero.State.Fallen, hero.State.Mangled)) continue;
-                if (!hero.Downed) _upPlayers++;
-                if (!Layout.InIsland(DungeonBuilder.WorldToCell(hero.GlobalPosition))) _playersOutside++;
+                if (!IsInstanceValid(hero)) continue;
+                var (up, outside) = CrewRules.PlayerCount(hero.Control is ControlKind.LocalHuman or ControlKind.Remote, hero.Parked, hero.State.Fallen,
+                    hero.Downed, hero.State.Mangled, Layout.InIsland(DungeonBuilder.WorldToCell(hero.GlobalPosition)));
+                if (up) _upPlayers++;
+                if (outside) _playersOutside++;
             }
         var rails = _rails != null && IsInstanceValid(_rails) ? _rails : null;
         _trainAtEnd = rails != null && rails.State.Mode == CartMode.Held && rails.StopIndex >= rails.StopS.Length - 1;
@@ -155,6 +157,9 @@ public partial class CrewRescueController
 
     private Chest? _rewardChest;
 
+    /// <summary>The bodies <see cref="ClearChestCell"/> moved off the chest's cell on this floor build (the flows read it).</summary>
+    internal int ChestCellCleared { get; private set; }
+
     /// <summary>The win's reward chest standing on this floor (server, solo and client), or null.</summary>
     internal Chest? RewardChest => _rewardChest != null && IsInstanceValid(_rewardChest) ? _rewardChest : null;
 
@@ -195,6 +200,7 @@ public partial class CrewRescueController
         _rails?.ReserveSiding(cell);
         _rewardChest = chest;
         var moved = NetSession.IsClient ? 0 : ClearChestCell(cell);
+        ChestCellCleared += moved;
         GD.Print($"[CrewRescue] the reward chest stands in room {Layout.Rail!.Stops[^1].Room} at {cell} (table {chest.TableId}){(moved > 0 ? $"; {moved} body(ies) stepped off its cell" : "")}");
         return chest;
     }

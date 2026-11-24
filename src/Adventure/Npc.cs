@@ -430,21 +430,17 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             var layout = Main.Instance?.Builder.Layout;
             // the side gate, read every frame (fix round 2): back on its lead's side (set down beside it, or the lead come across), the hold is over
             if (_catchUpHeld && (layout?.Rail?.Island == null || InIsland(layout, GlobalPosition) == InIsland(layout, lead.GlobalPosition))) _catchUpHeld = false;
-            // held across the island's edge (fix round 1, M5): only the path search is throttled, to once every HeldSearchSeconds; between searches it
-            // keeps the last search's way (straight at its lead, or holding where it stands), so it never steps one frame in thirty
-            Vector3? dest;
+            // held across the island's edge (Ruling 35, fix round 3): it holds where it is, walking nowhere; its path search runs only to tell when the
+            // hold may end (a way found across), at most every HeldSearchSeconds (M5), the first at once
+            Vector3? dest = null;
             var straight = true;
-            if (!_catchUpHeld || (_heldSearchIn -= dt) <= 0f)
+            if (!_catchUpHeld) dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out straight);
+            else if ((_heldSearchIn -= dt) <= 0f)
             {
-                dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out straight);
-                if (_catchUpHeld)
-                {
-                    _heldSearchIn = HeldSearchSeconds;
-                    _heldGoesStraight = dest != null;
-                    if (_mover.Unreachable <= 0f && !straight) _catchUpHeld = false; // a way found across: the hold is over
-                }
+                _heldSearchIn = HeldSearchSeconds;
+                _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out var searchedStraight);
+                if (_mover.Unreachable <= 0f && !searchedStraight) _catchUpHeld = false; // a way found across: the hold is over (it walks from the next frame)
             }
-            else dest = _heldGoesStraight ? lead.GlobalPosition : null;
             // speed follows the gap: a trailing follower settles at a steady pace instead of lurching between full speed
             // and a dead stop every frame; well behind, it runs to catch up
             if (dest is { } d && gap > 0.25f)
@@ -500,11 +496,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// catch-up is allowed, the follower is back on its lead's side (read every frame), or it finds a way across.
     /// </summary>
     private bool _catchUpHeld;
-    /// <summary>While held, the follower looks for a way to its lead at most this often (fix round 1, M5; the unheld follower's trigger is unchanged).</summary>
+    /// <summary>While held (standing still), the follower looks for a way to its lead at most this often (fix round 1, M5; the unheld follower's trigger is unchanged).</summary>
     private const float HeldSearchSeconds = 0.5f;
     private float _heldSearchIn;
-    /// <summary>The last held search went straight at the lead (no path, no drop on the way): kept between searches.</summary>
-    private bool _heldGoesStraight;
     /// <summary>A refusal by the set-down spot's side alone (the follower and its lead on one side) has been told: once, until a catch-up runs (M6).</summary>
     private bool _holdTold;
     /// <summary>The catch-up is held across the island's edge now (the flows read it).</summary>
@@ -525,9 +519,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (self != led)
         {
             // across the edge: a hold, told as it starts, its search throttled until it ends
-            if (!_catchUpHeld) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _catchUpHeld = true; _heldSearchIn = HeldSearchSeconds; _heldGoesStraight = false; }
+            if (!_catchUpHeld) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _catchUpHeld = true; _heldSearchIn = 0f; } // its first search at once
         }
-        else if (!_holdTold) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _holdTold = true; } // refused by the spot's side alone: told once until a catch-up runs
+        else if (!_holdTold) { GD.Print($"[npc] {NpcName}: catch-up held (the set-down spot is across the island's edge)"); _holdTold = true; } // refused by the spot's side alone: told once until a catch-up runs
         return false;
     }
 

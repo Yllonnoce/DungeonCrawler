@@ -76,29 +76,35 @@ public static class CrewRules
     public const int RewardChestIndex = 9000;
 
     /// <summary>
-    /// Who counts as a player for the island's rules (fix round 2): a human's hero, not parked, not fallen and not Mangled (neither can be revived
-    /// where it lies, so an unreachable body never holds the cages, the stranded judgement or Grisel). A downed one counts: outside, not up.
+    /// How one hero counts for the island's rules (fix round 3): <c>Up</c> for a human's hero that is not parked, fallen or down; <c>Outside</c> for one
+    /// not parked or fallen standing off the island's cells, down or not. A downed one (a Mangled one too: it can be pulled free or revived where it
+    /// lies) is not up but holds the outside; a fallen one (only the crevasse's return brings it back), a parked one or a companion counts as neither.
+    /// <paramref name="mangled"/> needs <paramref name="downed"/> (a Mangled hero is down) and changes nothing beyond it.
     /// </summary>
-    public static bool CountsAsPlayer(bool human, bool parked, bool fallen, bool mangled) => human && !parked && !fallen && !mangled;
+    public static (bool Up, bool Outside) PlayerCount(bool human, bool parked, bool fallen, bool downed, bool mangled, bool inIsland)
+    {
+        if (!human || parked || fallen) return (false, false);
+        return (!downed && !mangled, !inIsland);
+    }
 
     /// <summary>
     /// A crew member on foot outside the island (<paramref name="onFoot"/>, not <paramref name="inIsland"/>) with the train at the end of the line
     /// or gone (<paramref name="trainAtEndOrNone"/>: wrecked and hidden), at least one human up (<paramref name="upPlayers"/>), and no player outside
-    /// to fetch it (<paramref name="playersOutside"/>: every human not parked or fallen, a downed one too, who may be revived there) (Ruling 34, fix
-    /// round 1): it counts as lost while that lasts.
+    /// to fetch it (<paramref name="playersOutside"/>: <see cref="PlayerCount"/>'s Outside, a downed or Mangled one too, who may be revived or pulled
+    /// free there) (Ruling 34, fix rounds 1 and 3): it counts as lost while that lasts.
     /// </summary>
     public static bool Stranded(bool onFoot, bool inIsland, bool trainAtEndOrNone, int upPlayers, int playersOutside)
         => onFoot && !inIsland && trainAtEndOrNone && upPlayers > 0 && playersOutside <= 0;
 
     /// <summary>
     /// Ruling 33: the unopened cages are left behind once at least one human is up, no player is outside the island (<paramref name="playersOutside"/>,
-    /// a downed one counted), and the train is held at the last stop or wrecked inside.
+    /// a downed or Mangled one counted: <see cref="PlayerCount"/>), and the train is held at the last stop or wrecked inside.
     /// </summary>
     public static bool UnopenedLeftBehind(int upPlayers, int playersOutside, bool trainAtEndOrWreckedInside)
         => upPlayers > 0 && playersOutside <= 0 && trainAtEndOrWreckedInside;
 
     /// <summary>
-    /// Ruling 36: an escort (Grisel) left outside is brought in once at least one human is up and no player is outside (a downed one counted), with
+    /// Ruling 36: an escort (Grisel) left outside is brought in once at least one human is up and no player is outside (a downed or Mangled one counted), with
     /// the train at the end or wrecked inside.
     /// </summary>
     public static bool BringEscortIn(bool escortOutside, int upPlayers, int playersOutside, bool trainAtEndOrWreckedInside)

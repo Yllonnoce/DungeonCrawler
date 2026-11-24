@@ -35,6 +35,8 @@ public partial class DebugTools
 {
     private Npc? _ihA, _ihB;
     private Adventurer? _ihOnChest;
+    private Vector3 _ihHoldAt;
+    private float _ihHoldDrift;
     private Vector3 _ihLast;
     private float _ihT = float.NaN, _ihArriveT = float.NaN;
     private bool _ihHeldSeen, _ihAHome, _ihLetOut, _ihCountdownOk, _ihListening, _ihGriselLogged, _ihChestLogged, _ihSpareGather;
@@ -261,6 +263,8 @@ public partial class DebugTools
                 if (_ihArriveT is float.NaN) { _ihArriveT = _isTime; GD.Print($"[island] stranded: arrived at stop {rc.StopIndex} with the lead inside {Inside(layout, me)}; {IslandCrewStates(ctrl)}"); }
                 if (ctrl.StateOf(_ihB!) != CrewState.Lost) { if (_isTime - _ihArriveT > 1f) Fail($"{_ihB!.NpcName}, stranded outside, is {ctrl.StateOf(_ihB)} 1 s after the arrival"); break; }
                 GD.Print($"[island] stranded: {_ihB!.NpcName} Lost {_isTime - _ihArriveT:0.00} s after the arrival, at {At(_ihB)}; {_ihA!.NpcName} {ctrl.StateOf(_ihA)}; completed {ctrl.Completed}");
+                _ihHoldAt = _ihB.GlobalPosition; // fix round 3: held, it holds where it is (Ruling 35)
+                _ihHoldDrift = 0f;
                 _isStep++; _isClock = 0f;
                 break;
             }
@@ -268,9 +272,11 @@ public partial class DebugTools
             {
                 if (ctrl.StateOf(_ihB!) != CrewState.Lost) { Fail($"{_ihB!.NpcName} is {ctrl.StateOf(_ihB)} {_isClock:0.0} s into the 12 s stranded"); return; }
                 if (ctrl.Completed || ctrl.StateOf(_ihA!) != CrewState.Downed) { Fail($"while {_ihA!.NpcName} is down the floor is completed {ctrl.Completed} ({ctrl.StateOf(_ihA)})"); return; }
+                _ihHoldDrift = Mathf.Max(_ihHoldDrift, new Vector2(_ihB!.GlobalPosition.X - _ihHoldAt.X, _ihB.GlobalPosition.Z - _ihHoldAt.Z).Length());
+                if (_ihB.CatchUpHeld && _ihHoldDrift > 0.5f) { Fail($"{_ihB.NpcName}, held, walked {_ihHoldDrift:0.00} m from where the hold began ({At(_ihB)})"); return; }
                 if (_isClock < 12f) break;
                 if (!_ihHeldSeen) { Fail($"{_ihB!.NpcName}'s catch-up was never held in 12 s stranded"); return; }
-                GD.Print($"[island] stranded: 12 s on {_ihB!.NpcName} is still outside at {At(_ihB)} and Lost, its catch-up held, never teleported");
+                GD.Print($"[island] stranded: 12 s on {_ihB!.NpcName} is still outside at {At(_ihB)} and Lost, its catch-up held, never teleported; held, it moved {_ihHoldDrift:0.00} m at most");
                 me.Teleport(BesideLift(main, layout, rc, enc, enc.Parked!.Cart), enc.Parked.Cart.GlobalPosition);
                 _ihT = _isTime;
                 _isStep++; _isClock = 0f;
@@ -489,10 +495,11 @@ public partial class DebugTools
                 }
                 if (!_ihChestLogged) problems.Add("its line not logged");
                 if (_ihOnChest == null) problems.Add("no companion was stood on the chest's cell");
+                else if (ctrl.ChestCellCleared < 1) problems.Add("ClearChestCell moved nobody off the chest's cell"); // fix round 3: the controller moved it, not its own walk
                 else if (chest != null && DungeonBuilder.WorldToCell(_ihOnChest.GlobalPosition) == DungeonBuilder.WorldToCell(chest.GlobalPosition)) problems.Add($"{_ihOnChest.State.Name} still stands on the chest's cell");
                 if (door is not { Detected: true, IsOpen: true } || vault == null || layout.Rooms.IndexOf(vault.Room) != 10) problems.Add($"room 10's door: vault {vault?.Index} in room {(vault == null ? -1 : layout.Rooms.IndexOf(vault.Room))}, revealed {door?.Detected}, open {door?.IsOpen}");
                 if (problems.Count > 0) { if (_isTime - _ihT > 1f) Fail($"1 s after the win: {string.Join("; ", problems)}"); break; }
-                GD.Print($"[island] chest: {_ihOnChest!.State.Name} stepped off its cell to {At(_ihOnChest)}");
+                GD.Print($"[island] chest: {_ihOnChest!.State.Name} stepped off its cell to {At(_ihOnChest)} (ClearChestCell moved {ctrl.ChestCellCleared})");
                 GD.Print($"[island] chest: {_isTime - _ihT:0.00} s after the win the reward chest stands in room 9 at {At(chest!)} ({chest!.GlobalPosition.DistanceTo(main.Builder.Surface(layout.DownStairs)):0.0} m from the stairs at {layout.DownStairs}), table {chest.TableId}, its line logged; room 10's door revealed and open");
                 if (me.Cart == rc.Cart) rc.Cart.Interact(party, me);
                 var here = DungeonBuilder.WorldToCell(chest.GlobalPosition);
