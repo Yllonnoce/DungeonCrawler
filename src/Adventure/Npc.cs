@@ -506,11 +506,6 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
 
     private static bool InIsland(FloorLayout layout, Vector3 at) => layout.InIsland(DungeonBuilder.WorldToCell(at));
 
-    /// <summary>
-    /// Plan 15 Ruling 35: on a floor with an exit island, the follower's catch-up to <paramref name="dest"/> runs only with the follower, its
-    /// <paramref name="lead"/> and the spot all on one side of the island's edge (<see cref="Objectives.CrewRules.CatchUpAllowed"/>; a bridge cell is
-    /// outside); otherwise it holds where it is, printing so once per hold. Always true off an island floor.
-    /// </summary>
     /// <summary>Holds that started on a rail cell and stepped off it (plan 15 Task 8; the flows read it).</summary>
     internal int HoldStepsOff { get; private set; }
 
@@ -525,13 +520,27 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     private void StepOffTheLine(FloorLayout layout, bool inside)
     {
         var here = DungeonBuilder.WorldToCell(GlobalPosition);
-        if (Main.Instance?.Builder is not { } builder || ExitBridgeRules.HoldStepOff(layout, here, inside, builder.IsCellBlocked) is not { } cell) return;
+        if (!layout.IsRail(here) || Main.Instance?.Builder is not { } builder) return;
+        // fix round 1 (M3): never onto another body's cell (an NPC on foot, a hero up), as the sibling set-downs keep their taken sets
+        var taken = new HashSet<GridPos>();
+        if (GetParent() is { } parent)
+            for (int i = 0, n = parent.GetChildCount(); i < n; i++)
+                if (parent.GetChild(i) is Npc { Dead: false, Seated: false } other && other != this) taken.Add(DungeonBuilder.WorldToCell(other.GlobalPosition));
+        if (Main.Instance.Party is { } party)
+            foreach (var hero in party.Adventurers)
+                if (IsInstanceValid(hero) && !hero.Seated && !hero.Parked) taken.Add(DungeonBuilder.WorldToCell(hero.GlobalPosition));
+        if (ExitBridgeRules.HoldStepOff(layout, here, inside, builder.IsCellBlocked, taken) is not { } cell) return;
         GlobalPosition = builder.Surface(cell) + Vector3.Up * 0.1f;
         Velocity = Vector3.Zero;
         HoldStepsOff++;
         GD.Print($"[npc] {NpcName}: held on the line at {here}: steps off to {cell}");
     }
 
+    /// <summary>
+    /// Plan 15 Ruling 35: on a floor with an exit island, the follower's catch-up to <paramref name="dest"/> runs only with the follower, its
+    /// <paramref name="lead"/> and the spot all on one side of the island's edge (<see cref="Objectives.CrewRules.CatchUpAllowed"/>; a bridge cell is
+    /// outside); otherwise it holds where it is, printing so once per hold. Always true off an island floor.
+    /// </summary>
     private bool CatchUpAllowed(FloorLayout? layout, Node3D lead, Vector3 dest)
     {
         if (layout?.Rail?.Island == null) return true;

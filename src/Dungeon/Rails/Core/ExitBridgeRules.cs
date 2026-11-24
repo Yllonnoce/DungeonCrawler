@@ -69,17 +69,38 @@ public static class ExitBridgeRules
     /// <summary>The side of the exit island a body at <paramref name="cell"/> stands on (true inside), or null on a floor without one.</summary>
     public static bool? SideOf(FloorLayout l, GridPos cell) => l.Rail?.Island == null ? null : l.InIsland(cell);
 
+    /// <summary>How far (cells, each way) a hold's step off the rails may look (<see cref="HoldStepOff"/>).</summary>
+    public const int HoldStepReach = 4;
+
     /// <summary>
-    /// Where a follower whose catch-up hold starts at <paramref name="here"/> steps first (Ruling 35 as plan 15 Task 8 ruled): on a rail cell, the
-    /// nearest cell within 4 off the rails, on its own side of the island (<paramref name="inside"/>), that may take a body
-    /// (<see cref="CrevasseRules.SetDownOk"/>) and is not <paramref name="blocked"/> (a prop or a barrel's), ties by (Y, X); so a held follower never
-    /// stands where the lift stands again or a cart runs. Null off the rails (it holds where it is) or with no such cell near.
+    /// Where a follower whose catch-up hold starts at <paramref name="here"/> steps first (Ruling 35 as plan 15 Task 8 ruled; fix round 1, M2 and M3):
+    /// on a rail cell, the nearest cell (straight distance, ties by (Y, X)) off the rails, on its own side of the island (<paramref name="inside"/>), that
+    /// may take a body (<see cref="CrevasseRules.SetDownOk"/>), holds no barrel (<see cref="FloorLayout.BreakableSpawns"/>), is not <paramref name="blocked"/>
+    /// (a prop) and not <paramref name="taken"/> (another body's), within <see cref="HoldStepReach"/> cells and reached from <paramref name="here"/> by
+    /// 4-neighbour steps over cells that take a body, all within that reach: so a held follower never stands where the lift stands again or a cart runs, and
+    /// never steps across a drop. Null off the rails (it holds where it is) or with no such cell near.
     /// </summary>
-    public static GridPos? HoldStepOff(FloorLayout l, GridPos here, bool inside, Func<GridPos, bool>? blocked = null)
+    public static GridPos? HoldStepOff(FloorLayout l, GridPos here, bool inside, Func<GridPos, bool>? blocked = null, ISet<GridPos>? taken = null)
     {
         if (!l.IsRail(here)) return null;
-        foreach (var c in CrevasseRules.SetDownCells(l, here, 81, reach: 4))
-            if (c != here && !l.IsRail(c) && l.InIsland(c) == inside && CrevasseRules.SetDownOk(l, c) && blocked?.Invoke(c) != true) return c;
-        return null;
+        bool InReach(GridPos c) => Math.Abs(c.X - here.X) <= HoldStepReach && Math.Abs(c.Y - here.Y) <= HoldStepReach;
+        var seen = new HashSet<GridPos> { here };
+        var queue = new Queue<GridPos>();
+        queue.Enqueue(here);
+        GridPos? best = null;
+        var bestD = int.MaxValue;
+        while (queue.Count > 0)
+        {
+            var at = queue.Dequeue();
+            foreach (var n in new[] { new GridPos(at.X + 1, at.Y), new GridPos(at.X - 1, at.Y), new GridPos(at.X, at.Y + 1), new GridPos(at.X, at.Y - 1) })
+            {
+                if (!InReach(n) || !seen.Add(n) || !CrevasseRules.SetDownOk(l, n)) continue; // walk-connected: only over cells that take a body
+                queue.Enqueue(n);
+                if (l.IsRail(n) || l.InIsland(n) != inside || l.BreakableSpawns.Contains(n) || blocked?.Invoke(n) == true || taken?.Contains(n) == true) continue;
+                var d = (n.X - here.X) * (n.X - here.X) + (n.Y - here.Y) * (n.Y - here.Y);
+                if (d < bestD || d == bestD && best is { } b && (n.Y < b.Y || n.Y == b.Y && n.X < b.X)) { bestD = d; best = n; }
+            }
+        }
+        return best;
     }
 }

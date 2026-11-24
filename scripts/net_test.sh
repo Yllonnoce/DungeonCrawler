@@ -216,6 +216,8 @@ if [ "${RIDE:-}" = 1 ]; then
   # rider down there, on both sides
   if ! grep -q "\[net-server\] ride: Joiner is put beside the lift's W[0-9] (liftwagon:[0-9]*) at " "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not put beside a tub of the lift: $(grep -m1 "Joiner is put beside the lift's" "$TMP/server.log"))"; exit 1; fi
   if ! grep -q "\[net\] ride: the lift stands again here; its W[0-9] offers \"Board the cart\" .* pressed it through the intent (liftwagon:[0-9]*)" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: Joiner boarded the lift through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded the lift by a tub through its intent: $(grep -m1 "ride: the lift stands again here" "$TMP/joiner.log"))"; exit 1; fi
+  # fix round 1 (M7): the server took the tub's press itself and it seated the joiner (ServerWorld's "boarded the lift" for a liftwagon:{k} ref)
+  if ! grep -q "\[net-server\] interact liftwagon:[0-9]* from Joiner: boarded the lift (" "$TMP/server.log"; then echo "NET TEST: FAIL (no press on a tub of the lift seated the joiner on the server: $(grep -m1 "from Joiner: boarded" "$TMP/server.log"))"; exit 1; fi
   if ! grep -q "\[net-server\] ride: lift halted at S=[0-9.]*, [0-9.]* m behind the train's last body (the train held at stop [0-9]*), inside the island; 1 rider(s) set down inside; Joiner at .* (ok)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the lift did not halt within 3 m of the held train inside and set the joiner down: $(grep -m1 "ride: lift halted" "$TMP/server.log"))"; exit 1; fi
   if ! grep -q "\[net\] ride: the lift set us down inside the island at" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner was not set down inside the island by the lift: $(grep -m1 "the lift set us down" "$TMP/joiner.log"))"; exit 1; fi
   # plan 15 Task 8: the seat books on the grid carry the lift (L, L1..L4) with the joiner in it, the joiner's the server's at the same grid points
@@ -236,7 +238,7 @@ if [ "${RIDE:-}" = 1 ]; then
      || ! grep -q "\[net\] ride: over the exit bridge: [1-9][0-9]* frame(s), the cart's prompt \"\" on every one; still seated in seat [0-9]* (ok)" "$TMP/client.log"; then echo "NET TEST: FAIL (no remote Get out over the exit bridge: the client's press, the server's refusal or the client's empty prompt and seat: $(grep -m1 "ride: over the exit bridge" "$TMP/client.log"))"; exit 1; fi
   # plan 15 Task 8: the parked train's smash seen on each client within 1 s of the server's PropEvt, with the server's plating (each client's first cart
   # state after it), and the props hashed with the parked state: at the first stable grid point 1 s or more after the smash both clients' props word is the
-  # server's, which the smash changed
+  # server's, which the smash changed (fix round 1, M5: the first such point all three logs carry, so a client skipping one grid step does not fail it)
   PK_SRV=$(grep -m1 -o "\[net-server\] ride: parked: smashed (PropEvt parked:[0-9]*) at t=[0-9.]*, plating [-0-9]*" "$TMP/server.log")
   PK_T=$(echo "$PK_SRV" | sed -E 's/.* at t=([0-9.]+),.*/\1/'); PK_P=$(echo "$PK_SRV" | sed -E 's/.*plating ([-0-9]+)$/\1/')
   echo "--- the parked train's smash"; grep -h "the cart smashes the parked train\|\] ride: parked: " "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null | head -8
@@ -254,7 +256,7 @@ if [ "${RIDE:-}" = 1 ]; then
     file == 3 && /^\[net\] ride book / { jp[val("t")] = val("props") }
     END {
       best = ""
-      for (t in sp) if (t + 0 >= ts + 1.0 && (key(t - 0.5) in sp) && (key(t + 0.5) in sp) && sp[key(t - 0.5)] == sp[t] && sp[key(t + 0.5)] == sp[t] && (best == "" || t + 0 < best + 0)) best = t
+      for (t in sp) if (t + 0 >= ts + 1.0 && (t in cp) && (t in jp) && (key(t - 0.5) in sp) && (key(t + 0.5) in sp) && sp[key(t - 0.5)] == sp[t] && sp[key(t + 0.5)] == sp[t] && (best == "" || t + 0 < best + 0)) best = t
       printf "grid t=%s: the server %s (before the smash %s), the client %s, the joiner %s\n", best, sp[best], before, cp[best], jp[best]
       exit !(best != "" && before != "" && sp[best] != before && cp[best] == sp[best] && jp[best] == sp[best])
     }' "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log")

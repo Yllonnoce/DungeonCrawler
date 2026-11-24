@@ -19,8 +19,9 @@ namespace DungeonCrawler.Core;
 // regroups), and stop 1's first crew member put on foot 10 m short of its cart (ctrl.DebugPutOnFoot). The prompt: "Board the cart" from its W4 and
 // from its cart alike. The press (its cart's): the lead and the near companion in its cart, the crew member in its W1 seat 4 at once and not Home
 // there, the far one on foot. The countdown: 5 s, Get out closed for its first 2 s. Getting out in it (Task 8, Task 6's ⚠️5): on the first frame
-// Get out is offered the lead presses it: set down outside with nobody left in the lift, which stands on at its place (no run); the lead boards
-// again by whichever of its bodies offers "Board the cart", and the countdown is judged again from that press. The bridge: while the lift is over it the lead's prompt is ""
+// Get out is offered the lead presses it: set down outside with nobody left in the lift, which stands on at its place (no run), every frame for
+// 1 s (fix round 1, M1); then the lead boards again by whichever of its bodies offers "Board the cart", with the near companion and the crew member,
+// and the countdown is judged again from that press. The bridge: while the lift is over it the lead's prompt is ""
 // and a forced Get out does nothing. The save (Review Focus 4) at mid-bridge and a load: the lead beside the parked train outside, up and not
 // fallen, the lift standing; the lead boards again. The halt: 1.5 +- 1.5 m behind the held train's last body, inside, every rider on island cells;
 // hidden 2 s later and standing again 1 s after that. Regroup (Ruling 35): the far companion on an island cell that may take a body within 10 s.
@@ -41,7 +42,10 @@ public partial class DebugTools
     private float _ilWreckS = float.NaN;
     private bool _ilListening;
     /// <summary>Task 8: the lead got out during the countdown (once); the parked smashes before the ClearTheLiftsSpan ride, its wreck's time, and the wagons it wrecked.</summary>
-    private bool _ilOutDone;
+    private bool _ilOutDone, _ilReboarded;
+    /// <summary>Fix round 1 (M1): when the lead got out in the countdown, and the frames it was then seen outside before boarding again.</summary>
+    private float _ilOutT = float.NaN;
+    private int _ilOutFrames;
     private int _ilSmashesBefore;
     private float _ilSpanWreckT = float.NaN;
     private readonly List<TrainWagon> _ilSpanWagons = new();
@@ -213,6 +217,7 @@ public partial class DebugTools
             case 3:
             {
                 // the countdown: 5 s, Get out closed for its first 2 s
+                if (_ilOutDone && !_ilReboarded) { IslandLiftOutside(main, layout, rc, enc, train, party, me, Fail); break; } // fix round 1 (M1): 1 s outside, then board again
                 if (rc.Lift == null) { Fail("the lift went before it rolled"); return; }
                 var since = _isTime - _ilPressT;
                 var prompt = train.Cart.Prompt;
@@ -337,8 +342,8 @@ public partial class DebugTools
 
     /// <summary>
     /// =lift step 3 (Task 8, Task 6's ⚠️5): once, on the first frame Get out is offered in the countdown, the lead presses it: set down outside, nobody
-    /// left in the lift and no run, which stands on at its place as a lift; then the lead boards again by whichever of its bodies offers "Board the cart"
-    /// (beside its cart first if none does), and the countdown is judged again from that press. True when the step should wait a frame (or failed).
+    /// left in the lift and no run, which stands on at its place as a lift. <see cref="IslandLiftOutside"/> then holds it outside 1 s and boards again.
+    /// True (the step waits a frame, or failed).
     /// </summary>
     private bool IslandLiftGetOut(Main main, FloorLayout layout, RailController rc, RailEncounterController enc, ParkedTrain train, PartyController party, Adventurer me, float since, Action<string> Fail)
     {
@@ -355,19 +360,51 @@ public partial class DebugTools
         if (enc.ParkedNow != ParkedState.Lift || !train.Standing || train.Cart.GlobalPosition.DistanceTo(place) > 0.5f) problems.Add($"the parked train is {enc.ParkedNow}, standing={train.Standing}, its cart {train.Cart.GlobalPosition.DistanceTo(place):0.00} m from its place");
         if (problems.Count > 0) { Fail($"the Get out {since:0.00} s into the countdown: {string.Join("; ", problems)}"); return true; }
         GD.Print($"[island] lift: the lead got out {since:0.00} s into the countdown: set down outside at {cell}, nobody left in the lift and no run; it stands on at its place ({enc.ParkedNow})");
+        _ilOutT = _isTime;
+        _ilOutFrames = 0;
+        return true;
+    }
+
+    /// <summary>
+    /// =lift step 3 after the Get out (fix round 1, M1): every frame for 1 s the lead stands outside, up and on foot, nobody sits in the lift, it runs
+    /// no run and stands at its place as a lift offering "Board the cart" from one of its bodies; then the lead boards again by that body (beside its cart
+    /// first if none offers it), the near companion and the crew member with it (asserted), and the countdown is judged again from that press.
+    /// </summary>
+    private void IslandLiftOutside(Main main, FloorLayout layout, RailController rc, RailEncounterController enc, ParkedTrain train, PartyController party, Adventurer me, Action<string> Fail)
+    {
+        var cell = DungeonBuilder.WorldToCell(me.GlobalPosition);
+        var place = rc.Party.Track.Point(ParkedRules.CartS(enc.ExitFromS));
+        var anyone = train.Cart.Riders.Count + train.Wagons.Sum(w => w.Riders.Count);
         var bodies = new List<ICartBody>(train.Wagons) { train.Cart };
         bool Offers(ICartBody b) => (b is MineCart m ? m.Prompt : ((TrainWagon)b).Prompt) == ParkedRules.BoardPrompt;
-        if (!bodies.Any(Offers)) me.Teleport(BesideLift(main, layout, rc, enc, train.Cart), train.Cart.GlobalPosition + Vector3.Up * 0.9f);
-        if (bodies.FirstOrDefault(Offers) is not { } offering) { Fail($"after the Get out none of the lift's bodies offers the lead \"{ParkedRules.BoardPrompt}\""); return true; }
+        var problems = new List<string>();
+        if (me.Seated || me.Downed) problems.Add($"the lead is seated {me.Seated}, downed {me.Downed}");
+        if (layout.InIsland(cell) || !CrevasseRules.SetDownOk(layout, cell)) problems.Add($"the lead stands at {cell} (island {layout.InIsland(cell)})");
+        if (rc.Lift != null) problems.Add($"the lift runs at S={rc.LiftS:0.0}");
+        if (anyone > 0) problems.Add($"{anyone} seated in it");
+        if (enc.ParkedNow != ParkedState.Lift || !train.Standing || train.Cart.GlobalPosition.DistanceTo(place) > 0.5f) problems.Add($"the parked train is {enc.ParkedNow}, standing={train.Standing}, its cart {train.Cart.GlobalPosition.DistanceTo(place):0.00} m from its place");
+        if (problems.Count > 0) { Fail($"{_isTime - _ilOutT:0.00} s after the Get out in the countdown: {string.Join("; ", problems)}"); return; }
+        _ilOutFrames++;
+        if (_isTime - _ilOutT < 1f) return;
+        var offeredHere = bodies.Any(Offers);
+        if (!offeredHere) me.Teleport(BesideLift(main, layout, rc, enc, train.Cart), train.Cart.GlobalPosition + Vector3.Up * 0.9f);
+        if (bodies.FirstOrDefault(Offers) is not { } offering) { Fail($"1 s after the Get out none of the lift's bodies offers the lead \"{ParkedRules.BoardPrompt}\""); return; }
         var name = (offering as Node)?.Name.ToString() ?? "?";
+        _ilFar?.Teleport(rc.StandBesideLane(rc.Party.Track.Point(train.CartS - 40f)), train.Cart.GlobalPosition); // it followed the lead out in the second: 40 m short again, so it does not ride
         if (offering is MineCart pressCart) pressCart.Interact(party, me); else ((TrainWagon)offering).Interact(party, me);
-        if (me.Cart != train.Cart || rc.Lift == null || rc.ChaserBoardingLeft < 0f) { Fail($"after the Get out the lead pressed its {name}: seated in the lift's cart {me.Cart == train.Cart}, the lift runs {rc.Lift != null}, its countdown {rc.ChaserBoardingLeft:0.0}"); return true; }
         var book = new List<ICartRider>();
         train.CollectRiders(book);
-        GD.Print($"[island] lift: the lead boarded again by its {name}: [{string.Join(", ", book.OfType<Node3D>().Select(Who))}] aboard; the countdown starts again");
+        var crew = ObjectiveController.Instance is CrewRescueController ctrl ? ctrl.Crew.FirstOrDefault(n => n.Id == _ilCrewId) : null;
+        var again = new List<string>();
+        if (me.Cart != train.Cart || rc.Lift == null || rc.ChaserBoardingLeft < 0f) again.Add($"the lead seated in the lift's cart {me.Cart == train.Cart}, the lift runs {rc.Lift != null}, its countdown {rc.ChaserBoardingLeft:0.0}");
+        if (_ilNear == null || _ilNear.Cart != train.Cart) again.Add($"{_ilNear?.State.Name ?? "the near companion"} is not back in its cart");
+        if (crew == null || !book.Contains(crew)) again.Add($"{crew?.NpcName ?? _ilCrewId} is not back in the lift");
+        if (_ilFar != null && _ilFar.Seated) again.Add($"{_ilFar.State.Name} (40 m short) was seated");
+        if (again.Count > 0) { Fail($"boarding again by its {name} after the Get out: {string.Join("; ", again)}"); return; }
+        _ilReboarded = true;
+        GD.Print($"[island] lift: {_ilOutFrames} frame(s) over {_isTime - _ilOutT:0.00} s the lead stood outside at {cell}, the lift standing at its place with nobody in it and no run, offering \"{ParkedRules.BoardPrompt}\"{(offeredHere ? "" : " (beside its cart)")}; the lead boarded again by its {name}: [{string.Join(", ", book.OfType<Node3D>().Select(Who))}] aboard; the countdown starts again");
         _ilPressT = _isTime;
         _ilGetOutClosedSeen = _ilGetOutOpenSeen = false;
-        return true;
     }
 
     // ---- =takeover ---------------------------------------------------------------------------------------------------------------

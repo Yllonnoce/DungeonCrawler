@@ -84,6 +84,7 @@ public partial class ServerWorld
         // the change it missed, if it holds an older build (its log says it descended); a rebuild in place otherwise
         var delta = r.Epoch != _floorEpoch ? _floorDelta : 0;
         SendTo(slot.PeerId, FloorChangeOf(game.CurrentFloor, delta, state, poses, firstVisit: false, resync: true));
+        _enemySent.Forget(slot.PeerId); // it rebuilds its copies: its next snapshot carries every enemy, flags and all
         GD.Print($"[net-server] sent {slot.Name} floor {game.CurrentFloor} (build {_floorEpoch}) again, {now - _floorBuiltAt:0.0} s after it was built");
         Trace.Add("floor-resent");
     }

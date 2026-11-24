@@ -18,9 +18,8 @@ public partial class ServerWorld : Node
     public ServerHandshake Handshake { get; private set; } = null!;
     private INetTransport _t = null!;
     private readonly List<string> _logBatch = new();
-    private readonly Dictionary<int, Vector3> _lastSent = new();
-    /// <summary>The flags each enemy was last sent with, by peer (plan 15 Task 8: a change goes out at once, still or not; <see cref="SnapshotRules.SendEnemy"/>).</summary>
-    private readonly Dictionary<(int Peer, int NetId), byte> _flagsSent = new();
+    /// <summary>Each enemy's place and flags as last sent, by (peer, net id) (plan 15 Task 8 and its fix round 1: per peer, so a later peer is never starved by the first one's send).</summary>
+    private readonly EnemySnapshotMemory _enemySent = new();
     private float _fullSnapshotTimer;
     private float _autosaveTimer;
     private float _statusTimer;
@@ -135,8 +134,7 @@ public partial class ServerWorld : Node
         foreach (var peer in Handshake.InGamePeers) _t.Send(peer, change);
         foreach (var peer in Handshake.WelcomedPeers) HoldForJoiner(peer, change); // a joiner still building the old floor follows on Ready
         _floorChanging = false;
-        _lastSent.Clear();
-        _flagsSent.Clear();
+        _enemySent.Clear();
         _firstPose.Clear();
         Trace.Add($"floor:{floor}");
         WriteStatus();
@@ -399,6 +397,7 @@ public partial class ServerWorld : Node
     {
         var party = Main.Instance?.Party;
         UnseatLeaving(slot); // a seat is never left booked to a body that is gone: it steps out beside the lane first
+        _enemySent.Forget(slot.PeerId); // what this peer was sent of each enemy goes with it
         _rttOf.Remove(slot.MemberIndex);
         _shovedPending.Remove(slot.MemberIndex);
         _returnedPending.Remove(slot.MemberIndex);
@@ -1054,7 +1053,6 @@ public partial class ServerWorld : Node
         foreach (var e in root.GetChildren().OfType<Enemy>())
         {
             var pos = e.GlobalPosition;
-            var moved = !_lastSent.TryGetValue(e.NetId, out var last) || last.DistanceSquaredTo(pos) > 0.0004f;
             var near = bodies.Any(b => b.GlobalPosition.DistanceSquaredTo(pos) < Protocol.SnapshotInterestRadius * Protocol.SnapshotInterestRadius);
             byte flags = 0;
             if (e.IsAlive) flags |= EntityState.FlagAlive;
@@ -1062,10 +1060,8 @@ public partial class ServerWorld : Node
             if (!e.IsUnaware) flags |= EntityState.FlagAware;
             if (e.IsBoss) flags |= EntityState.FlagBoss;
             if (e.InWater) flags |= EntityState.FlagInWater;
-            var flagsChanged = !_flagsSent.TryGetValue((peer, e.NetId), out var sentFlags) || sentFlags != flags; // an enemy turned unaware standing still goes out now
-            if (!SnapshotRules.SendEnemy(full, moved, near && !e.IsUnaware, flagsChanged)) continue;
-            _lastSent[e.NetId] = pos;
-            _flagsSent[(peer, e.NetId)] = flags;
+            // moved, or its flags changed (an enemy turned unaware standing still), since this peer was last sent it (EnemySnapshotMemory)
+            if (!_enemySent.Offer(peer, e.NetId, pos.X, pos.Y, pos.Z, flags, full, near && !e.IsUnaware)) continue;
             enemies.Add(new EntityState(e.NetId, new NetVec(pos.X, pos.Y, pos.Z), e.Rotation.Y, e.Hp, EnemyStateCodes.Encode(e.State.Name), flags));
         }
         var npcs = root.GetChildren().OfType<Npc>().Select(n =>

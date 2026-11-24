@@ -95,11 +95,17 @@ public partial class NetTestFlow
 
     private int _exitFrames;
     private bool _exitPressed, _exitTold;
+    /// <summary>When this screen first held over the exit bridge (<see cref="_elapsed"/>), or −1.</summary>
+    private double _exitHeldAt = -1;
+    /// <summary>Fix round 1 (I1): the press waits until our front is this far into the bridge's span and the hold this old here, so the server holds too.</summary>
+    private const float ExitPressInto = 2f;
+    private const double ExitPressAfter = 0.5;
 
     /// <summary>
     /// Step 53, each tick: while the train has a car over the exit bridge here (<c>RailEncounterController.ExitBridgeHolds</c>, this screen's own
-    /// train) the cart's own prompt must read "" on every frame; on the first such frame our seat presses Get out through the intent anyway
-    /// (cart:0), which the server refuses ("get out refused (the train is on the exit bridge)"). Once the hold ends here we are still seated.
+    /// train) the cart's own prompt must read "" on every frame; once our front is <see cref="ExitPressInto"/> into the span and the hold is
+    /// <see cref="ExitPressAfter"/> old here (fix round 1, I1: never at the hold's edge, where the server may not hold yet) our seat presses Get out
+    /// through the intent anyway (cart:0), which the server refuses ("get out refused (the train is on the exit bridge)"). Once the hold ends here we are still seated.
     /// True when it failed.
     /// </summary>
     private bool RideExitBridge(NetSession net, Rails.RailController rc, Party.Adventurer me)
@@ -108,17 +114,19 @@ public partial class NetTestFlow
         if (enc.ExitBridgeHolds())
         {
             _exitFrames++;
+            if (_exitHeldAt < 0) _exitHeldAt = _elapsed;
             var prompt = rc.Cart.Prompt;
             if (prompt != "") return RideFail(net, FormattableString.Invariant($"over the exit bridge (front S={rc.Party.FrontS:0.0}) the cart offers \"{prompt}\" here, frame {_exitFrames} (want nothing)"));
-            if (_exitPressed) return false;
+            if (_exitPressed || rc.Party.FrontS < enc.ExitFromS + ExitPressInto || _elapsed - _exitHeldAt < ExitPressAfter) return false;
             _exitPressed = true;
             if (NetRefResolver.RefOf(rc.Cart) is not { } cartRef) return RideFail(net, "the party's cart has no net ref here");
             net.Send(new InteractIntent(cartRef));
-            GD.Print(FormattableString.Invariant($"[net] ride: over the exit bridge here (front S={rc.Party.FrontS:0.0}, the bridge S={enc.ExitFromS:0.0}..{enc.ExitToS:0.0}): the cart offers \"\"; pressed Get out through the intent anyway ({cartRef}) from seat {me.Seat}"));
+            GD.Print(FormattableString.Invariant($"[net] ride: over the exit bridge here (front S={rc.Party.FrontS:0.0}, the bridge S={enc.ExitFromS:0.0}..{enc.ExitToS:0.0}): the cart offers \"\"; pressed Get out through the intent anyway ({cartRef}) from seat {me.Seat}, {rc.Party.FrontS - enc.ExitFromS:0.0} m into the span and {_elapsed - _exitHeldAt:0.00} s into the hold here"));
             return false;
         }
         if (_exitFrames == 0) return false;
         _exitTold = true;
+        if (!_exitPressed) return RideFail(net, $"the hold over the exit bridge ended here after {_exitFrames} frame(s) before our front was {ExitPressInto:0} m into it and the hold {ExitPressAfter:0.0} s old: no Get out was pressed");
         var seated = me.Seated && me.Cart == rc.Cart;
         GD.Print($"[net] ride: over the exit bridge: {_exitFrames} frame(s), the cart's prompt \"\" on every one; {(seated ? $"still seated in seat {me.Seat}" : "NOT SEATED")} ({(seated ? "ok" : "FAIL")})");
         return !seated && RideFail(net, "the Get out pressed over the exit bridge let our hero out");
