@@ -132,7 +132,7 @@ public partial class RailEncounterController
         EventBus.Instance.Log("The cart smashes through the barricade!");
         barricade.Smash(root, _rails.Cart.Velocity);
         BarricadesSmashed++;
-        var hit = SmashCost("The barricade", wholeTrain: false); // the cart's seats only, as plan 11 has it (pre-flight F4)
+        var hit = SmashCost("The barricade", wholeTrain: BarricadeRules.SmashReachesWholeTrain); // the cart's seats only, as plan 11 has it
         GD.Print($"[rails] barricade {piece.Plan.Id} smashed at S={piece.S:0.0}: plating {before:0} -> {_rails.State.Plating:0}, {hit} hero(es) hit");
     }
 
@@ -140,7 +140,7 @@ public partial class RailEncounterController
     /// The cost of the party's train smashing through something on its line (Ruling 24; one helper for <c>r1_barricade</c>, <c>r2_barricade</c>
     /// and the parked train): <see cref="BarricadeRules.SmashDent"/> plating, <see cref="BarricadeRules.SpeedKept"/> of the speed kept, and
     /// <see cref="BarricadeRules.SmashDamage"/> (15% × lethality/3 of max HP, never below 1 HP) to each seated hero who is up: in the cart only,
-    /// or anywhere in the train with <paramref name="wholeTrain"/> (pre-flight F4: the parked train's reach). Crew and escorts are only jolted.
+    /// or anywhere in the train with <paramref name="wholeTrain"/> (<see cref="BarricadeRules.SmashBooks"/>: the parked train's reach). Crew and escorts are only jolted.
     /// A wreck the dent makes has its own toll: then nobody is hurt here. <paramref name="what"/> names the source. Returns the heroes hurt. Server.
     /// </summary>
     internal int SmashCost(string what, bool wholeTrain)
@@ -154,9 +154,9 @@ public partial class RailEncounterController
                 if (rider is Adventurer { Downed: false } hero && IsInstanceValid(hero) && !_smashedHeroes.Contains(hero)) _smashedHeroes.Add(hero);
         }
         Book(_rails.Cart);
-        if (wholeTrain)
-            foreach (var wagon in _rails.Train)
-                if (IsInstanceValid(wagon)) Book(wagon);
+        var car = 0;
+        foreach (var wagon in _rails.Train)
+            if (BarricadeRules.SmashBooks(++car, wholeTrain) && IsInstanceValid(wagon)) Book(wagon);
         var hit = 0;
         var scale = TierRules.PartyDamageScale;
         foreach (var hero in _smashedHeroes)

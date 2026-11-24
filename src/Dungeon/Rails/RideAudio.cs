@@ -37,8 +37,11 @@ public static class RideAudio
         At(cue, SoundAt(node));
     }
 
-    /// <summary>Where a prop's sound comes from: its one sound point (<see cref="ISoundPoint"/>, the same on every role), else its node.</summary>
-    public static Vector3 SoundAt(Node3D node) => node is ISoundPoint p ? p.SoundPoint : node.GlobalPosition;
+    /// <summary>
+    /// Where a prop's sound comes from: its one sound point (<see cref="ISoundPoint"/>, the same on every role), the parked train's for its cart (its
+    /// wire name, <c>parked:{piece}</c>, resolves to the cart), else its node.
+    /// </summary>
+    public static Vector3 SoundAt(Node3D node) => node is ISoundPoint p ? p.SoundPoint : node.GetParent() is ParkedTrain t ? t.SoundPoint : node.GlobalPosition;
 }
 
 /// <summary>A rail prop's one sound point: its noisy method on the server and in single player and a client's <see cref="RideAudio.OnProp"/> both play there.</summary>

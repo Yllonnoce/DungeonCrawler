@@ -14,16 +14,21 @@ namespace DungeonCrawler.Core;
 // stop and id). rc.Restore(Shape(rc).LastRideStop) with stop 2's crew in W2 (ctrl.DebugSeatCrew), then:
 // The build: the parked train's rear (its last tub's back, from the body) at ParkedRules.RearS(ExitFromS, 4) +- 0.1, in the way, standing, its five
 // bodies solid (layers 1|8), its tubs OfLift with their own wire names and none of them in rc.Wagons.
-// In the way: at the stop, held, the lead teleported beside it and looking at it is offered "" and never "Board the cart". The guard (pre-flight
-// F7): the lead seated in its W1 is offered no Get out and no move and is in no car of the train; a crew member downed in its W2 offers no revive
+// In the way: at the stop, held, the lead teleported beside it and looking at it is offered "" and never "Board the cart". The guard (no parked
+// tub is the party's): the lead seated in its W1 is offered no Get out and no move and is in no car of the train; a crew member downed in its W2 offers no revive
 // and is not in the party's train; neither a press on them nor on the party's cart from them is a move. Everyone boards; the lava pit's switch is
-// thrown from the seat on the way. Rolling: a companion in W1 (pre-flight F4: it pays at the smash), one held at 5% HP, one seated in the parked
+// thrown from the seat on the way. Rolling: a companion in W1 (it pays at the smash: the whole train does), one held at 5% HP, one seated in the parked
 // train's cart (DebugSeatParked: the race); a press on a parked body is never a move ("not a car of the train").
 // The sight: a layer-1 ray from the seated lead's eye with the front 15 m short of its rear to its lantern is clear. The call (bark or log) with
 // the front 33-35 m from its rear, its alarm on, the bell rung at it. The race: the companion aboard is thrown clear onto a cell that may take a
 // body, HP >= 1, never fallen. The smash: plating -25, each other seated up hero -15% of max HP (the 5% one left with 1 HP or more, the W1 one paid),
 // the crew's HP unchanged, V x 0.8 +- 0.05, five tubs tumbling, ParkedNow Gone. Standing again: within 1 s of the train's rear passing ExitToS
 // ParkedNow is Lift and "Another cart rolls out..." is logged. A restore at the last ride's stop stands it in the way again.
+// Last, a smash that wrecks the cart: every spare spent (rc.DebugSpendSpares), the last ride ridden again with the plating
+// set to ParkedRules.SmashDent 3 m short of its rear, so the smash wrecks the cart with no spare left. On the frame after: the cart wrecked and
+// hidden (not inside, no spare spent), the parked train Gone "the smash", five tubs tumbling, its PropEvt "smashed" told and no "standing"; Gone
+// every frame while ParkedTumbleLeft > 0; then a lift (ParkedWhy "a lift is due") within 1 s of the tumble's end, "standing" told after "smashed";
+// each smash played timber_smash once at its lantern, and "Another cart rolls out..." was logged once a ride (twice: the restore between).
 public partial class DebugTools
 {
     private bool _ipListening;
@@ -37,6 +42,12 @@ public partial class DebugTools
     private readonly Dictionary<Npc, float> _ipCrewBefore = new();
     private readonly List<Npc> _ipCrew = new();
     private float _ipRacerWatch;
+    /// <summary>The smash that wrecks the cart: the parked train's PropEvt words from the second ride on, the smashes before it, and when its smash wrecked the cart.</summary>
+    private readonly List<string> _ipTold = new();
+    private int _ipSmashesBefore;
+    private float _ipWreckSmashT = float.NaN;
+    /// <summary>The smash's timber_smash heard at its lantern (server and solo), and how often "Another cart rolls out..." was logged.</summary>
+    private int _ipSmashSounds, _ipLiftLogs;
 
     private void IslandParkedListen()
     {
@@ -51,14 +62,21 @@ public partial class DebugTools
         RailCalls.Called += called;
         Action<string, Vector3, bool> played = (cue, at, _) =>
         {
-            if (_done || !_testIsland || cue != "cart_bell" || RailEncounterController.Instance?.Parked is not { } train) return;
-            if (at.DistanceTo(train.SoundPoint) < 1f) _ipBellSeen = true;
+            if (_done || !_testIsland || RailEncounterController.Instance?.Parked is not { } train || at.DistanceTo(train.SoundPoint) >= 1f) return;
+            if (cue == "cart_bell") _ipBellSeen = true;
+            if (cue == "timber_smash") _ipSmashSounds++;
         };
         Audio.AudioManager.PlayedAt += played;
-        _staticUnhooks.Add(() => { RailCalls.Called -= called; Audio.AudioManager.PlayedAt -= played; });
+        Action<string, string> told = (netRef, what) =>
+        {
+            if (!_done && _testIsland && RailEncounterController.Instance?.Parked is { } train && netRef == train.NetRef) _ipTold.Add(what);
+        };
+        EventBus.Instance.PropChanged += told;
+        _staticUnhooks.Add(() => { RailCalls.Called -= called; Audio.AudioManager.PlayedAt -= played; EventBus.Instance.PropChanged -= told; });
         EventBus.Instance.Message += text =>
         {
             if (_done || !_testIsland || RailController.Instance is not { } r) return;
+            if (text == ParkedRules.LiftLog) _ipLiftLogs++;
             if (text == ParkedRules.LiftLog && float.IsNaN(_ipLiftLogT)) _ipLiftLogT = _isTime;
             if (text != ParkedRules.SmashLog) return;
             // logged before the riders are thrown clear and before the cost (SmashParked): every value here is the one the smash met
@@ -169,7 +187,7 @@ public partial class DebugTools
                 if (!_ipMovePinned && rc.State.Mode == CartMode.Rolling && rc.State.V > 1f && !rc.MovesRefused)
                 {
                     _ipMovePinned = true;
-                    // pre-flight F7: a press on a parked body from the train is never a move, nor offered
+                    // a press on a parked body from the train is never a move, nor offered
                     var bodies = new List<ICartBody> { train.Cart };
                     bodies.AddRange(train.Wagons);
                     foreach (var b in bodies)
@@ -234,6 +252,7 @@ public partial class DebugTools
                 if (tumbles != 5) problems.Add($"{tumbles} tub(s) tumbling, not 5");
                 if (enc.ParkedNow != ParkedState.Gone || train.Standing || train.Cart.CollisionLayer != 0 || train.Wagons.Any(w => w.Visible || w.CollisionLayer != 0)) problems.Add($"it is {enc.ParkedNow}, standing={train.Standing}, its bodies still shown or solid");
                 if (enc.ParkedSmashes != 1) problems.Add($"{enc.ParkedSmashes} smash(es) counted");
+                if (_ipSmashSounds != 1) problems.Add($"timber_smash played {_ipSmashSounds} time(s) at its lantern, not once");
                 var racer = _ipRacer!;
                 var racerCell = DungeonBuilder.WorldToCell(racer.GlobalPosition);
                 if (racer.Seated || !CrevasseRules.SetDownOk(layout, racerCell) || layout.InIsland(racerCell) || racer.State.Hp < 1f || racer.State.Fallen) problems.Add($"{racer.State.Name} (the race) seated={racer.Seated} at {racerCell} (may take a body {CrevasseRules.SetDownOk(layout, racerCell)}, island {layout.InIsland(racerCell)}) HP {racer.State.Hp:0.0} fallen={racer.State.Fallen}");
@@ -282,14 +301,70 @@ public partial class DebugTools
             case 8 when _isClock >= 0.5f:
             {
                 if (enc.ParkedNow != ParkedState.InTheWay || !train.Standing || rc.StopIndex != shape.LastRideStop) { Fail($"after rc.Restore({shape.LastRideStop}) it is {enc.ParkedNow}, standing={train.Standing}, the cart at stop {rc.StopIndex}"); return; }
-                Pass($"the build: {enc.ParkedId}'s rear at RearS(ExitFromS, 4) (S {train.RearFaceS:0.0}), its five bodies solid, its tubs never the party's; in the way at stop {shape.LastRideStop}, held, the lead beside it offered nothing, and no parked tub offered a revive, a Get out or a climb, nor took a press as a move; its lantern seen from the seat 15 m short; called {_ipCallGap:0.0} m from its rear, its alarm on and its bell rung; {_ipRacer!.State.Name}, seated in it, thrown clear onto a cell that may take a body; the smash: plating -25, each other seated up hero -15% of max HP (W1's {_ipWagonHero!.State.Name} too; {_ipLow!.State.Name} at 5% left with {_ipLow.State.Hp:0.0} HP), the crew unhurt, V x0.8, five tubs tumbling, Gone; a lift within 1 s of the rear passing the far edge; a restore stood it in the way again");
+                // ridden again with every spare spent, the smash wrecks the cart
+                rc.DebugSpendSpares();
+                _ipSmashesBefore = enc.ParkedSmashes;
+                GD.Print($"[island] parked: in the way again after the restore; every spare spent ({rc.SparesLeft} left): the last ride again, its smash to wreck the cart");
+                _isStep++; _isClock = 0f;
+                break;
+            }
+            case 9 when _isClock >= 0.5f:
+            {
+                if (!RideBoard(main, layout, rc, out var why)) { Fail(why); return; }
+                _isStep++; _isClock = 0f;
+                break;
+            }
+            case 10:
+            {
+                if (enc.ParkedSmashes == _ipSmashesBefore)
+                {
+                    if (rc.State.Mode == CartMode.Wrecked) { Fail($"the last ride was wrecked at S={rc.State.S:0.0} before the smash"); return; }
+                    if (rc.State.Mode == CartMode.Rolling) rc.DebugSetPlating(rc.Party.FrontS < train.RearFaceS - 3f ? CartRules.MaxPlating : ParkedRules.SmashDent); // the smash's dent wrecks it
+                    _ipTold.Clear(); // only the words from the smash on are judged
+                    if (_isClock > 120f) Fail($"the cart never smashed the parked train again (front {rc.Party.FrontS:0.0}, its rear {train.RearFaceS:0.0}, {enc.ParkedNow})");
+                    break;
+                }
+                var tumbles = root.GetChildren().Count(n => n is RigidBody3D && n.Name.ToString().StartsWith(ParkedTrain.TumbleName, StringComparison.Ordinal));
+                var problems = new List<string>();
+                if (rc.State.Mode != CartMode.Wrecked || rc.Cart.Visible || rc.LastWreckInside || rc.SparesLeft != 0) problems.Add($"the cart is {rc.State.Mode}, shown {rc.Cart.Visible}, inside {rc.LastWreckInside}, {rc.SparesLeft} spare(s) left (want a no-spare wreck at the smash)");
+                if (enc.ParkedNow != ParkedState.Gone || enc.ParkedWhy != "the smash" || train.Standing) problems.Add($"the parked train is {enc.ParkedNow} (\"{enc.ParkedWhy}\"), standing={train.Standing}, not Gone by the smash");
+                if (tumbles != 5) problems.Add($"{tumbles} tub(s) tumbling, not 5");
+                if (!_ipTold.Contains("smashed") || _ipTold.Contains("standing")) problems.Add($"told [{string.Join(", ", _ipTold)}], not \"smashed\" without \"standing\"");
+                if (enc.ParkedTumbleLeft < ParkedRules.TumbleSeconds - 0.5f) problems.Add($"its tubs tumble {enc.ParkedTumbleLeft:0.00} s more, not about {ParkedRules.TumbleSeconds:0} s");
+                GD.Print($"[island] parked: the smash wrecked the cart: {rc.State.Mode} at S={rc.State.S:0.0}, shown {rc.Cart.Visible}, inside {rc.LastWreckInside}, {rc.SparesLeft} spare(s) left; the parked train {enc.ParkedNow} (\"{enc.ParkedWhy}\"), {tumbles} tumbling for {enc.ParkedTumbleLeft:0.00} s more; told [{string.Join(", ", _ipTold)}]");
+                if (problems.Count > 0) { Fail($"the smash that wrecks the cart: {string.Join("; ", problems)}"); return; }
+                _ipWreckSmashT = _isTime;
+                _isStep++; _isClock = 0f;
+                break;
+            }
+            case 11:
+            {
+                var since = _isTime - _ipWreckSmashT;
+                if (enc.ParkedNow != ParkedState.Lift)
+                {
+                    if (enc.ParkedNow != ParkedState.Gone) { Fail($"{since:0.00} s after the smash the parked train is {enc.ParkedNow}, not Gone"); return; }
+                    if (_ipTold.Contains("standing")) { Fail($"{since:0.00} s after the smash \"standing\" was told while it is Gone"); return; }
+                    if (enc.ParkedTumbleLeft <= 0f && since > ParkedRules.TumbleSeconds + 1f) Fail($"{since:0.00} s after the smash, its tubs gone, there is no lift");
+                    break;
+                }
+                var problems = new List<string>();
+                if (enc.ParkedTumbleLeft > 0f || since < ParkedRules.TumbleSeconds - 0.1f) problems.Add($"a lift {since:0.00} s after the smash with its tubs tumbling {enc.ParkedTumbleLeft:0.00} s more");
+                if (enc.ParkedWhy != "a lift is due") problems.Add($"its reason \"{enc.ParkedWhy}\", not \"a lift is due\"");
+                var smashedAt = _ipTold.IndexOf("smashed");
+                var standingAt = _ipTold.IndexOf("standing");
+                if (smashedAt < 0 || standingAt < smashedAt) problems.Add($"told [{string.Join(", ", _ipTold)}]: \"standing\" not after \"smashed\"");
+                if (!train.Standing || train.Cart.CollisionLayer != ParkedTrain.StandingLayers) problems.Add("a lift, but its bodies are not standing solid");
+                if (_ipLiftLogs != 2 || _ipSmashSounds != 2) problems.Add($"\"{ParkedRules.LiftLog}\" logged {_ipLiftLogs} time(s) and timber_smash played {_ipSmashSounds} time(s) over the two rides, not twice each (once a ride: the restore between lets the line come again)");
+                GD.Print($"[island] parked: a lift {since:0.00} s after the smash that wrecked the cart (\"{enc.ParkedWhy}\"); told [{string.Join(", ", _ipTold)}]; \"{ParkedRules.LiftLog}\" logged {_ipLiftLogs} time(s), timber_smash {_ipSmashSounds} time(s)");
+                if (problems.Count > 0) { Fail($"after the smash that wrecked the cart: {string.Join("; ", problems)}"); return; }
+                Pass($"the build: {enc.ParkedId}'s rear at RearS(ExitFromS, 4) (S {train.RearFaceS:0.0}), its five bodies solid, its tubs never the party's; in the way at stop {shape.LastRideStop}, held, the lead beside it offered nothing, and no parked tub offered a revive, a Get out or a climb, nor took a press as a move; its lantern seen from the seat 15 m short; called {_ipCallGap:0.0} m from its rear, its alarm on and its bell rung; {_ipRacer!.State.Name}, seated in it, thrown clear onto a cell that may take a body; the smash: plating -25, each other seated up hero -15% of max HP (W1's {_ipWagonHero!.State.Name} too; {_ipLow!.State.Name} at 5% left with {_ipLow.State.Hp:0.0} HP), the crew unhurt, V x0.8, five tubs tumbling, Gone; a lift within 1 s of the rear passing the far edge; a restore stood it in the way again; with no spare left a smash that wrecked the cart was told \"smashed\" with five tubs tumbling, the place Gone for their {ParkedRules.TumbleSeconds:0} s, then \"standing\" ({since:0.00} s after the smash, \"{enc.ParkedWhy}\")");
                 return;
             }
         }
     }
 
     /// <summary>
-    /// The guard's pin (pre-flight F7), at the stop: the lead seated in the parked train's W1 is offered nothing (no Get out, no move), is in no car
+    /// The guard's pin (no parked tub is the party's), at the stop: the lead seated in the parked train's W1 is offered nothing (no Get out, no move), is in no car
     /// of the train, and a press on the party's cart from there is no move; a crew member downed in its W2 offers the lead no revive and is not
     /// in the party's train. Everyone goes back where they were. Null, or what broke.
     /// </summary>

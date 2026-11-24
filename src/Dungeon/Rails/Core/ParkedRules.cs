@@ -25,6 +25,8 @@ public static class ParkedRules
     public const int Wagons = 4;
     /// <summary>The smash's cost: the barricade's (<see cref="BarricadeRules"/>).</summary>
     public const float SmashDent = BarricadeRules.SmashDent, SpeedKept = BarricadeRules.SpeedKept;
+    /// <summary>Its smash hurts every seated hero who is up in the whole train, the wagons' too (<see cref="BarricadeRules.SmashBooks"/>): the train meets it, not the cart alone.</summary>
+    public const bool SmashReachesWholeTrain = true;
 
     /// <summary>The call's log line, with nobody seated to speak it (subtitle only).</summary>
     public const string CallLog = "Cart on the line — brace!";
@@ -62,19 +64,44 @@ public static class ParkedRules
         => partyRearS > bridgeToS || heldAtLast || !liveCart || wreckedInside;
 
     /// <summary>
-    /// The state after this step (Ruling 25), in this order: taken over (the caller's latch, set from the takeover's press until the arrival at
-    /// the last stop or a restore) gives <see cref="ParkedState.Gone"/>; a lift due with no chaser or relief on the line gives
-    /// <see cref="ParkedState.Lift"/>; in the way and smashed now gives <see cref="ParkedState.Gone"/>; otherwise it stays.
+    /// The state after this step (Ruling 25), in this order: taken over (the caller's latch, <see cref="LatchHolds"/>) gives <see cref="ParkedState.Gone"/>;
+    /// in the way and smashed now gives <see cref="ParkedState.Gone"/>, so "smashed" is told before any lift, even when the smash wrecked the cart with no
+    /// spare left and a lift is due in the same tick; a lift due with no chaser or relief on the line, and its tubs no longer <paramref name="tumbling"/>
+    /// (<see cref="Tumbling"/>), gives <see cref="ParkedState.Lift"/>; otherwise it stays.
     /// </summary>
-    public static ParkedState Next(ParkedState state, bool smashedNow, bool liftDue, bool takenOver, bool chaseOnLine)
+    public static ParkedState Next(ParkedState state, bool smashedNow, bool liftDue, bool takenOver, bool chaseOnLine, bool tumbling)
     {
         if (takenOver) return ParkedState.Gone;
-        if (liftDue && !chaseOnLine) return ParkedState.Lift;
         if (state == ParkedState.InTheWay && smashedNow) return ParkedState.Gone;
+        if (liftDue && !chaseOnLine && !tumbling) return ParkedState.Lift;
         return state;
     }
 
-    /// <summary>The lift rolls out (pre-flight F5): its place is empty, <see cref="ParkedState.Gone"/> ("gone" on the wire); any other state stays. While it runs it is the chase on the line, so <see cref="Next"/> stands no lift until it is hidden.</summary>
+    /// <summary>
+    /// Its tubs still tumble <paramref name="sinceSmash"/> seconds after the smash (under <see cref="TumbleSeconds"/>): its place stays gone, so the tumble
+    /// copies never spawn inside a lift standing solid again. Infinity (never smashed): false.
+    /// </summary>
+    public static bool Tumbling(double sinceSmash) => sinceSmash < TumbleSeconds;
+
+    /// <summary>
+    /// The takeover's latch (Ruling 25) after a cart event: set from the takeover's press, it clears on the arrival at the last stop
+    /// (<paramref name="atLastStop"/>), on a restore, and on a wreck of the taken-over train (the lift may then stand again for anyone still outside).
+    /// </summary>
+    public static bool LatchHolds(bool latched, CartEventKind e, bool atLastStop)
+        => latched && e switch
+        {
+            CartEventKind.Wrecked or CartEventKind.Restored => false,
+            CartEventKind.Arrived => !atLastStop,
+            _ => true,
+        };
+
+    /// <summary>
+    /// <see cref="LiftLog"/> is logged as the lift newly stands in play: once until the next restore (not again after each lift run), not on the step
+    /// right after a restore (a load at the last stop stands it at once), and not with nobody standing (a fall that took everyone: the wipe comes next).
+    /// </summary>
+    public static bool SaysLiftLog(bool toldAlready, bool justRestored, bool anyoneStanding) => !toldAlready && !justRestored && anyoneStanding;
+
+    /// <summary>The lift rolls out: its place is empty, <see cref="ParkedState.Gone"/> ("gone" on the wire); any other state stays. While it runs it is the chase on the line, so <see cref="Next"/> stands no lift until it is hidden.</summary>
     public static ParkedState LiftDeparts(ParkedState state) => state == ParkedState.Lift ? ParkedState.Gone : state;
 
     /// <summary>What it offers: "Board the cart" only as a lift, with no chase on the line, to a player on foot within reach; otherwise "".</summary>
@@ -99,7 +126,7 @@ public static class ParkedRules
     private static float Nearest(float a, float b) => float.IsNaN(a) ? b : Math.Min(a, b);
 
     /// <summary>
-    /// Each of <paramref name="riders"/>'s spot index for a set-down taken once for the whole list (Task 9, the Task 6 review's Minor 1): its place in
+    /// Each of <paramref name="riders"/>'s spot index for a set-down taken once for the whole list (Task 9: read once, not as each leaves): its place in
     /// <paramref name="book"/> (the lift's riders before anyone leaves), one not in it after the book's last, in turn. <paramref name="count"/> is how
     /// many spots to take.
     /// </summary>
@@ -117,7 +144,7 @@ public static class ParkedRules
     }
 
     /// <summary>
-    /// What the lift's halt line measures its gap to, as <c>LiftHalts</c> measures it (Task 9, the Task 6 review's Minor 3): the party train's last body
+    /// What the lift's halt line measures its gap to, as <c>LiftHalts</c> measures it (Task 9): the party train's last body
     /// while it has a live cart ahead (<paramref name="trainAhead"/>), else the standing buffer (<paramref name="bufferAhead"/>), else the last stop.
     /// </summary>
     public static string LiftHaltWhat(bool trainAhead, bool bufferAhead)
@@ -135,7 +162,7 @@ public static class ParkedRules
 
     /// <summary>
     /// A train with its front at <paramref name="trainFrontS"/> and its rear at <paramref name="trainRearS"/> stands within the parked train's span
-    /// (<paramref name="rearFaceS"/> .. <paramref name="frontFaceS"/>): a body of it overlaps the lift's place (Task 5 review 7). NaN: never.
+    /// (<paramref name="rearFaceS"/> .. <paramref name="frontFaceS"/>): a body of it overlaps the lift's place (<c>ClearTheLiftsSpan</c>). NaN: never.
     /// </summary>
     public static bool InItsSpan(float trainFrontS, float trainRearS, float rearFaceS, float frontFaceS)
         => trainFrontS > rearFaceS && trainRearS < frontFaceS;

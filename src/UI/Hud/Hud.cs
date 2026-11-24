@@ -487,14 +487,18 @@ public partial class Hud : Control
         foreach (var p in _panels) p.Refresh(); // every frame keeps the cooldown text live; each writes only what changed (no strings built on a quiet frame)
     }
 
-    /// <summary>A crushed player on a client: how long until the server carries them ahead, then that they can be freed.</summary>
+    /// <summary>
+    /// A crushed player on a client: how long until the server carries them ahead, then that they can be freed (<see cref="MangledRules.Banner"/>: on an
+    /// island floor a body still outside is there only while a friend is up outside).
+    /// </summary>
     private void TickMangledBanner(float dt)
     {
-        if (_party.Local is { Downed: true, State.Mangled: true } && Net.NetSession.IsClient)
+        if (_party.Local is { Downed: true, State.Mangled: true } me && Net.NetSession.IsClient)
         {
             _mangledSince += dt;
-            var left = MangledRules.BoundAfterSeconds - _mangledSince;
-            _mangled.Text = left > 0f ? $"Crushed. Rescue in {Math.Ceiling(left):0}s, or wait to be found" : "Crushed. Bound in the dark ahead; a friend can free you";
+            var layout = Main.Instance?.Builder.Layout;
+            var islandFloor = layout?.Rail?.Island != null;
+            _mangled.Text = MangledRules.Banner(_mangledSince, islandFloor, islandFloor && !layout!.InIsland(Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition)));
             _mangled.Visible = true;
         }
         else { _mangledSince = 0f; _mangled.Visible = false; }

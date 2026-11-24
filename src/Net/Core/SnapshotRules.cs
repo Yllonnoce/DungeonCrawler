@@ -16,9 +16,9 @@ public static class SnapshotRules
 }
 
 /// <summary>
-/// What each peer was last sent of each enemy (its place and flags), by (peer, net id) (plan 15 Task 8 fix round 1): every peer judges "moved" and
+/// What each peer was last sent of each enemy (its place and flags), by (peer, net id) (plan 15 Task 8): every peer judges "moved" and
 /// "flags changed" against what it was sent itself, so the second and later peers are not starved by the first one's send in the same tick. A peer's
-/// rows go when it leaves or has the floor resent; all go with a floor change. Engine-free.
+/// rows go when it leaves or has the floor resent, a gone enemy's at the peer's next full snapshot (<see cref="Keep"/>); all go with a floor change. Engine-free.
 /// </summary>
 public sealed class EnemySnapshotMemory
 {
@@ -48,6 +48,17 @@ public sealed class EnemySnapshotMemory
     {
         _drop.Clear();
         foreach (var key in _sent.Keys) if (key.Peer == peer) _drop.Add(key);
+        foreach (var key in _drop) _sent.Remove(key);
+    }
+
+    /// <summary>
+    /// A full snapshot to <paramref name="peer"/> carried the enemies <paramref name="present"/>: its rows of any other (an enemy freed since) go, so the
+    /// memory never outgrows the floor's living roster (a long floor 12 of portal waves, hounds and slag riders).
+    /// </summary>
+    public void Keep(int peer, IReadOnlySet<int> present)
+    {
+        _drop.Clear();
+        foreach (var key in _sent.Keys) if (key.Peer == peer && !present.Contains(key.NetId)) _drop.Add(key);
         foreach (var key in _drop) _sent.Remove(key);
     }
 

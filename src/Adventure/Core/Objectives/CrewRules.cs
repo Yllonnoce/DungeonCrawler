@@ -76,11 +76,11 @@ public static class CrewRules
     public const int RewardChestIndex = 9000;
 
     /// <summary>
-    /// How one hero counts for the island's rules (fix round 3): <c>Up</c> for a human's hero that is not parked, fallen or down; <c>Outside</c> for one
+    /// How one hero counts for the island's rules: <c>Up</c> for a human's hero that is not parked, fallen or down; <c>Outside</c> for one
     /// not parked or fallen standing off the island's cells, down or not. A downed one (a Mangled one too: it can be pulled free or revived where it
     /// lies) is not up but holds the outside; a fallen one (only the crevasse's return brings it back), a parked one or a companion counts as neither.
     /// A Mangled hero is always down in play (Mangled is set only at 0 HP); <paramref name="mangled"/> alone, with <paramref name="downed"/> false, still
-    /// counts as not up (and outside when outside), as a downed one does (Task 9, the Task 7 re-review 3's Minor 3).
+    /// counts as not up (and outside when outside), as a downed one does.
     /// </summary>
     public static (bool Up, bool Outside) PlayerCount(bool human, bool parked, bool fallen, bool downed, bool mangled, bool inIsland)
     {
@@ -92,7 +92,7 @@ public static class CrewRules
     /// A crew member on foot outside the island (<paramref name="onFoot"/>, not <paramref name="inIsland"/>) with the train at the end of the line
     /// or gone (<paramref name="trainAtEndOrNone"/>: wrecked and hidden), at least one human up (<paramref name="upPlayers"/>), and no player outside
     /// to fetch it (<paramref name="playersOutside"/>: <see cref="PlayerCount"/>'s Outside, a downed or Mangled one too, who may be revived or pulled
-    /// free there) (Ruling 34, fix rounds 1 and 3): it counts as lost while that lasts.
+    /// free there) (Ruling 34): it counts as lost while that lasts.
     /// </summary>
     public static bool Stranded(bool onFoot, bool inIsland, bool trainAtEndOrNone, int upPlayers, int playersOutside)
         => onFoot && !inIsland && trainAtEndOrNone && upPlayers > 0 && playersOutside <= 0;
@@ -108,6 +108,13 @@ public static class CrewRules
     /// Ruling 36: an escort (Grisel) left outside is brought in once at least one human is up and no player is outside (a downed or Mangled one counted), with
     /// the train at the end or wrecked inside.
     /// </summary>
+    /// <summary>
+    /// Ruling 36 and spec B.8 (never stranded): an escort (Grisel) left outside: alive, escorting, on foot and off the island's cells,
+    /// whether she is up or <paramref name="downed"/> (she does not bleed out, and only a hero's hands stand her up: brought in downed, she is left down
+    /// for a hero inside to revive).
+    /// </summary>
+    public static bool EscortLeftOutside(bool dead, bool downed, bool escorting, bool seated, bool inIsland) => !dead && escorting && !seated && !inIsland;
+
     public static bool BringEscortIn(bool escortOutside, int upPlayers, int playersOutside, bool trainAtEndOrWreckedInside)
         => escortOutside && upPlayers > 0 && playersOutside <= 0 && trainAtEndOrWreckedInside;
 

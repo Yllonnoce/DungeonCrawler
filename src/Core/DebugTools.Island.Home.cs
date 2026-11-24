@@ -20,17 +20,19 @@ namespace DungeonCrawler.Core;
 // cages at stops 3 and 4 left behind (never opened) and their crew lost; stops 1-2's crew home; the win (jailbreak_freed_all, the stairs
 // unsealed, the reward chest stood).
 // =stranded (Review Focus 2): the last ride with every cage's crew seated; once the train's rear is past the exit bridge (so past the pit's far
-// edge: pre-flight F11) one crew member is downed in W1 (ctrl.DebugDown) and one put on foot outside beside the parked train (ctrl.DebugPutOnFoot).
+// edge, so no pit is left to fall in) one crew member is downed in W1 (ctrl.DebugDown) and one put on foot outside beside the parked train (ctrl.DebugPutOnFoot).
 // At the arrival the outsider is Lost within 1 s and stays outside and Lost for 12 s, its catch-up held, never teleported; the lead outside: Freed
-// within 1 s; back inside: Lost within 1 s; the downed one revived (its bleed clock under 50 s: F11) wins the floor, and the lead outside afterwards
+// within 1 s; back inside: Lost within 1 s; the downed one revived (its bleed clock under 50 s, so it never bleeds out first) wins the floor, and the lead outside afterwards
 // leaves it won.
 // =grisel (Review Focus 2): forgiven, Grisel escorting; the last ride with every cage's crew seated; as the train's rear passes the exit bridge she
 // is put on foot outside on ride 5's lane cell at S 1150 (a rail cell). Held: her hold steps her off the rails first (plan 15 Task 8: never held on a
-// rail cell, on her own side, outside), then never teleported, until "Grisel picks her way in over the bridge behind you." is logged, within 1 s of the arrival with the lead inside, and she stands on an island cell beside the train's last body. The party at the head
+// rail cell, on her own side, outside), then never teleported, until "Grisel picks her way in over the bridge behind you." is logged, within 1 s of the arrival with the lead inside, and she stands on an island cell beside the train's last body.
+// Then (spec B.8: never stranded) she is put back where she was held outside and downed: within 1 s "Grisel is carried in over the bridge, still
+// down." is logged and she lies on an island cell off the rails, still down, offering "Revive Grisel"; revived there, she stands. The party at the head
 // of the stairs: she follows and q_grisel_out completes.
 // =chest: the last ride with every cage's crew seated: within 1 s of the win the reward chest stands in room 9 (table.vault, index 9000, no
 // mimic, no lock) and its line is logged; room 10's door revealed and open; the lead opens it and an item drops; a save and a load keep it,
-// opened; with the party in the safe room 40 s a group gathers inside the island (the cull spares the gathering's creatures: F12).
+// opened; with the party in the safe room 40 s a group gathers inside the island (the cull spares the gathering's creatures).
 public partial class DebugTools
 {
     private Npc? _ihA, _ihB;
@@ -42,6 +44,9 @@ public partial class DebugTools
     /// <summary>=grisel (plan 15 Task 8): her holds that stepped off the line before she was put on the lane cell.</summary>
     private int _ihStepsOffBefore, _ihStepsSeen;
     private bool _ihHeldSeen, _ihAHome, _ihLetOut, _ihCountdownOk, _ihListening, _ihGriselLogged, _ihChestLogged, _ihSpareGather;
+    /// <summary>=grisel: "Grisel is carried in over the bridge, still down." was logged.</summary>
+    private bool _ihCarriedLogged;
+    private Vector3 _ihOutsideAt;
     private int _ihLootBefore, _ihGatherBefore;
     private readonly List<string> _ihCrew = new();
 
@@ -53,11 +58,12 @@ public partial class DebugTools
         {
             if (_done || !_testIsland) return;
             if (text == CrewRescueController.GriselInLine) _ihGriselLogged = true;
+            if (text == CrewRescueController.GriselCarriedInLine) _ihCarriedLogged = true;
             if (text == CrewRescueController.RewardChestLine) _ihChestLogged = true;
         };
     }
 
-    /// <summary>=chest's gathering step: the cull spares the creatures holding at the safe room's gather cell (pre-flight F12).</summary>
+    /// <summary>=chest's gathering step: the cull spares the creatures holding at the safe room's gather cell.</summary>
     private bool IslandGathering(FloorLayout layout, Enemies.Enemy e)
         => _ihSpareGather && SafeRoomRules.GatherCell(layout) is { } c && DungeonBuilder.WorldToCell(e.GlobalPosition).ManhattanDistance(c) <= 2;
 
@@ -304,16 +310,16 @@ public partial class DebugTools
                 if (_ihArriveT is float.NaN) { _ihArriveT = _isTime; GD.Print($"[island] stranded: arrived at stop {rc.StopIndex} with the lead inside {Inside(layout, me)}; {IslandCrewStates(ctrl)}"); }
                 if (ctrl.StateOf(_ihB!) != CrewState.Lost) { if (_isTime - _ihArriveT > 1f) Fail($"{_ihB!.NpcName}, stranded outside, is {ctrl.StateOf(_ihB)} 1 s after the arrival"); break; }
                 GD.Print($"[island] stranded: {_ihB!.NpcName} Lost {_isTime - _ihArriveT:0.00} s after the arrival, at {At(_ihB)}; {_ihA!.NpcName} {ctrl.StateOf(_ihA)}; completed {ctrl.Completed}");
-                // Task 9 (the Task 7 re-review 3's Minor 1): the pin must be able to fail. Beside the lava the straight way to the lead crosses a drop, where
+                // Task 9: the pin must be able to fail. Beside the lava the straight way to the lead crosses a drop, where
                 // PathMover.Next answers null and a follower walking while held would stand still too; so the held outsider is moved to an outside cell whose
                 // straight line to the lead crosses no drop (rock between them), with open ground a cell along it: there a held follower that walked at its
-                // lead (fix round 2's code) would move more than 0.5 m, and one that holds where it is moves nothing
+                // lead (an earlier version of the hold) would move more than 0.5 m, and one that holds where it is moves nothing
                 if (IslandHoldPinCell(main, layout, me.GlobalPosition) is not { } pin) { Fail($"no outside cell near the lead whose straight line to it crosses no drop"); return; }
                 _ihB.GlobalPosition = main.Builder.Surface(pin) + Vector3.Up * 0.1f;
                 _ihB.Velocity = Vector3.Zero;
                 _ihLast = _ihB.GlobalPosition;
                 GD.Print($"[island] stranded: {_ihB.NpcName}, held, moved for the pin to {pin} ({new Vector2(me.GlobalPosition.X - _ihB.GlobalPosition.X, me.GlobalPosition.Z - _ihB.GlobalPosition.Z).Length():0.0} m from the lead, no drop on the line; inside {Inside(layout, _ihB)})");
-                _ihHoldAt = _ihB.GlobalPosition; // fix round 3: held, it holds where it is (Ruling 35)
+                _ihHoldAt = _ihB.GlobalPosition; // held, it holds where it is (Ruling 35)
                 _ihHoldDrift = 0f;
                 _isStep++; _isClock = 0f;
                 break;
@@ -346,7 +352,7 @@ public partial class DebugTools
                 if (!Inside(layout, me)) { Fail($"the lead teleported back stands outside at {At(me)}"); return; }
                 if (ctrl.StateOf(_ihB!) != CrewState.Lost) { if (_isClock > 1f) Fail($"with the lead back inside at {At(me)} {_ihB!.NpcName} is {ctrl.StateOf(_ihB)} 1 s on"); break; }
                 GD.Print($"[island] stranded: the lead back inside at {At(me)}: {_ihB!.NpcName} Lost {_isClock:0.00} s on; the lead goes down there (nobody else outside, no human up)");
-                // fix round 1 (I2): the lead down inside, held down (no calm auto-revive, no possession of a companion): no human is up
+                // the lead down inside, held down (no calm auto-revive, no possession of a companion): no human is up
                 party.AllowPossession = false;
                 me.State.Mangled = true;
                 me.State.Hp = 0;
@@ -367,7 +373,7 @@ public partial class DebugTools
             }
             case 8:
             {
-                // fix round 2 (item 7): the revived crewman is Home (seated in his wagon at the end) within 1 s of his revive
+                // the revived crewman is Home (seated in his wagon at the end) within 1 s of his revive
                 if (ctrl.StateOf(_ihA!) != CrewState.Home) { if (_isClock > 1f) { Fail($"{_ihA!.NpcName} is {ctrl.StateOf(_ihA)} 1 s after his revive"); return; } }
                 else if (!_ihAHome) { _ihAHome = true; GD.Print($"[island] stranded: {_ihA!.NpcName} Home {_isClock:0.00} s after his revive"); }
                 // every other crew member home: a Lost here would win the floor
@@ -488,25 +494,58 @@ public partial class DebugTools
                 if (!Inside(layout, g) || !StandsOk(layout, g) || d > 6f) { Fail($"Grisel brought in at {At(g)} (inside {Inside(layout, g)}), {d:0.0} m from {last.Name}"); return; }
                 if (!_ihHeldSeen) { Fail("Grisel's catch-up was never held while she was outside"); return; }
                 if (g.HoldStepsOff - _ihStepsOffBefore < 1) { Fail("put on the lane cell, Grisel's hold never stepped her off the rails (HoldStepsOff)"); return; }
+                _ihOutsideAt = _ihLast; // her last place outside, off the rails
+                _isStep = 6; _isClock = 0f;
+                break;
+            }
+            case 6 when _isClock >= 0.5f:
+            {
+                // spec B.8 (never stranded): downed outside where she was held, she is brought in downed (half a second on: the
+                // bring-in is once each time its condition starts, so she stands inside a while first, as she would in play)
+                var outsideAt = _ihOutsideAt;
+                _ihCarriedLogged = false;
+                g.GlobalPosition = outsideAt;
+                g.Velocity = Vector3.Zero;
+                g.GoDown();
+                GD.Print($"[island] grisel: put back outside at {DungeonBuilder.WorldToCell(outsideAt)} (inside {layout.InIsland(DungeonBuilder.WorldToCell(outsideAt))}) and downed (down {g.Downed})");
+                if (Inside(layout, g) || !g.Downed) { Fail($"Grisel was not downed outside (at {At(g)}, down {g.Downed})"); return; }
+                _isStep = 5; _isClock = 0f;
+                break;
+            }
+            case 5:
+            {
+                if (!_ihCarriedLogged)
+                {
+                    if (Inside(layout, g)) { Fail($"Grisel downed outside stands inside at {At(g)} before \"{CrewRescueController.GriselCarriedInLine}\""); return; }
+                    if (_isClock > 1f) Fail($"1 s after she was downed outside Grisel is still outside at {At(g)} (down {g.Downed}), not brought in");
+                    break;
+                }
+                var cell = DungeonBuilder.WorldToCell(g.GlobalPosition);
+                var offered = g.Prompt;
+                GD.Print($"[island] grisel: carried in downed {_isClock:0.00} s after she went down, at {cell} (inside {Inside(layout, g)}, rail {layout.IsRail(cell)}, down {g.Downed}), offering \"{offered}\"");
+                if (!Inside(layout, g) || !StandsOk(layout, g) || layout.IsRail(cell) || !g.Downed) { Fail($"Grisel carried in at {cell}: inside {Inside(layout, g)}, takes a body {StandsOk(layout, g)}, rail {layout.IsRail(cell)}, down {g.Downed}"); return; }
+                if (offered != $"Revive {g.NpcName}") { Fail($"Grisel carried in downed offers \"{offered}\", not \"Revive {g.NpcName}\""); return; }
+                if (!g.TryRevive() || g.Downed) { Fail($"Grisel carried in downed could not be revived (down {g.Downed}, revive taken {g.ReviveTaken})"); return; }
+                GD.Print($"[island] grisel: revived inside at {At(g)}, HP {g.Hp:0}");
                 // the party out at the head of the stairs (as --test-crew's forgiven branch): she follows them down there
                 if (me.Cart == rc.Cart) rc.Cart.Interact(party, me);
                 var stairs = root.GetNodeOrNull<Stairs>("DownStairs");
                 if (stairs == null) { Fail("no down stairs"); return; }
                 party.Teleport(stairs.GlobalTransform * new Vector3(0f, 0.3f, 1.2f), main.Builder.Surface(DungeonBuilder.WalkableNeighbor(layout, layout.DownStairs)));
                 _ihLast = g.GlobalPosition;
-                _isStep++; _isClock = 0f;
+                _isStep = 4; _isClock = 0f; // the walk to the stairs
                 break;
             }
             case 4:
             {
-                // fix round 2 (item 3): set down on her lead's side she is no longer held (the side gate is read every frame)
+                // set down on her lead's side she is no longer held (the side gate is read every frame)
                 if (g.CatchUpHeld && _isClock > 0.2f) { Fail($"Grisel, brought in beside the party, is still held {_isClock:0.0} s on"); return; }
-                // fix round 1 (M2): she walks there: never a jump of over 3 m in a frame (a catch-up)
+                // she walks there: never a jump of over 3 m in a frame (a catch-up)
                 if (g.GlobalPosition.DistanceTo(_ihLast) > 3f) { Fail($"Grisel was teleported from {DungeonBuilder.WorldToCell(_ihLast)} to {At(g)} on her way to the stairs"); return; }
                 _ihLast = g.GlobalPosition;
                 var q = Game.Instance.Adventure.Quests.Values.FirstOrDefault(x => x.Floor == 12 && x.GiverNpc == CrewRescueController.GriselId);
                 if (q?.Status != QuestStatus.Completed) { if (_isClock > 30f) Fail($"q_grisel_out is {q?.Status.ToString() ?? "missing"}: Grisel at {At(g)} (escorting {g.Escorting}, her catch-up held {g.CatchUpHeld}; the lead at {At(me)})"); break; }
-                Pass($"Grisel, left outside on ride {shape.Rides}'s lane cell as the train passed the bridge, stepped off the rails as her hold started and held there (never on a rail cell, never teleported, never inside, her catch-up held) until the arrival with the lead inside; brought in beside the train's last body within 1 s and \"{CrewRescueController.GriselInLine}\" logged; she walked with the party to the down stairs and {q.Id} completed {_isClock:0.0} s later");
+                Pass($"Grisel, left outside on ride {shape.Rides}'s lane cell as the train passed the bridge, stepped off the rails as her hold started and held there (never on a rail cell, never teleported, never inside, her catch-up held) until the arrival with the lead inside; brought in beside the train's last body within 1 s and \"{CrewRescueController.GriselInLine}\" logged; downed outside she was carried in downed within 1 s (\"{CrewRescueController.GriselCarriedInLine}\"), lay on an island cell offering her revive and stood again revived; she walked with the party to the down stairs and {q.Id} completed {_isClock:0.0} s later");
                 return;
             }
         }
@@ -543,7 +582,7 @@ public partial class DebugTools
             case 2:
             {
                 if (rc.State.Mode == CartMode.Wrecked) { Fail($"the last ride was wrecked at S={rc.State.S:0.0}"); return; }
-                // fix round 2 (M7): with the train past the bridge, a companion is stood on the chest's cell before the win: the chest must not stand on it
+                // with the train past the bridge, a companion is stood on the chest's cell before the win: the chest must not stand on it
                 if (!ctrl.Completed && _ihOnChest == null && rc.State.Mode == CartMode.Rolling && IslandRearS(rc) > enc.ExitToS + 0.5f && ctrl.RewardChestCell() is { } chestCell
                     && party.Active.FirstOrDefault(a => a != me && a.Cart == rc.Cart && !a.Downed) is { } mate)
                 {
@@ -566,7 +605,7 @@ public partial class DebugTools
                 }
                 if (!_ihChestLogged) problems.Add("its line not logged");
                 if (_ihOnChest == null) problems.Add("no companion was stood on the chest's cell");
-                else if (ctrl.ChestCellCleared < 1) problems.Add("ClearChestCell moved nobody off the chest's cell"); // fix round 3: the controller moved it, not its own walk
+                else if (ctrl.ChestCellCleared < 1) problems.Add("ClearChestCell moved nobody off the chest's cell"); // the controller moved it, not its own walk
                 else if (chest != null && DungeonBuilder.WorldToCell(_ihOnChest.GlobalPosition) == DungeonBuilder.WorldToCell(chest.GlobalPosition)) problems.Add($"{_ihOnChest.State.Name} still stands on the chest's cell");
                 if (door is not { Detected: true, IsOpen: true } || vault == null || layout.Rooms.IndexOf(vault.Room) != 10) problems.Add($"room 10's door: vault {vault?.Index} in room {(vault == null ? -1 : layout.Rooms.IndexOf(vault.Room))}, revealed {door?.Detected}, open {door?.IsOpen}");
                 if (problems.Count > 0) { if (_isTime - _ihT > 1f) Fail($"1 s after the win: {string.Join("; ", problems)}"); break; }

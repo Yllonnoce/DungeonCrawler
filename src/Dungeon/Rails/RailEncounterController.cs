@@ -135,6 +135,7 @@ public partial class RailEncounterController : Node
     private void OnCartEvent(CartEvent e)
     {
         if (NetSession.IsClient) return;
+        ParkedLatchOn(e); // the takeover's latch: cleared at the last stop's arrival, a restore or a wreck (plan 15 Ruling 25)
         switch (e.Kind)
         {
             case CartEventKind.Departed:
@@ -166,7 +167,6 @@ public partial class RailEncounterController : Node
             case CartEventKind.Arrived:
                 ClearRide(); // the ride's runaway is not cleared: it halts behind the held train first (Ruling 13)
                 ResetSwitchyard(undone: false, upToRide: e.Stop); // the finished rides' levers only: one thrown ahead for a later ride stays thrown
-                ParkedOnArrived(e.Stop); // the takeover's latch clears at the last stop (plan 15 Ruling 25)
                 break;
             case CartEventKind.OnFoot:
                 FreeRideRunaway("the party is on foot");

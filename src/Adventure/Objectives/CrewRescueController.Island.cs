@@ -35,7 +35,7 @@ public partial class CrewRescueController
 
     /// <summary>
     /// The players, each counted by <see cref="CrewRules.PlayerCount"/>: how many are up (not down), and how many stand outside the island, a downed
-    /// one too (it may be revived there: fix round 1, I2); and where the train is: held at the last stop, wrecked inside, or gone (wrecked and
+    /// one too (it may be revived there); and where the train is: held at the last stop, wrecked inside, or gone (wrecked and
     /// hidden). Read once a tick and at each judging. No allocation.
     /// </summary>
     private void ReadIsland()
@@ -75,7 +75,7 @@ public partial class CrewRescueController
     /// <summary>The unopened cages resolved by <see cref="ResolveUnopened"/> on this floor build (whether or not their stop was left already).</summary>
     private readonly HashSet<int> _cagesResolved = new();
 
-    /// <summary>The stops whose unopened cage <see cref="ResolveUnopened"/> resolved (the flows read it: fix round 1, I3).</summary>
+    /// <summary>The stops whose unopened cage <see cref="ResolveUnopened"/> resolved (the flows read it: a cage resolved here, not only one a restore left).</summary>
     internal IReadOnlyCollection<int> CagesResolved => _cagesResolved;
 
     /// <summary>
@@ -102,16 +102,19 @@ public partial class CrewRescueController
 
     /// <summary>The line logged when Grisel is brought in (a log line, not a bark).</summary>
     public const string GriselInLine = "Grisel picks her way in over the bridge behind you.";
+    /// <summary>The line logged when Grisel is brought in downed (a log line, not a bark): she lies there for a hero to revive.</summary>
+    public const string GriselCarriedInLine = "Grisel is carried in over the bridge, still down.";
 
     /// <summary>
-    /// Ruling 36 (server and solo, every tick, won or not): Grisel alive, up, escorting and on foot outside the island, with a human up, no player outside and
-    /// the train held at the end or wrecked inside (<see cref="CrewRules.BringEscortIn"/>), is set down on the island's set-down spot nearest the held train's
-    /// last body (after a wreck inside, beside the last stop's platform), once each time the condition starts; the log tells it.
+    /// Ruling 36 (server and solo, every tick, won or not): Grisel alive, escorting and on foot outside the island, up or downed (<see cref="CrewRules.EscortLeftOutside"/>;
+    /// spec B.8: never stranded), with a human up, no player outside and the train held at the end or wrecked inside (<see cref="CrewRules.BringEscortIn"/>), is set
+    /// down on the island's set-down spot nearest the held train's last body (after a wreck inside, beside the last stop's platform), once each time the condition
+    /// starts; the log tells it. Brought in downed, she stays down there for a hero inside to revive.
     /// </summary>
     private void BringEscortsIn()
     {
         var g = _grisel != null && IsInstanceValid(_grisel) ? _grisel : null;
-        var outside = g is { Dead: false, Downed: false, Escorting: true, Seated: false } && !Layout.InIsland(DungeonBuilder.WorldToCell(g.GlobalPosition));
+        var outside = g != null && CrewRules.EscortLeftOutside(g.Dead, g.Downed, g.Escorting, g.Seated, Layout.InIsland(DungeonBuilder.WorldToCell(g.GlobalPosition)));
         if (!CrewRules.BringEscortIn(outside, _upPlayers, _playersOutside, TrainAtEndOrWreckedInside) || _rails == null || !IsInstanceValid(_rails))
         {
             _escortInHeld = false;
@@ -120,8 +123,8 @@ public partial class CrewRescueController
         if (_escortInHeld) return;
         _escortInHeld = true;
         var near = EscortInNear();
-        // the island's set-down spot nearest it (RailEncounterController.IslandSetDown: island cells, never a drop, a prop or a barrel's cell, here never a rail; fix round 1:
-        // a lane-side cell could be a barrel's, and she stood wedged in it)
+        // the island's set-down spot nearest it (RailEncounterController.IslandSetDown: island cells, never a drop, a prop or a barrel's cell, here never a rail:
+        // a lane-side cell could be a barrel's, and she would stand wedged in it)
         var at = near;
         var best = float.MaxValue;
         if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc))
@@ -132,8 +135,8 @@ public partial class CrewRescueController
         g!.GlobalPosition = at;
         g.Velocity = Vector3.Zero;
         g.FaceToward(near);
-        EventBus.Instance.Log(GriselInLine);
-        GD.Print($"[CrewRescue] island: {g.NpcName} brought in beside the held train at {DungeonBuilder.WorldToCell(at)}");
+        EventBus.Instance.Log(g.Downed ? GriselCarriedInLine : GriselInLine);
+        GD.Print($"[CrewRescue] island: {g.NpcName} brought in{(g.Downed ? " downed" : "")} beside the held train at {DungeonBuilder.WorldToCell(at)}");
     }
 
     /// <summary>How many of the island's set-down spots (nearest the lane's first cell past the bridge) the bring-in looks among.</summary>
@@ -168,7 +171,7 @@ public partial class CrewRescueController
 
     /// <summary>
     /// The win (server and solo): the chest stands, clients are told (<c>PropEvt chest:9000 "stood"</c>) and the log says where; one kept standing (a
-    /// win a wipe took back, won again) is only pointed to. With no free exit cell for it the vault door's line is logged instead (fix round 1, M9).
+    /// win a wipe took back, won again) is only pointed to. With no free exit cell for it the vault door's line is logged instead (the win is still told).
     /// </summary>
     private void StandRewardChestOnWin()
     {
@@ -219,7 +222,7 @@ public partial class CrewRescueController
     }
 
     /// <summary>
-    /// Fix round 1 (M7), server and solo: every body on foot standing on the chest's <paramref name="cell"/> (a hero, an NPC, a creature) steps off to the
+    /// Server and solo: every body on foot standing on the chest's <paramref name="cell"/> (a hero, an NPC, a creature) steps off to the
     /// nearest free cell round it, so the solid chest never stands on anyone. The cell itself stays the rule's (build-time state only), so every peer
     /// stands its chest on the same cell. Returns how many moved.
     /// </summary>
@@ -233,7 +236,7 @@ public partial class CrewRescueController
             foreach (var hero in party.Adventurers)
             {
                 if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || DungeonBuilder.WorldToCell(hero.GlobalPosition) != cell) continue;
-                hero.Shove(Off()); // fix round 2: a remote player's client is told (a ForcePose), or its next pose would put its hero back on the cell
+                hero.Shove(Off()); // a Shove, not a teleport: a remote player's client is told (a ForcePose), or its next pose would put its hero back on the cell
                 moved++;
             }
         foreach (var child in _root.GetChildren())

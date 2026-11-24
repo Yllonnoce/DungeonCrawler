@@ -20,6 +20,25 @@ public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
     public const float TubHeight = 0.9f;
     public const float TubWidth = 1.4f;
     public const float TubLength = CartRules.HalfLength * 2f;
+    /// <summary>
+    /// A tub thrown clear (the party cart's wreck, the parked train's smash): a rigid copy of <paramref name="tubBody"/>'s "Body" look on layer 0
+    /// (the floor only, cosmetic and silent) named <paramref name="name"/>, under <paramref name="root"/> where the tub stands, thrown with
+    /// <paramref name="linear"/> and <paramref name="angular"/> and freed after <paramref name="seconds"/>. Null when the tub has no look.
+    /// </summary>
+    public static RigidBody3D? Tumble(Node3D root, Node3D tubBody, string name, Vector3 linear, Vector3 angular, float seconds)
+    {
+        if (tubBody.GetNodeOrNull<Node3D>("Body") is not { } body) return null;
+        var tub = new RigidBody3D { Name = name, CollisionLayer = 0, CollisionMask = 1, Mass = 300f };
+        tub.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(TubWidth, TubHeight, TubLength) }, Position = new Vector3(0, TubBottom + TubHeight / 2f, 0) });
+        tub.AddChild(body.Duplicate());
+        root.AddChild(tub);
+        tub.GlobalTransform = tubBody.GlobalTransform;
+        tub.LinearVelocity = linear;
+        tub.AngularVelocity = angular;
+        root.GetTree().CreateTimer(seconds).Timeout += () => { if (IsInstanceValid(tub)) tub.QueueFree(); };
+        return tub;
+    }
+
     /// <summary>The floor inside the tub: a seated rider's feet (and body origin) rest here.</summary>
     public const float InsideFloor = TubBottom + 0.14f;
     /// <summary>The seat planks stand this high above the inside floor.</summary>

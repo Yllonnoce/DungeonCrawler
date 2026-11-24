@@ -199,17 +199,11 @@ public partial class ParkedTrain : Node3D, ISoundPoint
 
     private void Tumble(Node3D root, Node3D tubBody, Vector3 velocity, int k)
     {
-        if (tubBody.GetNodeOrNull<Node3D>("Body") is not { } body) return;
-        var tub = new RigidBody3D { Name = $"{TumbleName}{k}", CollisionLayer = 0, CollisionMask = 1, Mass = 300f };
-        tub.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(MineCart.TubWidth, MineCart.TubHeight, MineCart.TubLength) }, Position = new Vector3(0, MineCart.TubBottom + MineCart.TubHeight / 2f, 0) });
-        tub.AddChild(body.Duplicate());
-        root.AddChild(tub);
-        tub.GlobalTransform = tubBody.GlobalTransform;
         var basis = tubBody.GlobalTransform.Basis;
         var outward = basis.X * OuterSide;
-        tub.LinearVelocity = velocity * (0.8f - 0.12f * k) + outward * (2.5f + 0.4f * k) + Vector3.Up * 4f; // the cart takes the hardest hit, the far tubs less
-        tub.AngularVelocity = -basis.Z * (2f + 0.3f * k) * OuterSide + basis.X * 1.5f + Vector3.Up * 1f;
-        GetTree().CreateTimer(ParkedRules.TumbleSeconds).Timeout += () => { if (IsInstanceValid(tub)) tub.QueueFree(); };
+        MineCart.Tumble(root, tubBody, $"{TumbleName}{k}",
+            velocity * (0.8f - 0.12f * k) + outward * (2.5f + 0.4f * k) + Vector3.Up * 4f, // the cart takes the hardest hit, the far tubs less
+            -basis.Z * (2f + 0.3f * k) * OuterSide + basis.X * 1.5f + Vector3.Up * 1f, ParkedRules.TumbleSeconds);
     }
 
     public override void _Process(double delta)

@@ -87,6 +87,7 @@ public static class RideSound
         ("buffer", "smashed") => "timber_smash",
         ("barricade", "cut") => "crate_break",
         ("barricade", "smashed") => "timber_smash",
+        ("parked", "smashed") => "timber_smash", // ride 5's parked train (plan 15), as the barricade it took the place of
         _ => null,
     };
 

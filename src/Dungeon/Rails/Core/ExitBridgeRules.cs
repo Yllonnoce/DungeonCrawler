@@ -39,7 +39,13 @@ public static class ExitBridgeRules
     public static bool SetDownPastFarEdge(float bodyS, float toS) => bodyS <= toS;
 
     /// <summary>
-    /// Where a body steps out by party-lane index <paramref name="laneIndex"/> (Ruling 12, as fix round 1 ruled): today's
+    /// The free island cell rider <paramref name="i"/> of a set-down inside is given among <paramref name="free"/> found (nearest first): its own while
+    /// they last, then they are shared in turn; −1 with none (the caller's lane cell, the only place left).
+    /// </summary>
+    public static int SpotIndex(int i, int free) => free <= 0 ? -1 : i % free;
+
+    /// <summary>
+    /// Where a body steps out by party-lane index <paramref name="laneIndex"/> (Ruling 12): today's
     /// <see cref="CartSeats.ExitCell"/> when that cell may take a body (<see cref="CrevasseRules.SetDownOk"/>); otherwise the at-stop exit cell
     /// of the nearest party index, searched outward i+1, i−1, i+2, i−2, … (ties to the higher index), whose result holds a body. None
     /// anywhere: today's cell. On an exit-island floor the body keeps its side (<paramref name="inside"/>: true inside the island, false
@@ -86,13 +92,13 @@ public static class ExitBridgeRules
     public const int HoldStepReach = 4;
 
     /// <summary>
-    /// Where a follower whose catch-up hold starts at <paramref name="here"/> steps first (Ruling 35 as plan 15 Task 8 ruled; fix round 1, M2 and M3):
+    /// Where a follower whose catch-up hold starts at <paramref name="here"/> steps first (Ruling 35 as plan 15 Task 8 ruled):
     /// on a rail cell, the nearest cell (straight distance, ties by (Y, X)) off the rails, on its own side of the island (<paramref name="inside"/>), that
     /// may take a body (<see cref="CrevasseRules.SetDownOk"/>), holds no barrel (<see cref="FloorLayout.BreakableSpawns"/>), is not <paramref name="blocked"/>
     /// (a closed door or a solid prop) and not <paramref name="taken"/> (another body's), within <see cref="HoldStepReach"/> cells and reached from
     /// <paramref name="here"/> by 4-neighbour steps over such cells (rail cells may be walked over, never answered), all within that reach: so a held follower
-    /// never stands where the lift stands again or a cart runs, and never steps across a drop, through a door or a prop, or past a barrel or a body (Task 9,
-    /// the Task 8 re-review's N1). Null off the rails (it holds where it is) or with no such cell near.
+    /// never stands where the lift stands again or a cart runs, and never steps across a drop, through a door or a prop, or past a barrel or a body (Task 9).
+    /// Null off the rails (it holds where it is) or with no such cell near.
     /// </summary>
     public static GridPos? HoldStepOff(FloorLayout l, GridPos here, bool inside, Func<GridPos, bool>? blocked = null, ISet<GridPos>? taken = null)
     {

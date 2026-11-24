@@ -18,8 +18,10 @@ public partial class ServerWorld : Node
     public ServerHandshake Handshake { get; private set; } = null!;
     private INetTransport _t = null!;
     private readonly List<string> _logBatch = new();
-    /// <summary>Each enemy's place and flags as last sent, by (peer, net id) (plan 15 Task 8 and its fix round 1: per peer, so a later peer is never starved by the first one's send).</summary>
+    /// <summary>Each enemy's place and flags as last sent, by (peer, net id) (plan 15 Task 8: per peer, so a later peer is never starved by the first one's send).</summary>
     private readonly EnemySnapshotMemory _enemySent = new();
+    /// <summary>The enemies a full snapshot carries (reused): <see cref="EnemySnapshotMemory.Keep"/> drops the rest.</summary>
+    private readonly HashSet<int> _enemyIds = new();
     private float _fullSnapshotTimer;
     private float _autosaveTimer;
     private float _statusTimer;
@@ -62,7 +64,7 @@ public partial class ServerWorld : Node
         bus.EnemyDied += e => { if (!Quiet) { Broadcast(new EnemyDied(e.NetId, -1)); Trace.Add("kill"); } };
         bus.ProjectileFired += p => { if (!Quiet) Broadcast(new ProjectileSpawned(0, Vec(p.GlobalPosition), Vec(p.Velocity), p.IsArrow, p.Color.ToRgba32(), p.SourceMember)); };
         bus.MemberDowned += i => Broadcast(new MemberDownedEvt(i));
-        bus.MemberRevived += i => { _mangledSince.Remove(i); _bound.Remove(i); Broadcast(new MemberRevivedEvt(i)); };
+        bus.MemberRevived += i => { _mangledSince.Remove(i); _bound.Remove(i); _boundHere.Remove(i); Broadcast(new MemberRevivedEvt(i)); };
         bus.LevelUp += i => Broadcast(new LevelUpEvt(i));
         bus.MemberKill += m => { var idx = Array.IndexOf(Main.Instance.Party.Members, m); if (idx >= 0) Broadcast(new EmoteEvt(idx, "victory")); };
         bus.PartyWiped += () => Broadcast(new PartyWipedEvt());
@@ -918,6 +920,11 @@ public partial class ServerWorld : Node
 
     private readonly Dictionary<int, float> _mangledSince = new();
     private readonly HashSet<int> _bound = new();
+    /// <summary>
+    /// Members left where they fell on an island floor while a human is up outside (<see cref="MangledRules.BindChoice.StayHere"/>): freeable there,
+    /// and judged again every tick until the last of them is gone in, when the body is bound inside the island.
+    /// </summary>
+    private readonly HashSet<int> _boundHere = new();
     /// <summary>Members the server has bound ahead (tests and the HUD read it).</summary>
     public IReadOnlySet<int> Bound => _bound;
 
@@ -926,13 +933,32 @@ public partial class ServerWorld : Node
         var main = Main.Instance;
         if (main == null || !main.InGame || main.Builder.Layout is not { } layout || main.Exploration is not { } exploration) return;
         var party = main.Party;
+        var islandFloor = layout.Rail?.Island != null;
         foreach (var b in party.Active)
         {
-            if (!b.Downed || !b.State.Mangled) { _mangledSince.Remove(b.Index); _bound.Remove(b.Index); continue; }
-            if (_bound.Contains(b.Index)) continue;
+            if (!b.Downed || !b.State.Mangled) { _mangledSince.Remove(b.Index); _bound.Remove(b.Index); _boundHere.Remove(b.Index); continue; }
+            if (_bound.Contains(b.Index) && !_boundHere.Contains(b.Index)) continue;
             var since = _mangledSince.GetValueOrDefault(b.Index) + dt;
             _mangledSince[b.Index] = since;
             if (since < MangledRules.BoundAfterSeconds) continue;
+            // plan 15's exit island: no walk crosses the lava, so a body outside is never bound ahead
+            var outside = islandFloor && !layout.InIsland(DungeonBuilder.WorldToCell(b.GlobalPosition));
+            switch (MangledRules.IslandBind(islandFloor, outside, outside ? UpHumansOutside(party, layout) : 0))
+            {
+                case MangledRules.BindChoice.StayHere:
+                    _bound.Add(b.Index); // freeable where it lies, its hazard armed or not, as a body bound ahead is
+                    if (_boundHere.Add(b.Index)) GD.Print($"[net-server] {b.State.Name} lies crushed outside the island: a friend up outside can free them there");
+                    continue;
+                case MangledRules.BindChoice.Island:
+                    _boundHere.Remove(b.Index);
+                    _bound.Add(b.Index);
+                    if (IslandBindSpot(party, layout, b) is not { } spot) continue;
+                    b.Shove(spot + Vector3.Up * 0.3f);
+                    EventBus.Instance.Log($"{b.State.Name} is bound in the dark ahead.");
+                    Trace.Add($"bound:{b.State.Name}");
+                    GD.Print($"[net-server] {b.State.Name}, crushed outside with nobody up outside, is bound inside the island at {DungeonBuilder.WorldToCell(spot)}");
+                    continue;
+            }
             var living = party.Active.Where(a => !a.Downed).Select(a => DungeonBuilder.WorldToCell(a.GlobalPosition)).ToList();
             var cell = MangledRules.BoundCell(layout, exploration.Seen, living, Dungeon.Generation.HazardPlanner.CriticalPath(layout));
             _bound.Add(b.Index); // decided once: a body with nowhere to go stays where it fell
@@ -942,6 +968,38 @@ public partial class ServerWorld : Node
             Trace.Add($"bound:{b.State.Name}");
         }
     }
+
+    /// <summary>Humans up outside the exit island (<see cref="Adventure.Objectives.CrewRules.PlayerCount"/>: not parked, fallen or down).</summary>
+    private static int UpHumansOutside(PartyController party, Dungeon.Generation.FloorLayout layout)
+    {
+        var n = 0;
+        foreach (var hero in party.Adventurers)
+        {
+            if (!IsInstanceValid(hero)) continue;
+            var (up, outside) = Adventure.Objectives.CrewRules.PlayerCount(hero.Control is ControlKind.LocalHuman or ControlKind.Remote, hero.Parked, hero.State.Fallen,
+                hero.Downed, hero.State.Mangled, layout.InIsland(DungeonBuilder.WorldToCell(hero.GlobalPosition)));
+            if (up && outside) n++;
+        }
+        return n;
+    }
+
+    /// <summary>
+    /// Where a crushed body left outside is bound inside the island: the first of the island's set-down spots (<see cref="Dungeon.Rails.RailEncounterController.IslandSetDown"/>:
+    /// island cells, never a drop, a prop, a barrel's cell or a rail) no other party body stands on, else the first; null without an island or its controller.
+    /// </summary>
+    private static Vector3? IslandBindSpot(PartyController party, Dungeon.Generation.FloorLayout layout, Adventurer body)
+    {
+        if (Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc)) return null;
+        var spots = enc.IslandSetDown(IslandBindSpots);
+        if (spots.Count == 0) return null;
+        var standing = party.Adventurers.Where(a => IsInstanceValid(a) && a != body).Select(a => DungeonBuilder.WorldToCell(a.GlobalPosition)).ToHashSet();
+        foreach (var spot in spots)
+            if (!standing.Contains(DungeonBuilder.WorldToCell(spot))) return spot;
+        return spots[0];
+    }
+
+    /// <summary>How many of the island's set-down spots a crushed body's binding looks among.</summary>
+    private const int IslandBindSpots = 12;
 
     public int RejectedPoses { get; private set; }
     private readonly Dictionary<int, Vector3> _firstPose = new();
@@ -1050,8 +1108,10 @@ public partial class ServerWorld : Node
         var party = main.Party;
         var bodies = party.Active.ToList();
         var enemies = new List<EntityState>();
+        _enemyIds.Clear();
         foreach (var e in root.GetChildren().OfType<Enemy>())
         {
+            if (full) _enemyIds.Add(e.NetId);
             var pos = e.GlobalPosition;
             var near = bodies.Any(b => b.GlobalPosition.DistanceSquaredTo(pos) < Protocol.SnapshotInterestRadius * Protocol.SnapshotInterestRadius);
             byte flags = 0;
@@ -1064,6 +1124,7 @@ public partial class ServerWorld : Node
             if (!_enemySent.Offer(peer, e.NetId, pos.X, pos.Y, pos.Z, flags, full, near && !e.IsUnaware)) continue;
             enemies.Add(new EntityState(e.NetId, new NetVec(pos.X, pos.Y, pos.Z), e.Rotation.Y, e.Hp, EnemyStateCodes.Encode(e.State.Name), flags));
         }
+        if (full) _enemySent.Keep(peer, _enemyIds); // a freed enemy's rows go with the full snapshot that no longer carries it
         var npcs = root.GetChildren().OfType<Npc>().Select(n =>
         {
             byte f = 0;

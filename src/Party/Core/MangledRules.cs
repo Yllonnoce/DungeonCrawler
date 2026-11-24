@@ -28,6 +28,36 @@ public static class MangledRules
         return true;
     }
 
+    /// <summary>Where the safety valve puts a body nobody rescued in <see cref="BoundAfterSeconds"/> (<see cref="IslandBind"/>).</summary>
+    public enum BindChoice
+    {
+        /// <summary>As on every floor: bound ahead on the walk to the down stairs (<see cref="BoundCell"/>), decided once.</summary>
+        Ahead,
+        /// <summary>It stays where it fell, freeable there, judged again every tick.</summary>
+        StayHere,
+        /// <summary>Bound on one of the exit island's set-down spots, still crushed, for anyone inside to free.</summary>
+        Island,
+    }
+
+    /// <summary>
+    /// On a floor with an exit island (plan 15) the walk from the up stairs to the down stairs crosses the lava, so a body left outside
+    /// could never be bound ahead: while a human is up outside (<paramref name="upHumansOutside"/>) it stays where it fell, where they can free it; with
+    /// none (the last of them rode the lift in) it is bound inside the island. A body inside, and every other floor, go on as before.
+    /// </summary>
+    public static BindChoice IslandBind(bool islandFloor, bool outsideIsland, int upHumansOutside)
+        => !islandFloor || !outsideIsland ? BindChoice.Ahead : upHumansOutside > 0 ? BindChoice.StayHere : BindChoice.Island;
+
+    /// <summary>
+    /// A crushed player's banner (a client's HUD), <paramref name="sinceMangled"/> seconds on: the countdown to the safety valve, then where the body is
+    /// and who can free it. On an island floor a body still outside after the valve is there only while a friend is up outside (<see cref="IslandBind"/>).
+    /// </summary>
+    public static string Banner(float sinceMangled, bool islandFloor, bool outsideIsland)
+    {
+        var left = BoundAfterSeconds - sinceMangled;
+        if (left > 0f) return $"Crushed. Rescue in {Math.Ceiling(left):0}s, or wait to be found";
+        return islandFloor && outsideIsland ? "Crushed. A friend out here can free you" : "Crushed. Bound in the dark ahead; a friend can free you";
+    }
+
     public static bool RescueAllowed(bool hazardArmed, float distance, bool rescuerDowned)
         => hazardArmed && distance <= RescueRange && !rescuerDowned;
 

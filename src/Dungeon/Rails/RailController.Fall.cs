@@ -114,7 +114,7 @@ public partial class RailController
     }
 
     /// <summary>Heroes in the world and on their feet (not down, not fallen, not parked). No allocation.</summary>
-    private static int StandingHeroes()
+    internal static int StandingHeroes()
     {
         var standing = 0;
         if (Main.Instance?.Party is { } party)

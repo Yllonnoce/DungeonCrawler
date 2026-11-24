@@ -494,7 +494,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>
     /// The rail controller's <see cref="RailController.WagonCrewPrompt"/>, on every peer: "Revive {name}" for a downed crew member seated in the
     /// wagon, only when the revive would be taken (<see cref="Npc.ReviveTaken"/>: no living hostile within the clear radius). One the game would
-    /// refuse offers nothing, so it never stands in a move's place (plan 15 Task 0, the plan 14 final re-review's N1).
+    /// refuse offers nothing, so it never stands in a move's place (plan 15 Task 0).
     /// </summary>
     private string WagonCrewPrompt(TrainWagon wagon, Adventurer hero) => PropPromptRules.WagonPrompt(RevivableIn(wagon)?.NpcName);
 
@@ -1042,11 +1042,13 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>
     /// A client's copy for the HUD: home and lost crew from the server's state (the crew's seats come from the seat messages).
     /// The open cages and the orc's keys are rail props: they come only from the server's PropEvts and the prop check's rail
-    /// part, never from here (one writer per fact: a stale objective state cannot undo a newer PropEvt).
+    /// part, never from here (one writer per fact: a stale objective state cannot undo a newer PropEvt). The win's reward chest is mended
+    /// here, forward only (a client missing it stands it; nothing here takes one away), as <see cref="ShowForward"/> stands it at a build.
     /// </summary>
     public override void ApplyNet(ObjectiveStateDto dto)
     {
         base.Restore(dto);
+        if (dto.RewardChest == true) ShowRewardChest(); // plan 15 Ruling 37: idempotent, from the same cell rule
         var home = (dto.HomeCrew ?? new List<string>()).ToHashSet();
         var lost = (dto.LostCrew ?? new List<string>()).ToHashSet();
         foreach (var npc in _crew)

@@ -64,7 +64,7 @@ public partial class RailController : Node
     internal IReadOnlyCollection<int> CrewLeftAt => _crewLeftAt;
 
     /// <summary>
-    /// The prisoners at <paramref name="stop"/> are left behind though the cart is not held there (server and solo; plan 15 Ruling 33, pre-flight F3): the
+    /// The prisoners at <paramref name="stop"/> are left behind though the cart is not held there (server and solo; plan 15 Ruling 33): the
     /// crew controller resolves the island floor's unopened cages once a human is up and no player is outside (a downed one counted) with the train at the
     /// end or wrecked inside. True when
     /// the stop was added (it was not left already).
@@ -228,9 +228,9 @@ public partial class RailController : Node
     /// A wagon's prompt for <paramref name="hero"/>, on every peer: a lost wagon offers nothing; a coupled one its plain prompt first
     /// (<see cref="WagonPlainPrompt"/>: the crew's revive, its own rider's "Get out") where that use stands (<see cref="PlainUseStands"/>: within
     /// the server's reach of the wagon), and otherwise the move offered to it (<see cref="MoveOfferFor"/>: "Climb back to wagon N", "Climb forward
-    /// to wagon N"). A press is the same: a use of a car whose plain use stands is that use, never a move (<see cref="IsMovePress"/>; the final
-    /// review's I1). A revive the game would refuse is no plain prompt at all (the crew controller's, plan 15 Task 0, N1), and a car the yaw
-    /// points to beyond the reach offers its move, not a revive the server would drop (N2).
+    /// to wagon N"). A press is the same: a use of a car whose plain use stands is that use, never a move (<see cref="IsMovePress"/>).
+    /// A revive the game would refuse is no plain prompt at all (the crew controller's, plan 15 Task 0), and a car the yaw
+    /// points to beyond the reach offers its move, not a revive the server would drop.
     /// </summary>
     private string WagonPrompt(TrainWagon wagon, Adventurer hero)
     {
@@ -254,7 +254,7 @@ public partial class RailController : Node
     /// The plain use of <paramref name="thing"/> (a car of the train) stands for <paramref name="hero"/>, on every peer: its plain prompt offers
     /// something (<see cref="PlainPromptOf"/>) and it is within the server's reach (<see cref="InUseReach"/>). Where it stands it wins over a
     /// move to the car, in the look (<see cref="Adventurer"/>'s view), the prompt (<see cref="WagonPrompt"/>) and the press (<see cref="IsMovePress"/>)
-    /// alike (plan 15 Task 0, the plan 14 final re-review's N2).
+    /// alike (plan 15 Task 0).
     /// </summary>
     public bool PlainUseStands(object thing, Adventurer hero) => PlainPromptOf(thing, hero) is { Length: > 0 } && InUseReach(thing, hero);
 
@@ -274,7 +274,7 @@ public partial class RailController : Node
     /// <summary>
     /// "Get out" of <paramref name="wagon"/> is offered to and taken from its own rider <paramref name="hero"/>: <see cref="WagonGetOutOk"/>, and
     /// <see cref="TrainMoveRules.ReviveGetOutGrace"/> after the wagon last offered a revive here (<see cref="TrainWagon.ReviveSeenAt"/>), so a stale
-    /// "Revive" press never gets its presser out (plan 15 Task 0, fix round 1, M1).
+    /// "Revive" press never gets its presser out (plan 15 Task 0).
     /// </summary>
     private bool WagonGetOutOffered(Adventurer hero, TrainWagon wagon) => WagonGetOutOk(hero) && TrainMoveRules.GetOutAfterRevive(_now - wagon.ReviveSeenAt);
 
@@ -1031,7 +1031,7 @@ public partial class RailController : Node
 
     /// <summary>
     /// <see cref="StandBesideCart()"/> for a follower now at <paramref name="follower"/> (an escort's seated-lead catch-up): it keeps the
-    /// follower's side of the exit island (fix round 1 of plan 15 Task 3), so a body outside is never caught up across the lava.
+    /// follower's side of the exit island (plan 15 Task 3), so a body outside is never caught up across the lava.
     /// </summary>
     public Vector3 StandBesideCart(Vector3 follower)
         => _builder.Surface(ExitCellNear(Cart.GlobalPosition, true, false, ExitBridgeRules.SideOf(_layout, DungeonBuilder.WorldToCell(follower)))) + Vector3.Up * 0.1f;
@@ -1255,7 +1255,7 @@ public partial class RailController : Node
     /// </summary>
     private void Wreck(bool fall = false, bool seen = false)
     {
-        if (Lift == null) EndChase(atOnce: true); // a chase ends with the train's wreck: its riders step out beside the chaser (the lift rolls on to its limit: Ruling 29)
+        if (Lift == null) EndChase(atOnce: true); // a chase ends with the train's wreck, inside or not: its riders step out beside the chaser, on its side (the lift rolls on to its limit: Ruling 29)
         Wrecks++;
         WreckedAt = Cart.GlobalPosition;
         LastWreckFell = fall;
@@ -1307,7 +1307,7 @@ public partial class RailController : Node
     /// A plain wreck with the cart's front at or past the exit bridge's start (plan 15, Ruling 11), after the wreck's event: no spare takes over
     /// and no OnFoot event is raised. Every rider of the cart and of each coupled wagon, crew included, is set down inside the island: on its
     /// set-down spots (<see cref="RailEncounterController.IslandSetDown"/>) when the rider's car stands at or short of the bridge's far edge,
-    /// beside the lane where it is (<see cref="ExitCellNear"/>) when it is past it. Heroes take the plain wreck's toll, crew none (pre-flight F9);
+    /// beside the lane where it is (<see cref="ExitCellNear"/>) when it is past it. Heroes take the plain wreck's toll, crew none (they are only jolted);
     /// crew set down follow the lead. Then the train is uncoupled (lost: hidden, not solid; a restore couples fresh), the cart hidden, and the
     /// stop taken as the last.
     /// </summary>
@@ -1364,16 +1364,9 @@ public partial class RailController : Node
     /// </summary>
     private void Tumble()
     {
-        if (!IsInsideTree() || GetParent() is not Node3D root || Cart.GetNodeOrNull<Node3D>("Body") is not { } body) return;
-        var tub = new RigidBody3D { Name = "CartTumble", CollisionLayer = 0, CollisionMask = 1, Mass = 300f };
-        tub.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(MineCart.TubWidth, MineCart.TubHeight, MineCart.TubLength) }, Position = new Vector3(0, MineCart.TubBottom + MineCart.TubHeight / 2f, 0) });
-        tub.AddChild(body.Duplicate());
-        root.AddChild(tub);
-        tub.GlobalTransform = Cart.GlobalTransform;
+        if (!IsInsideTree() || GetParent() is not Node3D root) return;
         var basis = Cart.GlobalTransform.Basis;
-        tub.LinearVelocity = Cart.Velocity + Vector3.Up * 4f;
-        tub.AngularVelocity = -basis.Z * 3f + basis.X * 1.5f + Vector3.Up * 1f;
-        GetTree().CreateTimer(TumbleSeconds).Timeout += () => { if (IsInstanceValid(tub)) tub.QueueFree(); };
+        MineCart.Tumble(root, Cart, "CartTumble", Cart.Velocity + Vector3.Up * 4f, -basis.Z * 3f + basis.X * 1.5f + Vector3.Up * 1f, TumbleSeconds);
     }
 
     /// <summary>No spare took over: the real cart's body is hidden and not solid, and kept for a Restore.</summary>
@@ -1396,7 +1389,7 @@ public partial class RailController : Node
             EventBus.Instance.Log("No carts left. The rest is on foot.");
             Raise(new CartEvent(CartEventKind.OnFoot, Stop: StopIndex));
             HideWreck(); // the tumble was the wreck: nothing is left standing on the line (the node stays for a Restore)
-            ClearTheLiftsSpan(); // the lift stands next tick: no party wagon is left shown in its place (Task 5 review 7)
+            ClearTheLiftsSpan(); // the lift stands next tick: no party wagon is left shown in its place
             return;
         }
         _spares.Use(pick);

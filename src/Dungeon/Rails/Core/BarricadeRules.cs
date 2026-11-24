@@ -21,6 +21,8 @@ public static class BarricadeRules
     public const float SmashHpFraction = 0.15f;
     /// <summary>The fraction of its speed a cart keeps through a smash.</summary>
     public const float SpeedKept = 0.8f;
+    /// <summary>A barricade's smash hurts the cart's seated heroes only, as plan 11 has it (the parked train's reaches the whole train: <see cref="ParkedRules.SmashReachesWholeTrain"/>).</summary>
+    public const bool SmashReachesWholeTrain = false;
     /// <summary>The call comes this far before the face (about six seconds at cruise).</summary>
     public const float CallAhead = 35f;
     /// <summary>From the barricade's middle to the face a cart meets.</summary>
@@ -31,6 +33,9 @@ public static class BarricadeRules
 
     /// <summary>A smash's share of a seated hero's max HP: <see cref="SmashHpFraction"/> at the default lethality, scaled by the party's damage scale.</summary>
     public static float SmashFraction(float partyDamageScale) => SmashHpFraction * partyDamageScale / TierRules.DefaultLethality;
+
+    /// <summary>A smash's cost books the seated heroes of car <paramref name="car"/> (0 the cart, 1.. its wagons): the cart's always, a wagon's only with <paramref name="wholeTrain"/>.</summary>
+    public static bool SmashBooks(int car, bool wholeTrain) => car == 0 || wholeTrain;
 
     /// <summary>The HP a smash takes from a hero at <paramref name="hp"/> of <paramref name="maxHp"/>: its fraction, but never below 1 HP.</summary>
     public static float SmashDamage(float maxHp, float hp, float partyDamageScale)

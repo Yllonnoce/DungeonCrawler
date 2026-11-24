@@ -78,8 +78,9 @@ public partial class RailEncounterController
 
     /// <summary>
     /// <paramref name="count"/> places a wreck inside sets its riders down on (Ruling 11): from <see cref="CrevasseRules.SetDownCells"/> round
-    /// the party lane's first cell past the bridge, island cells only, never a drop, a blocked cell (a prop) or a breakable's cell, the cells off the rails first; when too few, the rest
-    /// share that lane cell. Each is the cell's floor point.
+    /// the party lane's first cell past the bridge, nearest first, island cells only, never a drop, a blocked cell (a prop), a breakable's cell (a barrel
+    /// stands there) or a rail cell (the lift runs on the lane and the train stands there); when too few, the rest share those cells in turn
+    /// (<see cref="ExitBridgeRules.SpotIndex"/>), and only with none at all that lane cell. Each is the cell's floor point.
     /// </summary>
     internal List<Vector3> IslandSetDown(int count)
     {
@@ -87,9 +88,9 @@ public partial class RailEncounterController
         if (_layout.Rail is not { Island: { } island } rail || count <= 0) return spots;
         var near = rail.Party[Math.Min(island.Bridge.To + 1, rail.Party.Count - 1)];
         var found = CrevasseRules.SetDownCells(_layout, near, 81)
-            .Where(c => island.Cells.Contains(c) && CrevasseRules.SetDownOk(_layout, c) && !_builder.IsCellBlocked(c) && !_layout.BreakableSpawns.Contains(c)).Distinct() // never on a prop or a barrel (fix round 1, M4)
-            .OrderBy(c => _layout.IsRail(c) ? 1 : 0).ToList(); // a stable sort: nearest first within each
-        for (var i = 0; i < count; i++) spots.Add(_builder.Surface(i < found.Count ? found[i] : near));
+            .Where(c => island.Cells.Contains(c) && CrevasseRules.SetDownOk(_layout, c) && !_layout.IsRail(c) && !_builder.IsCellBlocked(c) && !_layout.BreakableSpawns.Contains(c))
+            .Distinct().ToList();
+        for (var i = 0; i < count; i++) spots.Add(_builder.Surface(ExitBridgeRules.SpotIndex(i, found.Count) is var k and >= 0 ? found[k] : near));
         return spots;
     }
 }
