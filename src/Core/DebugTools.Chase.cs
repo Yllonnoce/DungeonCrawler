@@ -1515,7 +1515,6 @@ public partial class DebugTools
         _chR4AwayMost = Math.Max(_chR4AwayMost, away);
     }
 
-    /// <summary>At the end of ride 4: the line, and the check that the lead never went down on it (the baseline before Task 4's answering).</summary>
     /// <summary>
     /// Plan 14 Task 6 fix round 1: every hound leap of this floor build onto a body within TrainRules.LeapReach (a miss: its length printed only,
     /// its take-off within the reach of the nearest body, Task 8 fix round 1), each printed with its length, and r5_hounds'

@@ -19,12 +19,11 @@ namespace DungeonCrawler.Core;
 // regroups), and stop 1's first crew member put on foot 10 m short of its cart (ctrl.DebugPutOnFoot). The prompt: "Board the cart" from its W4 and
 // from its cart alike. The press (its cart's): the lead and the near companion in its cart, the crew member in its W1 seat 4 at once and not Home
 // there, the far one on foot. The countdown: 5 s, Get out closed for its first 2 s. Getting out in it (Task 8, Task 6's ⚠️5): on the first frame
-// Get out is offered the lead presses it: set down outside with nobody left in the lift, the lead, the near companion and the crew member each
-// outside on a cell that takes a body (Task 9, Minor 1), the lift standing on at its place (no run), every frame for
-// 1 s (fix round 1, M1); then the lead boards again by whichever of its bodies offers "Board the cart" after that second (read once; beside its cart
-// if none does from where the lead stands), with the near companion and the crew member,
-// and the countdown is judged again from that press. The bridge: while the lift is over it the lead's prompt is ""
-// and a forced Get out does nothing. The save (Review Focus 4) at mid-bridge and a load: the lead beside the parked train outside, up and not
+// Get out is offered the lead presses it: set down outside with nobody left in the lift, the lead, the near companion and the crew member
+// each outside on a cell that takes a body (Task 9, Minor 1), the lift standing on at its place (no run), every frame for 1 s (fix round 1,
+// M1); then the lead boards again by whichever of its bodies offers "Board the cart" after that second (read once; beside its cart if none
+// does from where the lead stands), with the near companion and the crew member, and the countdown is judged again from that press. The
+// bridge: while the lift is over it the lead's prompt is "" and a forced Get out does nothing. The save (Review Focus 4) at mid-bridge and a load: the lead beside the parked train outside, up and not
 // fallen, the lift standing; the lead boards again. The halt: 1.5 +- 1.5 m behind the held train's last body, inside, every rider on island cells;
 // hidden 2 s later and standing again 1 s after that. Regroup (Ruling 35): the far companion on an island cell that may take a body within 10 s.
 // Last (Task 9, Minor 12): the lead boards the standing lift again from beside it and rc.DebugEndChase ends that chase: its place Gone at once and
@@ -385,7 +384,9 @@ public partial class DebugTools
         if (anyone > 0) problems.Add($"{anyone} still seated in it");
         if (enc.ParkedNow != ParkedState.Lift || !train.Standing || train.Cart.GlobalPosition.DistanceTo(place) > 0.5f) problems.Add($"the parked train is {enc.ParkedNow}, standing={train.Standing}, its cart {train.Cart.GlobalPosition.DistanceTo(place):0.00} m from its place");
         // Task 9 (the Task 6 review's Minor 1): the lead, the near companion who got out with them and the crew member set down after, each outside on a
-        // cell that takes a body (beside the parked train's place one cell is free, so they share it: ParkedRules.SetDownOrder gives each its own spot)
+        // cell that takes a body. This check cannot fail for the reason Minor 1 exists: beside the parked train's place only one cell is free, so all three
+        // share it with the fix or without it. The ordering Minor 1 fixed (each rider its own spot by its place in the book read once) is pinned by the
+        // unit row ParkedRulesTests.SetDownOrder_TakesTheBookOnce only.
         var crewOut = ObjectiveController.Instance is CrewRescueController ctrlOut ? ctrlOut.Crew.FirstOrDefault(n => n.Id == _ilCrewId) : null;
         var outCells = new List<(string, GridPos)> { (Who(me), cell) };
         if (_ilNear != null) outCells.Add((Who(_ilNear), DungeonBuilder.WorldToCell(_ilNear.GlobalPosition)));
