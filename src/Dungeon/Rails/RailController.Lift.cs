@@ -402,7 +402,7 @@ public partial class RailController
     }
 
     /// <summary>
-    /// A no-spare plain wreck (Task 5 review 7): when any part of the wrecked train (its cart's front back to its last wagon's rear) overlaps the parked
+    /// A no-spare plain wreck: when any part of the wrecked train (its cart's front back to its last wagon's rear) overlaps the parked
     /// train's span, every party wagon is uncoupled (lost: hidden, as an inside wreck's train), those outside the span too; the party's cart stays where it
     /// wrecked. So the lift that stands on the next tick shares its place with no party wagon. A restore or a takeover couples them fresh.
     /// </summary>
@@ -451,7 +451,7 @@ public partial class RailController
     internal void DebugEndChase()
     {
         if (NetSession.IsClient || _chase is not { } c) return;
-        if (c.Lift && !c.Departed) Exit?.ParkedLiftDeparts(); // a lift ended so goes as a rolled one does: its place says Gone, and stands it again (Task 6 review, Minor 12)
+        if (c.Lift && !c.Departed) Exit?.ParkedLiftDeparts(); // a lift ended so goes as a rolled one does: its place says Gone, and stands it again
         c.Departed = true;
         EndChase(atOnce: true);
         FreeChaser();

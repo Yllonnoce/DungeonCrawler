@@ -428,10 +428,10 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             var lead = party.Lead;
             var gap = new Vector2(lead.GlobalPosition.X - GlobalPosition.X, lead.GlobalPosition.Z - GlobalPosition.Z).Length() - FollowDistance;
             var layout = Main.Instance?.Builder.Layout;
-            // the side gate, read every frame (fix round 2): back on its lead's side (set down beside it, or the lead come across), the hold is over
+            // the side gate, read every frame (not only when a catch-up is due): back on its lead's side (set down beside it, or the lead come across), the hold is over
             if (_catchUpHeld && (layout?.Rail?.Island == null || InIsland(layout, GlobalPosition) == InIsland(layout, lead.GlobalPosition))) _catchUpHeld = false;
-            // held across the island's edge (Ruling 35, fix round 3): it holds where it is, walking nowhere; its path search runs only to tell when the
-            // hold may end (a way found across), at most every HeldSearchSeconds (M5), the first at once
+            // held across the island's edge (Ruling 35): it holds where it is, walking nowhere; its path search runs only to tell when the
+            // hold may end (a way found across), at most every HeldSearchSeconds (a path search per frame cost too much), the first at once
             Vector3? dest = null;
             var straight = true;
             if (!_catchUpHeld) dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out straight);
@@ -496,10 +496,10 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// catch-up is allowed, the follower is back on its lead's side (read every frame), or it finds a way across.
     /// </summary>
     private bool _catchUpHeld;
-    /// <summary>While held (standing still), the follower looks for a way to its lead at most this often (fix round 1, M5; the unheld follower's trigger is unchanged).</summary>
+    /// <summary>While held (standing still), the follower looks for a way to its lead at most this often (a search per frame cost too much; the unheld follower's trigger is unchanged).</summary>
     private const float HeldSearchSeconds = 0.5f;
     private float _heldSearchIn;
-    /// <summary>A refusal by the set-down spot's side alone (the follower and its lead on one side) has been told: once, until a catch-up runs (M6).</summary>
+    /// <summary>A refusal by the set-down spot's side alone (the follower and its lead on one side) has been told: once, until a catch-up runs (not a log line per frame).</summary>
     private bool _holdTold;
     /// <summary>The catch-up is held across the island's edge now (the flows read it).</summary>
     internal bool CatchUpHeld => _catchUpHeld;
@@ -513,7 +513,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     internal void DebugReleaseHold() { _catchUpHeld = false; _holdTold = false; _mover.Reset(); }
 
     /// <summary>
-    /// A hold that starts on a rail cell (plan 15 Task 8, the Task 7 re-review's lane cell) first steps the body to the nearest cell off the rails on
+    /// A hold that starts on a rail cell (plan 15 Task 8: a follower held on the lane would stand where a cart runs) first steps the body to the nearest cell off the rails on
     /// its own side (<see cref="ExitBridgeRules.HoldStepOff"/>): then it holds where it is, never inside the lift standing again at its place nor in a
     /// cart's way. Off the rails, or with no such cell near, it holds where it stands. Server and solo.
     /// </summary>
@@ -521,7 +521,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     {
         var here = DungeonBuilder.WorldToCell(GlobalPosition);
         if (!layout.IsRail(here) || Main.Instance?.Builder is not { } builder) return;
-        // fix round 1 (M3): never onto another body's cell (an NPC on foot, a hero up), as the sibling set-downs keep their taken sets
+        // never onto another body's cell (an NPC on foot, a hero up), as the sibling set-downs keep their taken sets
         var taken = new HashSet<GridPos>();
         if (GetParent() is { } parent)
             for (int i = 0, n = parent.GetChildCount(); i < n; i++)

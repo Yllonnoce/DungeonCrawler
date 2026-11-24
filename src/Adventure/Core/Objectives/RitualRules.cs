@@ -20,15 +20,15 @@ public static class RitualRules
     /// <summary>
     /// A revive is taken (any downed NPC's: the ritualist, a fighter, an escort, a crew member): it is down and alive, and no living hostile
     /// enemy stands nearer than <see cref="ReviveClearRadius"/> (<paramref name="nearestHostile"/>, in metres; +∞ or NaN for none). The one
-    /// rule <c>Npc.TryRevive</c> refuses by and a wagon's "Revive {name}" is offered by, so the prompt and the refusal never disagree (plan 15
-    /// Task 0, the plan 14 final re-review's N1).
+    /// rule <c>Npc.TryRevive</c> refuses by and a wagon's "Revive {name}" is offered by, so the prompt and the refusal never disagree, and a refused revive never masks a move to the car (plan 15
+    /// Task 0).
     /// </summary>
     public static bool ReviveTaken(bool downed, bool dead, float nearestHostile) => downed && !dead && !(nearestHostile < ReviveClearRadius);
 
     /// <summary>
     /// An enemy counts against a revive (its distance is what <see cref="ReviveTaken"/>'s nearest reads): alive and aware of the party. Only
     /// those two, never the AI state behind them, so a client's enemy copy, which runs no AI and reads its awareness from the server's snapshot,
-    /// counts exactly as the server's (plan 15 Task 0, fix round 1, I1).
+    /// counts exactly as the server's (plan 15 Task 0).
     /// </summary>
     public static bool CountsAgainstRevive(bool alive, bool aware) => alive && aware;
 

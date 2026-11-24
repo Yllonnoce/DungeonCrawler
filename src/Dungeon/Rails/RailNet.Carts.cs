@@ -67,7 +67,7 @@ public partial class RailNet
         }
     }
 
-    /// <summary>Client: the lift runs on the wire here (its copy follows the server's): its bodies stay shown whatever its place's state (pre-flight F5).</summary>
+    /// <summary>Client: the lift runs on the wire here (its copy follows the server's): its bodies stay shown whatever its place's state (its place says Gone as it rolls).</summary>
     internal bool ClientLiftLive => _carts.TryGetValue(CartIds.Lift, out var cc) && cc.Lift is { } t && IsInstanceValid(t);
 
     /// <summary>Client: the lift as the server runs it (its follower's mode and S, its countdown left, −1 none), or null while it is not on the wire.</summary>

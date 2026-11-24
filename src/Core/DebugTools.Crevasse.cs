@@ -371,7 +371,7 @@ public partial class DebugTools
                 if (rc.State.Mode == CartMode.Wrecked || rc.Falls == 0 && rc.State.Mode == CartMode.Held && rc.SparesUsed.Count > _crvSparesBefore) { Fail("the cart was wrecked, not fallen"); return; }
                 if (rc.State.Mode == CartMode.Rolling)
                 {
-                    if (_crvVariant == "trestle") ThrowPitOnTheWay(main, rc, "crevasse"); // =trestle: round the pit, to fall with the trestle (plan 15 Ruling 21, F13)
+                    if (_crvVariant == "trestle") ThrowPitOnTheWay(main, rc, "crevasse"); // =trestle: round the pit, to fall with the trestle (plan 15 Ruling 21)
                     if (_crvVariant == "trestle" && root.GetNodeOrNull<Trestle>($"Trestle_{Kiln(rc, "trestle")}") is { } trestle && rc.Party.FrontS >= trestle.From && party.ForcedMoveInput == null)
                     {
                         party.ForcedMoveInput = new Vector2(0, 1); // the stick back: the brake, until the trestle falls with the cart on it

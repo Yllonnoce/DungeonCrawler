@@ -84,7 +84,7 @@ public static class SpareRules
 
     /// <summary>
     /// The log line when a chaser (or a relief, <paramref name="relief"/>) ends its chase: behind the train, or, halted at the parked train's place
-    /// (<paramref name="atParked"/>, Ruling 29: the train is across the lava, past the exit bridge), short of the bridge (Task 9, the Task 6 review's Minor 4).
+    /// (<paramref name="atParked"/>, Ruling 29: the train is across the lava, past the exit bridge), short of the bridge (Task 9).
     /// </summary>
     public static string PullUpLine(bool relief, bool atParked)
         => $"The {(relief ? "relief" : "spare")} cart {(atParked ? "halts short of the exit bridge" : "pulls up behind the train")}.";

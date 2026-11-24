@@ -15,7 +15,7 @@ namespace DungeonCrawler.Core;
 //   [boarders] group {id}: spawned at party S={s}, in reach at S={r}, alongside at S={a}, {hound} leapt at S={l} onto {W{k}|the cart|a miss} (...), its cart freed at S={f} ({why}; ...)
 // and fails unless every hound leapt, each landing on a body within TrainRules.LeapReach (8.6 m) (a miss: its length printed only, its
 // take-off within the reach of the nearest coupled car's body, the bound the crouch rule sets) and each r5_hounds hound landing BdGolemMargin s or more
-// before the golem's burst (fix round 1; plan 15 Ruling 15's gate (b), the pumped estimate printed beside it), r5_hounds spawned with the train's
+// before the golem's burst (plan 15 Ruling 15's gate (b), the pumped estimate printed beside it), r5_hounds spawned with the train's
 // rear home past the pit switch's back and its cart never rammed nor freed by the crossing (gate (a)); r1_hounds' leap came with the cart 5 m past r1_barricade or more and the front at r1_beam or short of it;
 // r3_hounds' cart was freed by Ruling 19 (its hounds gone, or the crossing) with the front at r3_switch_out's points - 2 m or short of it;
 // r5_hounds' cart was freed by Ruling 19 before the front reached r5_golem's S, or by the golem's burst, and never stood within 3 m of the
@@ -35,7 +35,7 @@ public partial class DebugTools
     // the crossing pass (fix round 1, (e))
     private int _bdXPass, _bdXStep, _bdXMark;
     private float _bdXClock;
-    /// <summary>A hound lands at least this long before the golem's burst (fix round 1, (d); plan 15 Task 4, the coordinator's rulings: 1.5 → 0.5 s, then 0.4 s in fix round 1, for 0.2 s of headroom on the 0.60-0.68 s measured with r5_hounds at S 1097.0).</summary>
+    /// <summary>A hound lands at least this long before the golem's burst (plan 15 Task 4: 1.5 → 0.5 s, then 0.4 s, for 0.2 s of headroom on the 0.60-0.68 s measured with r5_hounds at S 1097.0).</summary>
     private const float BdGolemMargin = 0.4f;
     // a miss's take-off (Task 8 fix round 1): each hound riding a slag cart with its flat distance to the nearest coupled car's body (the
     // party's cart or a coupled wagon), read every frame, so the frame before a miss starts gives its take-off distance
@@ -282,7 +282,7 @@ public partial class DebugTools
         foreach (var l in enc.SlagLog.Where(x => x.What.StartsWith("leapt ", StringComparison.Ordinal)))
         {
             var margin = burst.What != null && l.Encounter == "r5_hounds" && l.T <= burst.T ? burst.T - (l.T + RailEncounterController.LeapSeconds) : double.NaN;
-            // pre-flight F2: a pumped approach's margin, an estimate printed beside the measured one (never gated): the spawn-to-burst stretch at the
+            // a pumped approach's margin, an estimate printed beside the measured one (never gated): the spawn-to-burst stretch at the
             // pumped speed, less the measured spawn-to-landing seconds
             var pumped = !double.IsNaN(margin) && r5Spawn.What != null ? (burst.PartyS - r5Spawn.PartyS) / pumpedV - (l.T + RailEncounterController.LeapSeconds - r5Spawn.T) : double.NaN;
             var pumpedText = double.IsNaN(pumped) ? "" : $"; the pumped estimate {pumped:0.00} s ((burst S {burst.PartyS:0.0} - spawn S {r5Spawn.PartyS:0.0}) / {pumpedV:0.00} m/s - {l.T + RailEncounterController.LeapSeconds - r5Spawn.T:0.00} s spawn to landing; printed only)";

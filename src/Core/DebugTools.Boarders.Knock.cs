@@ -28,17 +28,17 @@ namespace DungeonCrawler.Core;
 //    2's crew seated in W2 by the test's hook, the lead climbs back to W2, one of them is put down, and seated in W2 at speed, looking at them,
 //    the lead is offered "Revive {name}" by what its ray found (W2 itself; a move offered by its yaw all the while) and the press revives
 //    them; then it climbs forward to W1.
-//  - Plan 15 Task 0 (the plan 14 final re-review's N1, N2; a revive that would be refused never masks the climb): N1, after (b), a hound held
+//  - Plan 15 Task 0 (a revive that would be refused never masks the climb): first, after (b), a hound held
 //    alive on W1 (answers held: nobody else climbs) and a W1 crew member put down beside it: the revive is refused (the hound within the clear
 //    radius), so W1 offers no revive and the cart rider looking back is offered "Climb back to wagon 1"; the press lands the lead in W1 and
 //    W1's throw clock, running alone until then, is reset within a tick or two of the landing (no throw). There a press on W1 from its own seat
 //    at speed (a "Revive" sent from a screen behind) finds nothing to do: refused out loud ("Not with enemies this close."), no move, no get-out.
-//    The hound is killed and the crew member got up. N2, after (a) and the climb forward to W1: the lead climbs forward into the cart, a cart
+//    The hound is killed and the crew member got up. Second, after (a) and the climb forward to W1: the lead climbs forward into the cart, a cart
 //    companion is seated in W1's place (answers held), a W2 crew member is put down (no enemy near: the revive would be taken), and the cart
 //    rider looking back, beyond the server's reach of W2 (printed), is offered "Climb back to wagon 2" (passing W1), not the revive; the press
 //    lands it in W2, where the revive, now within reach, is offered by the ray and taken (as (a)); the companion goes back to the cart and the
-//    lead climbs forward to W1 again. Fix round 1: W2 within the reach on a bend is waited out (M2); and that climb forward to W1 is made by
-//    a stale revive (M6, M8): a W1 crew member put down, the look from W2 shows "Revive {name}" on W1, a hound lands on W1 in the press's
+//    lead climbs forward to W1 again. W2 within the reach on a bend is waited out; and that climb forward to W1 is made by
+//    a stale revive (its grace starts once the press is known as a move): a W1 crew member put down, the look from W2 shows "Revive {name}" on W1, a hound lands on W1 in the press's
 //    frame, and the press is judged as the move to W1 by that state, with the move's grace started though the look was not the move.
 //  - The final review's M8: after the lever window, rolling, the player takes a cart companion (party.Possess); the old lead, left in W1, goes
 //    back into the cart's free hero seat by itself within the cooldown, the hop and 1 s.
@@ -147,7 +147,7 @@ public partial class DebugTools
                 Next(60);
                 break;
 
-            // plan 15 Task 0, N1: a hound held alive on W1 beside a downed crew member; the refused revive never masks the climb
+            // plan 15 Task 0: a hound held alive on W1 beside a downed crew member; the refused revive never masks the climb
             case 60:
             {
                 if (t < 0.3f) break;
@@ -289,7 +289,7 @@ public partial class DebugTools
                 Next(_bdN2Done ? 10 : 90);
                 break;
 
-            // plan 15 Task 0, N2: from the cart, W1's place taken, a downed crew member in W2 beyond the server's reach: the climb to W2 is
+            // plan 15 Task 0: from the cart, W1's place taken, a downed crew member in W2 beyond the server's reach: the climb to W2 is
             // offered, not the revive
             case 90:
             {
@@ -329,7 +329,7 @@ public partial class DebugTools
                 var plain = rc.PlainPromptOf(W(2), me);
                 var offer = rc.MoveOfferFor(me);
                 var said = me.LookingAt?.Prompt ?? "";
-                if (tub <= PropPromptRules.InteractReach) // a bend brought W2 within the reach, where its revive rightly stands: wait (fix round 1, M2)
+                if (tub <= PropPromptRules.InteractReach) // a bend brought W2 within the reach, where its revive rightly stands: wait
                 {
                     _bdBeyondAt = -1f;
                     if (t > 20f) Fail($"N2: W2 stayed within the reach of the cart seat {me.Seat} for 20 s ({tub:0.00} m)");
@@ -365,7 +365,7 @@ public partial class DebugTools
                 Next(95);
                 break;
 
-            // plan 15 Task 0, fix round 1 (M6, M8): the climb forward to W1 again, by a stale revive. A W1 crew member is put down (no enemy
+            // plan 15 Task 0: the climb forward to W1 again, by a stale revive. A W1 crew member is put down (no enemy
             // near): from W2 the look shows "Revive {name}" on W1 in the move's place. In the press's own frame a hound lands on W1 (as the
             // server's state would be when a client's "Revive" reaches it): the press is judged by that state, the move to W1 is taken, and
             // the move's grace starts on this machine (no move offered, E does nothing) though the look was not the move.

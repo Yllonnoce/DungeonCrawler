@@ -34,7 +34,7 @@ public partial class TrainWagon : AnimatableBody3D, IInteractable, ICartBody
     public event Action<ICartRider, bool>? RiderChanged;
     public float Speed { get; set; }
     public float Curvature { get; set; }
-    /// <summary>When (the rail controller's clock, on this machine) this wagon last offered a revive; −∞ for never (plan 15 Task 0, fix round 1, M1).</summary>
+    /// <summary>When (the rail controller's clock, on this machine) this wagon last offered a revive; −∞ for never (plan 15 Task 0).</summary>
     internal double ReviveSeenAt { get; set; } = double.NegativeInfinity;
     public Vector3 Velocity => -GlobalTransform.Basis.Z * Speed;
 

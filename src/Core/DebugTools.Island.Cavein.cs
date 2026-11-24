@@ -9,7 +9,7 @@ namespace DungeonCrawler.Core;
 // At stop 0, on foot, after the build (DebugTools.Island.cs). The west hall: the lead, walked from room 1 toward the down stairs (46,54)
 // (ForcedMoveInput), never passes world x 152.0 (the cave-in's face) in 8 s, coming within 2 m of it; a companion sent for the down
 // stairs (SeekSpot) has no path there (GridPathfinder) and stays out of room 9. The north hall: the same from the fork (46,45) toward
-// (46,50), the face at world z 184.0. Into the lava (pre-flight F10: both walkers are companions, the lead stays up): one companion put in
+// (46,50), the face at world z 184.0. Into the lava (both walkers are companions, the lead stays up): one companion put in
 // room 9 at (42,54) and walked west at walking speed falls into the trench within 2 s; another put on the party lane's cell 310 and walked
 // along it onto 311, the exit bridge's first cell, falls within 2 s. Both come back (up, on cells that may take a body) when the lead,
 // walked along the lane from outside room 1, steps onto stop 0's platform (plan 10's return).

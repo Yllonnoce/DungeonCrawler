@@ -25,7 +25,7 @@ public static class TrainMoveRules
     /// <summary>
     /// After a wagon last offered a revive, its own rider is neither offered nor given "Get out" for this long (seconds, on each machine's
     /// clock): a "Revive" pressed on a screen behind the server lands within a round trip of the server's revive ending, and is refused out
-    /// loud, never taken as a get-out (plan 15 Task 0, fix round 1, M1). A get-out is pressed when it was offered.
+    /// loud, never taken as a get-out (plan 15 Task 0). A get-out is pressed when it was offered.
     /// </summary>
     public const float ReviveGetOutGrace = 1f;
 

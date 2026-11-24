@@ -127,7 +127,7 @@ public partial class RailNet
         {
             SendSeated(world, peer, lift.Cart, CartIds.Lift); // the lift's riders, after the cart state that lists it (plan 15 Ruling 30)
             foreach (var w in lift.Wagons) SendSeated(world, peer, w, CartIds.LiftWagon(w.Number));
-            if (parkedEnc.ParkedCatchUpWord() is { } word && lift.NetRef.Length > 0) world.SendTo(peer, new PropEvt(lift.NetRef, word)); // its state by name (the Task 5 review's Minor 1)
+            if (parkedEnc.ParkedCatchUpWord() is { } word && lift.NetRef.Length > 0) world.SendTo(peer, new PropEvt(lift.NetRef, word)); // its state by name: no in-the-way glimpse until the prop check
         }
         if (ObjectiveController.Instance is CrewRescueController crew)
         {
@@ -192,7 +192,7 @@ public partial class RailNet
         else if (moved is { } left && rider is Adventurer hopper)
         {
             RailEncounterController.LeapCue(hopper, left, hopper.GlobalPosition, shake: false); // cart_jump where it left, cart_land where it sits
-            _rails.MoveTakenFor(hopper); // our own plain press the server made a move (a stale revive): the move's grace starts now (M8)
+            _rails.MoveTakenFor(hopper); // our own plain press the server made a move (a stale revive): the move's grace starts now
         }
     }
 

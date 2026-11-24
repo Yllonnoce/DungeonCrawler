@@ -97,14 +97,14 @@ public partial class NetTestFlow
     private bool _exitPressed, _exitTold;
     /// <summary>When this screen first held over the exit bridge (<see cref="_elapsed"/>), or −1.</summary>
     private double _exitHeldAt = -1;
-    /// <summary>Fix round 1 (I1): the press waits until our front is this far into the bridge's span and the hold this old here, so the server holds too.</summary>
+    /// <summary>The press waits until our front is this far into the bridge's span and the hold this old here, so the server holds too.</summary>
     private const float ExitPressInto = 2f;
     private const double ExitPressAfter = 0.5;
 
     /// <summary>
     /// Step 53, each tick: while the train has a car over the exit bridge here (<c>RailEncounterController.ExitBridgeHolds</c>, this screen's own
     /// train) the cart's own prompt must read "" on every frame; once our front is <see cref="ExitPressInto"/> into the span and the hold is
-    /// <see cref="ExitPressAfter"/> old here (fix round 1, I1: never at the hold's edge, where the server may not hold yet) our seat presses Get out
+    /// <see cref="ExitPressAfter"/> old here (never at the hold's edge, where the server may not hold yet) our seat presses Get out
     /// through the intent anyway (cart:0), which the server refuses ("get out refused (the train is on the exit bridge)"). Once the hold ends here we are still seated.
     /// True when it failed.
     /// </summary>
@@ -163,7 +163,7 @@ public partial class NetTestFlow
         GD.Print(FormattableString.Invariant($"[net] ride: parked: smashed here (PropEvt) {_pkSmashT:0.000}, plating {_pkPlating:0}"));
     }
 
-    // ---- the joiner: the lift boarded by a tub (Task 6's ⚠️4) --------------------------------------------------------------------------
+    // ---- the joiner: the lift boarded by a tub (Task 8) -----------------------------------------------------------------------------
 
     /// <summary>
     /// The body of the lift the joiner presses: the first of its wagons (W1..W4) that offers "Board the cart" here, else its cart (the server puts the

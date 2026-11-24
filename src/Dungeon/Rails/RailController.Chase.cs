@@ -108,7 +108,12 @@ public partial class RailController
     /// </summary>
     private bool LimitAtParked(float limit) => !float.IsNaN(ParkedBackS) && limit < SpareRules.ChaseLimit(TrainBackS, StopS[Math.Min(StopIndex + 1, StopS.Length - 1)]) - 1e-3f;
 
-    /// <summary>The train ahead of a chaser, relief or lift has stopped for good there: held (at a stop or halted), or wrecked past the exit bridge's start (Ruling 29).</summary>
+    /// <summary>
+    /// The train ahead of a chaser, relief or lift has stopped for good there: held (at a stop or halted), or wrecked past the exit bridge's start (Ruling 29).
+    /// The wrecked-inside arm is live for the lift only: every wreck ends a chaser's or a relief's chase at once (<c>Wreck</c>'s first line), its riders set
+    /// down beside it on its own side (<see cref="SetDownChasers"/> through <c>ExitCellNear</c>'s side rule: the chaser never passes the parked train's place,
+    /// so outside), before <see cref="LastWreckInside"/> is known. Kept so the rule reads as Ruling 29 has it.
+    /// </summary>
     private bool TrainStoppedAhead => State.Mode == CartMode.Held || LastWreckInside;
 
     /// <summary>

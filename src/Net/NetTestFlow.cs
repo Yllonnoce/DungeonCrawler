@@ -233,7 +233,7 @@ public partial class NetTestFlow : Node
             var at = p2.Adventurers[_rideMember].GlobalPosition;
             GD.Print(FormattableString.Invariant($"[net-server] ride: set down at ({at.X:0.00}, {at.Y:0.00}, {at.Z:0.00}) at stop {Dungeon.Rails.RailController.Instance?.StopIndex}"));
         }
-        // the lift (plan 15 Task 6, fix round 1): keyed on the joiner's own slot, outside the first client's block above, since the first client
+        // the lift (plan 15 Task 6): keyed on the joiner's own slot, outside the first client's block above, since the first client
         // leaves seated right after the chase is done, before the joiner rides the lift in; called once per tick, whoever is online
         if (Dungeon.Rails.RailController.Instance is { } liftRc && IsInstanceValid(liftRc) && Main.Instance?.Party is { } liftParty
             && world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null && sl.Name == RideJoinerName) is { } joinSlot && joinSlot.MemberIndex < liftParty.Adventurers.Length)
@@ -701,7 +701,7 @@ public partial class NetTestFlow : Node
     // the lift (plan 15 Task 6, Ruling 22's step 8): set down behind the parked train's place, the joiner is put in reach of the lift's cart once it
     // stands again (the chaser hidden); it boards through its intent (parked:{piece}), the lift carries it over the exit bridge and halts within 3 m
     // of the held train's last body, inside, and sets it down there (traced lift-done). Called each tick from the ride loop keyed on the joiner's slot,
-    // not from RideJoinerServer: the first client leaves seated while this runs (fix round 1)
+    // not from RideJoinerServer: the first client leaves seated while this runs
     private bool _liftShoved, _liftBoarded, _liftDone, _liftOk;
     private float _liftGap = float.NaN;
     private int _liftsBefore = -1;
@@ -714,7 +714,7 @@ public partial class NetTestFlow : Node
         {
             _liftShoved = true;
             _liftsBefore = rc.LiftsDone;
-            // plan 15 Task 8 (Task 6's ⚠️4): by a tub of the lift (liftwagon:{k}) when one is in reach of a walkable cell beside the parked train, else by its cart
+            // plan 15 Task 8: by a tub of the lift (liftwagon:{k}) when one is in reach of a walkable cell beside the parked train, else by its cart
             var (spot, body, name) = LiftBoardSpot(main, layout, rc, enc, train);
             hero.Shove(spot);
             var tub = body is Dungeon.Rails.TrainWagon w ? w.TubDistance(spot) : train.Cart.TubDistance(spot);
@@ -2689,7 +2689,7 @@ public partial class NetTestFlow : Node
                     _clock = 0; _step = 88; // plan 15 Task 8: seated in the party's train for the wreck at the end of the line
                     return;
                 }
-                // plan 15 Task 8 (Task 6's ⚠️4): the press on a tub of the lift (liftwagon:{k}) when one offers "Board the cart" here, else on its cart
+                // plan 15 Task 8: the press on a tub of the lift (liftwagon:{k}) when one offers "Board the cart" here, else on its cart
                 var (pressed, pressedName, offer, tubDist) = LiftBodyToPress(lift, me);
                 if (liftEnc.ParkedNow == Dungeon.Rails.ParkedState.Lift && offer == Dungeon.Rails.ParkedRules.BoardPrompt && (_joinLiftAskedAt < 0 || _clock - _joinLiftAskedAt >= 2))
                 {

@@ -138,7 +138,7 @@ public partial class RailController
     /// <summary>
     /// The hero this machine plays pressed a car of the train from another car as that car's plain use (what its look showed in the move's
     /// place: a revive), on this machine's clock. Should the deciding machine's state make the press the move (a stale revive), the move's
-    /// grace starts once it is known (<see cref="MoveTakenFor"/>; plan 15 Task 0, fix round 1, M8).
+    /// grace starts once it is known (<see cref="MoveTakenFor"/>; plan 15 Task 0).
     /// </summary>
     public void TrainPlainPressed(Adventurer hero)
     {
@@ -149,7 +149,7 @@ public partial class RailController
     /// A move of <paramref name="hero"/>'s was taken: in solo by <see cref="Move"/> on its press, on a client when the server's seat lands it
     /// (<c>RailNet.OnSeat</c>). For the hero this machine plays whose last press on the train here was a plain use, not a move (the press became
     /// the move on the deciding machine's state), E does nothing for <see cref="TrainMoveRules.MoveCooldown"/> from now, as after a move's
-    /// press (<see cref="MovePressed"/>; plan 15 Task 0, fix round 1, M8). A move pressed as one already started it. No allocation.
+    /// press (<see cref="MovePressed"/>; plan 15 Task 0). A move pressed as one already started it. No allocation.
     /// </summary>
     internal void MoveTakenFor(Adventurer hero)
     {
@@ -175,8 +175,8 @@ public partial class RailController
     /// <summary>
     /// A use of <paramref name="target"/> by <paramref name="actor"/> is a move press: the actor rides another car of the train, moves are not
     /// refused, <paramref name="target"/> is the place a move that way goes to on this peer's book, and the car's plain use does not stand
-    /// (<see cref="PlainUseStands"/>: a downed crew member's revive within reach wins over the move, the final review's I1; one the game would
-    /// refuse is no plain use, and one beyond the server's reach does not stand, plan 15 Task 0, N1 and N2). Anything else is the car's plain use
+    /// (<see cref="PlainUseStands"/>: a downed crew member's revive within reach wins over the move; one the game would
+    /// refuse is no plain use, and one beyond the server's reach does not stand, plan 15 Task 0). Anything else is the car's plain use
     /// (a revive, from beside the wagon or from another car, a get-out).
     /// </summary>
     public bool IsMovePress(Adventurer actor, object target)
@@ -190,7 +190,7 @@ public partial class RailController
 
     /// <summary>
     /// A use of <paramref name="target"/> by <paramref name="actor"/> asks for a move even when no move to it is offered on this peer's book
-    /// (fix round 1, I1): the actor rides another car of the rolling train and the car's plain use does not stand (<see cref="PlainUseStands"/>:
+    /// (a stale revive): the actor rides another car of the rolling train and the car's plain use does not stand (<see cref="PlainUseStands"/>:
     /// the cart's never does for a wagon's rider; a wagon's when it has no downed crew whose revive is taken, or stands beyond the reach). It is
     /// judged as a move and refused out loud (<see cref="WhyMoveRefused"/>: the place booked by another press, a lever window, the live bridge),
     /// never taken as a plain use the presser's screen did not offer, nor dropped. Held, the press stays the car's plain use (a revive from
@@ -276,7 +276,7 @@ public partial class RailController
         MovesTaken++;
         LastMoveRefused = null;
         RideAudio.At("cart_jump", hero.GlobalPosition);
-        if (why == "press") MoveTakenFor(hero); // a plain press the state here made a move (a stale revive): its grace starts (M8)
+        if (why == "press") MoveTakenFor(hero); // a plain press the state here made a move (a stale revive): its grace starts
         GD.Print($"[rails] move: {name} {(to > from ? "back" : "forward")} from car {from} to car {to}{(seat != TrainRules.HeroPlace && to > 0 ? $" seat {seat} (a downed hero holds its place)" : "")} ({why}) at S={State.S:0.0}");
         return true;
     }

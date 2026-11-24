@@ -1477,7 +1477,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (RailController.Instance is { } rails && IsInstanceValid(rails))
         {
             if (_lookingAtMove && ReferenceEquals(target, LookingAt)) rails.MovePressed(this);
-            else if (rails.TrainCarFromAnother(this, target)) rails.TrainPlainPressed(this); // a revive in the move's place: should it become the move, its grace starts then (M8)
+            else if (rails.TrainCarFromAnother(this, target)) rails.TrainPlainPressed(this); // a revive in the move's place: should it become the move, its grace starts then
         }
         // talking is local (the choice goes over the wire); everything else the server does for us
         if (Net.NetSession.IsClient && target is not Npc)

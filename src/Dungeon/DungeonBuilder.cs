@@ -1264,7 +1264,7 @@ public partial class DungeonBuilder : Node3D
     public int CaveInFaces { get; private set; }
 
     /// <summary>
-    /// The exit island's cave-ins (plan 15, Ruling 40, as fix round 2 ruled): each face of a cave-in cell toward a walkable or chasm cell
+    /// The exit island's cave-ins (plan 15, Ruling 40): each face of a cave-in cell toward a walkable or chasm cell
     /// gets a rockfall, the mine pack's rocks (<see cref="RockfallAt"/>) piled against it from wall to wall and up to near the ceiling, big
     /// boulders at the base and smaller ones above, a broken post fallen across it, and a light on it. Each face's look comes from a local
     /// <see cref="Random"/> seeded by the cell and the floor as <see cref="SealMouth"/>'s is (no gameplay stream), so every role draws the same.
@@ -1290,6 +1290,9 @@ public partial class DungeonBuilder : Node3D
         GD.Print($"[DungeonBuilder] floor {CurrentFloor}: the cave-ins' rockfalls: {boulders} boulder(s) on {faces.Count} face(s)");
     }
 
+    /// <summary>A rock fitted to a <c>s</c> × <c>s</c> footprint reaches this times <c>s</c> from its middle, whatever its yaw and small tilt.</summary>
+    private const float Turned = 0.72f;
+
     /// <summary>
     /// One cave-in face's rockfall (<see cref="DressCaveIns"/>), on cave-in cell <paramref name="cell"/>'s side toward <paramref name="d"/>.
     /// Rows of the mine pack's rocks rise from the open cell's floor (a trench's from the lava) to near the ceiling, the face's full width,
@@ -1298,9 +1301,6 @@ public partial class DungeonBuilder : Node3D
     /// half: none reaches a walkable cell beyond the open one, or the rails. A broken post
     /// leans across the heap and a dim warm light stands off the face. Returns the boulders laid.
     /// </summary>
-    /// <summary>A rock fitted to a <c>s</c> × <c>s</c> footprint reaches this times <c>s</c> from its middle, whatever its yaw and small tilt.</summary>
-    private const float Turned = 0.72f;
-
     private int RockfallAt(Node3D parent, GridPos cell, GridPos d, Material rock, Material wood)
     {
         var layout = Layout!;
