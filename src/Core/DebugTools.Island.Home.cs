@@ -25,8 +25,8 @@ namespace DungeonCrawler.Core;
 // within 1 s; back inside: Lost within 1 s; the downed one revived (its bleed clock under 50 s: F11) wins the floor, and the lead outside afterwards
 // leaves it won.
 // =grisel (Review Focus 2): forgiven, Grisel escorting; the last ride with every cage's crew seated; as the train's rear passes the exit bridge she
-// is put on foot outside on ride 5's lane at S 1150. Held: outside, never teleported, until "Grisel picks her way in over the bridge behind you."
-// is logged, within 1 s of the arrival with the lead inside, and she stands on an island cell beside the train's last body. The party at the head
+// is put on foot outside on ride 5's lane cell at S 1150 (a rail cell). Held: her hold steps her off the rails first (plan 15 Task 8: never held on a
+// rail cell, on her own side, outside), then never teleported, until "Grisel picks her way in over the bridge behind you." is logged, within 1 s of the arrival with the lead inside, and she stands on an island cell beside the train's last body. The party at the head
 // of the stairs: she follows and q_grisel_out completes.
 // =chest: the last ride with every cage's crew seated: within 1 s of the win the reward chest stands in room 9 (table.vault, index 9000, no
 // mimic, no lock) and its line is logged; room 10's door revealed and open; the lead opens it and an item drops; a save and a load keep it,
@@ -39,6 +39,8 @@ public partial class DebugTools
     private float _ihHoldDrift;
     private Vector3 _ihLast;
     private float _ihT = float.NaN, _ihArriveT = float.NaN;
+    /// <summary>=grisel (plan 15 Task 8): her holds that stepped off the line before she was put on the lane cell.</summary>
+    private int _ihStepsOffBefore, _ihStepsSeen;
     private bool _ihHeldSeen, _ihAHome, _ihLetOut, _ihCountdownOk, _ihListening, _ihGriselLogged, _ihChestLogged, _ihSpareGather;
     private int _ihLootBefore, _ihGatherBefore;
     private readonly List<string> _ihCrew = new();
@@ -217,7 +219,17 @@ public partial class DebugTools
         {
             if (b.Dead) { Fail($"{b.NpcName}, on foot outside, died"); return; }
             if (Inside(layout, b)) { Fail($"{b.NpcName}, on foot outside, stands inside the island at {At(b)}"); return; }
-            if (b.GlobalPosition.DistanceTo(_ihLast) > 3f) { Fail($"{b.NpcName}, on foot outside, was teleported from {DungeonBuilder.WorldToCell(_ihLast)} to {At(b)}"); return; }
+            // plan 15 Task 8: put on the lane ahead of the parked cart (BesideLift's cell there is a rail cell), its hold's one step off the rails is no catch-up:
+            // on that frame it lands off the rails, outside, on a cell that takes a body
+            if (b.HoldStepsOff - _ihStepsOffBefore > _ihStepsSeen)
+            {
+                _ihStepsSeen = b.HoldStepsOff - _ihStepsOffBefore;
+                var to = DungeonBuilder.WorldToCell(b.GlobalPosition);
+                GD.Print($"[island] stranded: {b.NpcName}'s hold started on the lane: stepped off from {DungeonBuilder.WorldToCell(_ihLast)} to {to} ({b.GlobalPosition.DistanceTo(_ihLast):0.0} m; rail {layout.IsRail(to)}, inside {Inside(layout, b)}, takes a body {StandsOk(layout, b)})");
+                if (layout.IsRail(to) || Inside(layout, b) || !StandsOk(layout, b) || b.GlobalPosition.DistanceTo(_ihLast) > 2.5f * DungeonBuilder.CellSize) { Fail($"{b.NpcName}'s step off the line landed at {to}"); return; }
+            }
+            else if (b.GlobalPosition.DistanceTo(_ihLast) > 3f) { Fail($"{b.NpcName}, on foot outside, was teleported from {DungeonBuilder.WorldToCell(_ihLast)} to {At(b)}"); return; }
+            if (b.CatchUpHeld && layout.IsRail(DungeonBuilder.WorldToCell(b.GlobalPosition))) { Fail($"{b.NpcName} is held on a rail cell {At(b)}"); return; }
             _ihLast = b.GlobalPosition;
             if (b.CatchUpHeld) _ihHeldSeen = true;
         }
@@ -249,6 +261,7 @@ public partial class DebugTools
                 _ihB = ctrl.Crew.FirstOrDefault(n => IsInstanceValid(n) && !n.Dead && n.Ride is TrainWagon { Number: 2 });
                 if (_ihA == null || _ihB == null) { Fail("no crew in W1 and W2 to down and to put on foot"); return; }
                 ctrl.DebugDown(_ihA.Id);
+                _ihStepsOffBefore = _ihB.HoldStepsOff;
                 ctrl.DebugPutOnFoot(_ihB.Id, BesideLift(main, layout, rc, enc, parked.Cart));
                 _ihLast = _ihB.GlobalPosition;
                 GD.Print($"[island] stranded: with the train's rear at S={rear:0.0} (the pit's far edge {enc.PitFarS:0.0}, the bridge's {enc.ExitToS:0.0}) {_ihA.NpcName} downed in W1 (Downed {_ihA.Downed}) and {_ihB.NpcName} on foot outside beside the parked train at {At(_ihB)} (inside {Inside(layout, _ihB)})");
@@ -386,10 +399,15 @@ public partial class DebugTools
                 if (rc.State.Mode == CartMode.Wrecked) { Fail($"the last ride was wrecked at S={rc.State.S:0.0}"); return; }
                 var rear = IslandRearS(rc);
                 if (rc.State.Mode != CartMode.Rolling || !(rear > enc.ExitToS + 0.5f)) { if (_isClock > 120f) Fail($"the train's rear never passed the exit bridge (at S={rear:0.0})"); break; }
-                var spot = rc.StandBesideLane(rc.Party.Track.Point(1150f));
+                // plan 15 Task 8: on the lane cell itself (a rail cell), so her hold starts on the line and must step her off it (ExitBridgeRules.HoldStepOff)
+                var laneCell = DungeonBuilder.WorldToCell(rc.Party.Track.Point(1150f));
+                if (!layout.IsRail(laneCell)) { Fail($"ride {shape.Rides}'s lane at S 1150 is not a rail cell ({laneCell})"); return; }
+                var spot = main.Builder.Surface(laneCell) + Vector3.Up * 0.1f;
+                _ihStepsOffBefore = g.HoldStepsOff;
                 var was = g.Seated ? $"seated in {(g.Ride as Node)?.Name}" : $"on foot at {At(g)}";
                 if (g.Seated) g.GetOut(spot);
                 else { g.GlobalPosition = spot; g.Velocity = Vector3.Zero; }
+                g.DebugReleaseHold(); // a hold she was in already is let go: her next one starts on the lane cell (Task 8's pin)
                 _ihLast = g.GlobalPosition;
                 GD.Print($"[island] grisel: with the train's rear at S={rear:0.0} Grisel ({was}) is left outside on ride {shape.Rides}'s lane at S 1150, {At(g)} (inside {Inside(layout, g)}, escorting {g.Escorting})");
                 if (Inside(layout, g) || g.Seated || !g.Escorting) { Fail("Grisel was not left outside, on foot and escorting"); return; }
@@ -404,8 +422,23 @@ public partial class DebugTools
                 if (!_ihGriselLogged)
                 {
                     if (Inside(layout, g)) { Fail($"Grisel stands inside at {At(g)} before the line"); return; }
-                    if (g.GlobalPosition.DistanceTo(_ihLast) > 3f) { Fail($"Grisel was teleported from {DungeonBuilder.WorldToCell(_ihLast)} to {At(g)} before the line"); return; }
-                    if (g.CatchUpHeld) _ihHeldSeen = true;
+                    // her hold's one step off the rails (a cell is 4 m) is no catch-up: on that frame she must land off the rails, outside, on a cell that takes a body
+                    var stepped = g.HoldStepsOff - _ihStepsOffBefore > _ihStepsSeen;
+                    if (stepped)
+                    {
+                        _ihStepsSeen = g.HoldStepsOff - _ihStepsOffBefore;
+                        var to = DungeonBuilder.WorldToCell(g.GlobalPosition);
+                        GD.Print($"[island] grisel: her hold started on the lane: stepped off from {DungeonBuilder.WorldToCell(_ihLast)} to {to} ({g.GlobalPosition.DistanceTo(_ihLast):0.0} m; rail {layout.IsRail(to)}, inside {Inside(layout, g)}, takes a body {StandsOk(layout, g)})");
+                        if (layout.IsRail(to) || Inside(layout, g) || !StandsOk(layout, g) || g.GlobalPosition.DistanceTo(_ihLast) > 2.5f * DungeonBuilder.CellSize) { Fail($"Grisel's step off the line landed at {to} (rail {layout.IsRail(to)}, inside {Inside(layout, g)})"); return; }
+                    }
+                    else if (g.GlobalPosition.DistanceTo(_ihLast) > 3f) { Fail($"Grisel was teleported from {DungeonBuilder.WorldToCell(_ihLast)} to {At(g)} before the line"); return; }
+                    if (g.CatchUpHeld)
+                    {
+                        var heldCell = DungeonBuilder.WorldToCell(g.GlobalPosition);
+                        if (layout.IsRail(heldCell)) { Fail($"Grisel is held on a rail cell {heldCell}"); return; }
+                        if (!_ihHeldSeen) GD.Print($"[island] grisel: held at {heldCell} off the rails, outside {!Inside(layout, g)} (her hold stepped her off the line {g.HoldStepsOff - _ihStepsOffBefore} time(s))");
+                        _ihHeldSeen = true;
+                    }
                     _ihLast = g.GlobalPosition;
                     if (!(_ihArriveT is float.NaN) && _isTime - _ihArriveT > 1f) { Fail($"1 s after the arrival with the lead inside Grisel is still outside at {At(g)}, not brought in"); return; }
                     if (_isClock > 90f) Fail($"the train did not arrive at stop {shape.Rides}");
@@ -417,6 +450,7 @@ public partial class DebugTools
                 GD.Print($"[island] grisel: brought in {_isTime - _ihArriveT:0.00} s after the arrival at {At(g)}, {d:0.0} m from the train's last body {last.Name}; her catch-up held before it {_ihHeldSeen}");
                 if (!Inside(layout, g) || !StandsOk(layout, g) || d > 6f) { Fail($"Grisel brought in at {At(g)} (inside {Inside(layout, g)}), {d:0.0} m from {last.Name}"); return; }
                 if (!_ihHeldSeen) { Fail("Grisel's catch-up was never held while she was outside"); return; }
+                if (g.HoldStepsOff - _ihStepsOffBefore < 1) { Fail("put on the lane cell, Grisel's hold never stepped her off the rails (HoldStepsOff)"); return; }
                 // the party out at the head of the stairs (as --test-crew's forgiven branch): she follows them down there
                 if (me.Cart == rc.Cart) rc.Cart.Interact(party, me);
                 var stairs = root.GetNodeOrNull<Stairs>("DownStairs");
@@ -435,7 +469,7 @@ public partial class DebugTools
                 _ihLast = g.GlobalPosition;
                 var q = Game.Instance.Adventure.Quests.Values.FirstOrDefault(x => x.Floor == 12 && x.GiverNpc == CrewRescueController.GriselId);
                 if (q?.Status != QuestStatus.Completed) { if (_isClock > 30f) Fail($"q_grisel_out is {q?.Status.ToString() ?? "missing"}: Grisel at {At(g)} (escorting {g.Escorting}, her catch-up held {g.CatchUpHeld}; the lead at {At(me)})"); break; }
-                Pass($"Grisel, left outside on ride {shape.Rides}'s lane as the train passed the bridge, held there (never teleported, never inside, her catch-up held) until the arrival with the lead inside; brought in beside the train's last body within 1 s and \"{CrewRescueController.GriselInLine}\" logged; she walked with the party to the down stairs and {q.Id} completed {_isClock:0.0} s later");
+                Pass($"Grisel, left outside on ride {shape.Rides}'s lane cell as the train passed the bridge, stepped off the rails as her hold started and held there (never on a rail cell, never teleported, never inside, her catch-up held) until the arrival with the lead inside; brought in beside the train's last body within 1 s and \"{CrewRescueController.GriselInLine}\" logged; she walked with the party to the down stairs and {q.Id} completed {_isClock:0.0} s later");
                 return;
             }
         }

@@ -19,6 +19,8 @@ public partial class ServerWorld : Node
     private INetTransport _t = null!;
     private readonly List<string> _logBatch = new();
     private readonly Dictionary<int, Vector3> _lastSent = new();
+    /// <summary>The flags each enemy was last sent with, by peer (plan 15 Task 8: a change goes out at once, still or not; <see cref="SnapshotRules.SendEnemy"/>).</summary>
+    private readonly Dictionary<(int Peer, int NetId), byte> _flagsSent = new();
     private float _fullSnapshotTimer;
     private float _autosaveTimer;
     private float _statusTimer;
@@ -134,6 +136,7 @@ public partial class ServerWorld : Node
         foreach (var peer in Handshake.WelcomedPeers) HoldForJoiner(peer, change); // a joiner still building the old floor follows on Ready
         _floorChanging = false;
         _lastSent.Clear();
+        _flagsSent.Clear();
         _firstPose.Clear();
         Trace.Add($"floor:{floor}");
         WriteStatus();
@@ -1053,14 +1056,16 @@ public partial class ServerWorld : Node
             var pos = e.GlobalPosition;
             var moved = !_lastSent.TryGetValue(e.NetId, out var last) || last.DistanceSquaredTo(pos) > 0.0004f;
             var near = bodies.Any(b => b.GlobalPosition.DistanceSquaredTo(pos) < Protocol.SnapshotInterestRadius * Protocol.SnapshotInterestRadius);
-            if (!full && !moved && !(near && !e.IsUnaware)) continue;
-            _lastSent[e.NetId] = pos;
             byte flags = 0;
             if (e.IsAlive) flags |= EntityState.FlagAlive;
             if (e.IsHostile) flags |= EntityState.FlagHostile;
             if (!e.IsUnaware) flags |= EntityState.FlagAware;
             if (e.IsBoss) flags |= EntityState.FlagBoss;
             if (e.InWater) flags |= EntityState.FlagInWater;
+            var flagsChanged = !_flagsSent.TryGetValue((peer, e.NetId), out var sentFlags) || sentFlags != flags; // an enemy turned unaware standing still goes out now
+            if (!SnapshotRules.SendEnemy(full, moved, near && !e.IsUnaware, flagsChanged)) continue;
+            _lastSent[e.NetId] = pos;
+            _flagsSent[(peer, e.NetId)] = flags;
             enemies.Add(new EntityState(e.NetId, new NetVec(pos.X, pos.Y, pos.Z), e.Rotation.Y, e.Hp, EnemyStateCodes.Encode(e.State.Name), flags));
         }
         var npcs = root.GetChildren().OfType<Npc>().Select(n =>

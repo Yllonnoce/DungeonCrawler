@@ -68,4 +68,18 @@ public static class ExitBridgeRules
 
     /// <summary>The side of the exit island a body at <paramref name="cell"/> stands on (true inside), or null on a floor without one.</summary>
     public static bool? SideOf(FloorLayout l, GridPos cell) => l.Rail?.Island == null ? null : l.InIsland(cell);
+
+    /// <summary>
+    /// Where a follower whose catch-up hold starts at <paramref name="here"/> steps first (Ruling 35 as plan 15 Task 8 ruled): on a rail cell, the
+    /// nearest cell within 4 off the rails, on its own side of the island (<paramref name="inside"/>), that may take a body
+    /// (<see cref="CrevasseRules.SetDownOk"/>) and is not <paramref name="blocked"/> (a prop or a barrel's), ties by (Y, X); so a held follower never
+    /// stands where the lift stands again or a cart runs. Null off the rails (it holds where it is) or with no such cell near.
+    /// </summary>
+    public static GridPos? HoldStepOff(FloorLayout l, GridPos here, bool inside, Func<GridPos, bool>? blocked = null)
+    {
+        if (!l.IsRail(here)) return null;
+        foreach (var c in CrevasseRules.SetDownCells(l, here, 81, reach: 4))
+            if (c != here && !l.IsRail(c) && l.InIsland(c) == inside && CrevasseRules.SetDownOk(l, c) && blocked?.Invoke(c) != true) return c;
+        return null;
+    }
 }

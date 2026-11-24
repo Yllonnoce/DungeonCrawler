@@ -65,18 +65,23 @@
 #                                     the cavern with four wagons, their rear the front less TrainRules.Length); out at stop 4, the kiln's, on foot while the train leaves on ride 5 with the
 #                                     first client, who throws the lava pit's switch from the seat on the first frame its window offers it
 #                                     (the server takes it in the seated window; the train goes round the pit, both clients showing the
-#                                     server's CrossOut and CrossBack; nothing runs into the pit): stop 4's spare, which offered nothing while the train was held there, offers itself
+#                                     server's CrossOut and CrossBack; nothing runs into the pit); the train smashes the parked train (plan 15 Task 8: each client
+#                                     shows the smash's PropEvt within 1 s of the server's with its plating, the server traces it prop:parked:{piece}:smashed, and
+#                                     both clients' props hash as the server's after it); over the exit bridge the first client's cart offers "" on every frame,
+#                                     its Get out pressed through the intent (cart:0) is refused by the server and it stays seated: stop 4's spare, which offered nothing while the train was held there, offers itself
 #                                     once it has gone; the joiner takes it through its intent (spare:4), and its chaser runs up behind
 #                                     the train (hopping ride 5's pit and the fallen
 #                                     trestle) and halts within 3 m of the parked train's place, outside the island (plan 15 Ruling 29:
-#                                     chase-done on both sides; no relief cart was sent online); its rider is set down there, and once the
-#                                     chaser has gone the parked train stands as a lift: put in reach of its cart, the joiner presses
-#                                     "Board the cart" through its intent (parked:{piece}), and the lift carries it over the exit bridge,
+#                                     chase-done on both sides, the joiner's gap read within 1 s of its set-down; no relief cart was sent online); its rider is set
+#                                     down there, and once the chaser has gone the parked train stands as a lift (traced ...:standing): put in reach of a tub of it,
+#                                     the joiner presses "Board the cart" on that tub through its intent (liftwagon:{k}, Task 8), and the lift (L in the seat books
+#                                     on both sides; gone as it departs, traced) carries it over the exit bridge,
 #                                     halts within 3 m of the held train's last body inside the island and sets it down there (lift-done
 #                                     on both sides; plan 15 Task 6); the first client leaves
-#                                     seated once the chaser has gone; the server then wrecks the cart at the end of the line by a test
-#                                     hook: past the exit bridge's start no spare takes over and its riders, if any rode, are set down inside (the
-#                                     joiner sees Wrecked and no takeover); the test restores the cart at stop 4 (not a rise) and wrecks it
+#                                     seated once the chaser has gone; the joiner, inside, is seated in the party's cart at the end of the line by the server's
+#                                     test hook (the end of the line takes no boarding), and the server then wrecks the cart there by a test
+#                                     hook: past the exit bridge's start no spare takes over and every hero who rode (the joiner: one) is set down inside (the
+#                                     joiner sees Wrecked, no takeover, and itself set down on an island cell); the test restores the cart at stop 4 (not a rise) and wrecks it
 #                                     there: the joiner sees a spare's takeover (stop 3's; wrecked again
 #                                     3 s later, stop 2's, where ride 3 with the heap leaves; only the end's wreck is in earshot); it boards that cart
 #                                     and rides ride 3 again with its switch straight, into the ore heap: its rendered S never passes
@@ -108,8 +113,8 @@ run_server() { if [ -n "$SERVER_EXE" ]; then "$SERVER_EXE" --headless -- "$@"; e
 if [ "${RIDE:-}" = 1 ]; then
   # the RIDE pass: run it alone (its set-piece clocks fail on a loaded machine: a slow server's floor clock falls behind its own
   # wall clock). One server on the built-in campaign, one client; floor 12 after the client is ready. A test server quits after
-  # 120 s unless told (the pass rides the five rides to the end of the line, about 330 s on the client with plan 14's slower train; the
-  # server's own pass ends by 560 s, the clients' by 540 s), and ends anyway once empty. A scripted server deals no objective unless one
+  # 120 s unless told (the pass rides the five rides to the end of the line, about 330 s on the client with plan 14's slower train; plan 15
+  # Task 8 adds about 3 s before the end-of-line wreck (the joiner seated, 2 s); the server's own pass ends by 560 s, the clients' by 540 s), and ends anyway once empty. A scripted server deals no objective unless one
   # is named: --objective=jailbreak gives floor 12 the campaign's own (the crew in their platform cages, the train's four wagons empty).
   # The pass checks the wire, not the fight: the server keeps the heroes topped up, frees a natural hound alone with crew 1 s after it
   # boards (only ride 2's scripted throw takes a prisoner) and keeps the train's crew above half their hp
@@ -175,10 +180,13 @@ if [ "${RIDE:-}" = 1 ]; then
   # Ruling 42: the end-of-line wreck lies past the exit bridge's start (B.2): no spare took over and the riders were set down inside, the joiner
   # seeing Wrecked and no takeover; then the test's restore at stop 4 (not a rise: the wipe-rise watch reads none of it) and the wreck there with
   # a spare (stop 3's), from which the old steps run
-  # fix round 1 (I1): either one hero or more rode and every one was set down inside ("(ok)"), or nobody rode and the line says so; never
-  # "0 … (ok)" (a hero seated for the set-down is Task 8's)
-  if ! grep -q "\[net-server\] ride: wreck at the end of the line: past the exit bridge's start, no spare took over; [1-9][0-9]* hero(es) set down inside (of [1-9][0-9]* riding; .*(ok)$" "$TMP/server.log" \
-     && ! grep -q "\[net-server\] ride: wreck at the end of the line: past the exit bridge's start, no spare took over; nobody riding: no hero in the train to set down (.*(nobody riding)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: $(grep -m1 "\[net-server\] ride: wreck at the end of the line" "$TMP/server.log"))"; exit 1; fi
+  # plan 15 Task 8 (Task 4's carry): the joiner, set down inside by the lift, is seated in the party's cart held at the end of the line (the server's test
+  # hook: the end of the line takes no boarding), seen seated on its screen; the wreck sets every hero who rode down inside: set down = riding, both >= 1
+  if ! grep -q "\[net-server\] ride: Joiner is seated in the party's cart at stop [0-9]* by the test's hook .*: seat [0-9]*, for the wreck at the end of the line" "$TMP/server.log" || ! grep -q "\[net\] ride: seated in the party's cart at stop [0-9]* here (seat [0-9]*, by the server's SeatMsg) for the wreck at the end of the line" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner was not seated in the party's cart for the wreck at the end of the line: $(grep -m1 "Joiner is seated in the party's cart" "$TMP/server.log"))"; exit 1; fi
+  WRECK_IN=$(grep -m1 "\[net-server\] ride: wreck at the end of the line: " "$TMP/server.log")
+  if ! echo "$WRECK_IN" | grep -q "\[net-server\] ride: wreck at the end of the line: past the exit bridge's start, no spare took over; [0-9]* hero(es) set down inside (of [0-9]* riding; .*(ok)$" \
+     || ! echo "$WRECK_IN" | awk '{ n = $0; sub(/.*no spare took over; /, "", n); sub(/ hero\(es\).*/, "", n); r = $0; sub(/.*\(of /, "", r); sub(/ riding;.*/, "", r); exit !(n + 0 >= 1 && n == r) }'; then echo "NET TEST: FAIL (the wreck at the end of the line did not set every hero who rode down inside, one at least: ${WRECK_IN:-no line})"; exit 1; fi
+  if ! grep -q "\[net\] ride: wreck at the end of the line: set down inside the island here at" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner was not set down inside the island on its screen after the wreck at the end of the line: $(grep -m1 "ride: wreck at the end of the line: set down\|still seated 1 s after the wreck" "$TMP/joiner.log"))"; exit 1; fi
   if ! grep -q "\[net\] ride: wreck at the end of the line: the cart showed Wrecked here and no spare took over" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner did not see the end-of-line wreck with no takeover)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: test restore at stop [0-9]* (not a rise)" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never restored the cart at the kiln's stop after the inside wreck)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: wreck: .* took over" "$TMP/server.log" || grep -q "\[net-server\] ride: wreck: .* did NOT take over" "$TMP/server.log" || ! grep -q "\[net\] ride: wreck: the cart showed Wrecked here" "$TMP/joiner.log" || ! grep -q "\[net\] ride: wreck-spare:" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: no spare took over, or the joiner did not see the Wrecked state and then the takeover)"; exit 1; fi
@@ -203,11 +211,56 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: chaser hud \"Spare cart — after the train\"" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's cart bar did not read the chaser's line while it rolled)"; exit 1; fi
   if ! grep -q "\[net\] ride: chase-done: set down beside the lane outside the island" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: chase-done: the chaser halted .* behind the parked train's place at S=[0-9.]*, outside the island (the train held at stop [0-9]*, S=[0-9.]*, 4 wagon(s)); Joiner set down beside the lane outside at .*: yes;" "$TMP/server.log"; then echo "NET TEST: FAIL (no chase-done at the parked train's place on the joiner and the server: $(grep -m1 "chase-done" "$TMP/server.log"))"; exit 1; fi
   if ! grep -q "\[net-server\] ride: chase-done: .* outside the island .* it hopped [1-9] hole(s) in the line" "$TMP/server.log"; then echo "NET TEST: FAIL (the chaser never hopped ride 5's pit or the fallen trestle)"; exit 1; fi
-  # the lift (plan 15 Task 6): the joiner presses "Board the cart" on the lift's cart through its intent; the lift halts within 3 m of the held
-  # train's last body inside the island and sets its one rider down there, on both sides
-  if ! grep -q "\[net\] ride: the lift stands again here; its cart offers \"Board the cart\" .* pressed it through the intent (parked:[0-9]*)" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: Joiner boarded the lift through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded the lift through its intent)"; exit 1; fi
+  # the lift (plan 15 Task 6): the joiner presses "Board the cart" on a tub of the lift (Task 8, Task 6's ⚠️4: liftwagon:{k}, put by the wagon nearest a
+  # walkable cell beside the parked train) through its intent; the lift halts within 3 m of the held train's last body inside the island and sets its one
+  # rider down there, on both sides
+  if ! grep -q "\[net-server\] ride: Joiner is put beside the lift's W[0-9] (liftwagon:[0-9]*) at " "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not put beside a tub of the lift: $(grep -m1 "Joiner is put beside the lift's" "$TMP/server.log"))"; exit 1; fi
+  if ! grep -q "\[net\] ride: the lift stands again here; its W[0-9] offers \"Board the cart\" .* pressed it through the intent (liftwagon:[0-9]*)" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: Joiner boarded the lift through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded the lift by a tub through its intent: $(grep -m1 "ride: the lift stands again here" "$TMP/joiner.log"))"; exit 1; fi
   if ! grep -q "\[net-server\] ride: lift halted at S=[0-9.]*, [0-9.]* m behind the train's last body (the train held at stop [0-9]*), inside the island; 1 rider(s) set down inside; Joiner at .* (ok)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the lift did not halt within 3 m of the held train inside and set the joiner down: $(grep -m1 "ride: lift halted" "$TMP/server.log"))"; exit 1; fi
   if ! grep -q "\[net\] ride: the lift set us down inside the island at" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner was not set down inside the island by the lift: $(grep -m1 "the lift set us down" "$TMP/joiner.log"))"; exit 1; fi
+  # plan 15 Task 8: the seat books on the grid carry the lift (L, L1..L4) with the joiner in it, the joiner's the server's at the same grid points
+  LIFT_BOOKS=$(awk '
+    FNR == 1 { file++ }
+    function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
+    file == 1 && /^\[net-server\] ride book / { w = val("seats"); if (w ~ /L[0-9]*\[[^]]*h[0-9]/) sb[val("t")] = w " " val("train") " " val("props") }
+    file == 2 && /^\[net\] ride book / { w = val("seats"); if (w ~ /L[0-9]*\[[^]]*h[0-9]/) jb[val("t")] = w " " val("train") " " val("props") }
+    END { n = 0; m = 0; for (t in sb) { n++; if ((t in jb) && jb[t] == sb[t]) m++ } printf "%d server grid point(s) with a hero in the lift, the joiner the same at %d\n", n, m; exit !(n >= 2 && m >= 2) }' "$TMP/server.log" "$TMP/joiner.log")
+  LIFT_BOOKS_RC=$?
+  echo "--- the lift in the books: $LIFT_BOOKS"
+  if [ $LIFT_BOOKS_RC -ne 0 ]; then echo "NET TEST: FAIL (the seat books did not carry the lift (L) with the joiner in it on the server and the joiner alike: $LIFT_BOOKS)"; exit 1; fi
+  # plan 15 Task 8 (B.10): no remote Get out over the exit bridge. While its train has a car over the bridge the first client's cart offers "" on every frame
+  # here; it presses Get out through the intent (cart:0) on the first: the server refuses it, and the client stays seated
+  echo "--- the exit bridge"; grep -h "\[net\] ride: over the exit bridge\|get out refused (the train is on the exit bridge)" "$TMP/server.log" "$TMP/client.log" 2>/dev/null | head -4
+  if ! grep -q "\[net\] ride: over the exit bridge here (front S=[0-9.]*, the bridge S=[0-9.]*\.\.[0-9.]*): the cart offers \"\"; pressed Get out through the intent anyway (cart:0)" "$TMP/client.log" \
+     || ! grep -q "\[net-server\] interact cart:0 from Rider: get out refused (the train is on the exit bridge)" "$TMP/server.log" \
+     || ! grep -q "\[net\] ride: over the exit bridge: [1-9][0-9]* frame(s), the cart's prompt \"\" on every one; still seated in seat [0-9]* (ok)" "$TMP/client.log"; then echo "NET TEST: FAIL (no remote Get out over the exit bridge: the client's press, the server's refusal or the client's empty prompt and seat: $(grep -m1 "ride: over the exit bridge" "$TMP/client.log"))"; exit 1; fi
+  # plan 15 Task 8: the parked train's smash seen on each client within 1 s of the server's PropEvt, with the server's plating (each client's first cart
+  # state after it), and the props hashed with the parked state: at the first stable grid point 1 s or more after the smash both clients' props word is the
+  # server's, which the smash changed
+  PK_SRV=$(grep -m1 -o "\[net-server\] ride: parked: smashed (PropEvt parked:[0-9]*) at t=[0-9.]*, plating [-0-9]*" "$TMP/server.log")
+  PK_T=$(echo "$PK_SRV" | sed -E 's/.* at t=([0-9.]+),.*/\1/'); PK_P=$(echo "$PK_SRV" | sed -E 's/.*plating ([-0-9]+)$/\1/')
+  echo "--- the parked train's smash"; grep -h "the cart smashes the parked train\|\] ride: parked: " "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null | head -8
+  if [ -z "$PK_SRV" ] || ! grep -q "\[rails\] the cart smashes the parked train at S=" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never smashed the parked train or never told its PropEvt)"; exit 1; fi
+  for f in client joiner; do
+    PK=$(grep -m1 -o "\[net\] ride: parked: smashed here (PropEvt) [0-9.]*, plating [-0-9]*" "$TMP/$f.log" 2>/dev/null)
+    if [ -z "$PK" ] || ! echo "$PK" | awk -v ts="$PK_T" -v ps="$PK_P" '{ t = $0; sub(/.*\(PropEvt\) /, "", t); sub(/,.*/, "", t); p = $NF; d = t - ts; if (d < 0) d = -d; exit !(d <= 1.0 && p == ps) }'; then echo "NET TEST: FAIL (the $f did not show the parked train's smash within 1 s of the server's (t=$PK_T) with its plating $PK_P: ${PK:-no line})"; exit 1; fi
+  done
+  PK_HASH=$(awk -v ts="$PK_T" '
+    FNR == 1 { file++ }
+    function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
+    function key(t) { return sprintf("%.1f", t) }
+    file == 1 && /^\[net-server\] ride book / { sp[val("t")] = val("props"); if (val("t") + 0 < ts) before = val("props") }
+    file == 2 && /^\[net\] ride book / { cp[val("t")] = val("props") }
+    file == 3 && /^\[net\] ride book / { jp[val("t")] = val("props") }
+    END {
+      best = ""
+      for (t in sp) if (t + 0 >= ts + 1.0 && (key(t - 0.5) in sp) && (key(t + 0.5) in sp) && sp[key(t - 0.5)] == sp[t] && sp[key(t + 0.5)] == sp[t] && (best == "" || t + 0 < best + 0)) best = t
+      printf "grid t=%s: the server %s (before the smash %s), the client %s, the joiner %s\n", best, sp[best], before, cp[best], jp[best]
+      exit !(best != "" && before != "" && sp[best] != before && cp[best] == sp[best] && jp[best] == sp[best])
+    }' "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log")
+  PK_HASH_RC=$?
+  echo "--- the props after the smash: $PK_HASH"
+  if [ $PK_HASH_RC -ne 0 ]; then echo "NET TEST: FAIL (after the parked train's smash the clients' props did not hash as the server's, or the smash left the hash unchanged: $PK_HASH)"; exit 1; fi
   # ride 5's lava pit (plan 15 Ruling 22): the first client throws its switch from the seat on the first frame the window offers it; the
   # server takes the press in the seated window and the train goes round the pit; both clients show the crossing as the server's (CrossOut
   # and CrossBack within 0.1 m); nothing runs into the pit, on any peer

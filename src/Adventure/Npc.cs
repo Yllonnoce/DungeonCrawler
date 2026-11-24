@@ -511,6 +511,27 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// <paramref name="lead"/> and the spot all on one side of the island's edge (<see cref="Objectives.CrewRules.CatchUpAllowed"/>; a bridge cell is
     /// outside); otherwise it holds where it is, printing so once per hold. Always true off an island floor.
     /// </summary>
+    /// <summary>Holds that started on a rail cell and stepped off it (plan 15 Task 8; the flows read it).</summary>
+    internal int HoldStepsOff { get; private set; }
+
+    /// <summary>Test hook (--test-island=grisel): the hold is let go where the follower stands, so its next one starts there (on a lane cell the flow put it on).</summary>
+    internal void DebugReleaseHold() { _catchUpHeld = false; _holdTold = false; _mover.Reset(); }
+
+    /// <summary>
+    /// A hold that starts on a rail cell (plan 15 Task 8, the Task 7 re-review's lane cell) first steps the body to the nearest cell off the rails on
+    /// its own side (<see cref="ExitBridgeRules.HoldStepOff"/>): then it holds where it is, never inside the lift standing again at its place nor in a
+    /// cart's way. Off the rails, or with no such cell near, it holds where it stands. Server and solo.
+    /// </summary>
+    private void StepOffTheLine(FloorLayout layout, bool inside)
+    {
+        var here = DungeonBuilder.WorldToCell(GlobalPosition);
+        if (Main.Instance?.Builder is not { } builder || ExitBridgeRules.HoldStepOff(layout, here, inside, builder.IsCellBlocked) is not { } cell) return;
+        GlobalPosition = builder.Surface(cell) + Vector3.Up * 0.1f;
+        Velocity = Vector3.Zero;
+        HoldStepsOff++;
+        GD.Print($"[npc] {NpcName}: held on the line at {here}: steps off to {cell}");
+    }
+
     private bool CatchUpAllowed(FloorLayout? layout, Node3D lead, Vector3 dest)
     {
         if (layout?.Rail?.Island == null) return true;
@@ -519,7 +540,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (self != led)
         {
             // across the edge: a hold, told as it starts, its search throttled until it ends
-            if (!_catchUpHeld) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _catchUpHeld = true; _heldSearchIn = 0f; } // its first search at once
+            if (!_catchUpHeld) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _catchUpHeld = true; _heldSearchIn = 0f; StepOffTheLine(layout, self); } // its first search at once
         }
         else if (!_holdTold) { GD.Print($"[npc] {NpcName}: catch-up held (the set-down spot is across the island's edge)"); _holdTold = true; } // refused by the spot's side alone: told once until a catch-up runs
         return false;
