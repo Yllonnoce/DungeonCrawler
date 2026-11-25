@@ -212,7 +212,7 @@ public partial class NetTestFlow : Node
             }
             // every departure from a stop (held there, not halted on the line) is a real one: a boarding's countdown ran out
             var heldAtStop = held && !rc.Halted;
-            if (_rideHeldAtStop && rc.State.Mode == Dungeon.Rails.CartMode.Rolling)
+            if (_rideHeldAtStop && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && !rc.HijackLive) // a hijack's roll back, and its relief train, are not departures (plan 16)
             {
                 _rideDeparts++;
                 var aboard = 0;
@@ -225,6 +225,7 @@ public partial class NetTestFlow : Node
             RideSplitServer(rc);
             RideCavernServer(world, rc, hero, party);
             RideJoinerServer(world, rc, party);
+            RideHijackServer(world, rc, hero, party); // plan 16 Task 9: the hijack won back and got away at stop 3 (NetTestFlow.Hijack.cs)
         }
         if (_rideSeated && !_rideSetDown && _rideMember >= 0 && Main.Instance?.Party is { } p2 && _rideMember < p2.Adventurers.Length && !p2.Adventurers[_rideMember].Seated)
         {
@@ -276,11 +277,11 @@ public partial class NetTestFlow : Node
             var (parkedMissing, parkedOrdered) = ParkedTraceOrder(world); // plan 15 Task 8: the parked train's PropEvts traced in ride order
             missing.AddRange(parkedMissing.Where(m => !missing.Contains(m)));
             ordered &= parkedOrdered;
-            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props && joiner && chase && thrown && _ridePitRound && _insideWreckOk && _wreckOk && _heapHalt && _lastWreckOk && _wipeOk;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}, home by its live switch back thrown from the seat {Yes(_rideBackTaken)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; boarded again from stop 3 to the kiln's {Yes(_joinRideOnDone)}; the left-behind spare: refused while the train was held at the kiln's stop {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the parked train's place {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down outside {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the lift boarded {Yes(_liftBoarded)}, halted behind the train inside {(_liftDone ? FormattableString.Invariant($"{_liftGap:0.00} m") : "NO")} ({(_liftOk ? "ok" : "NOT ok")}); the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; ride {line0.LastRide}'s pit switch thrown from the client's seat and the train round the pit {Yes(_ridePitRound)}; the wreck at the end of the line inside (no spare, the joiner seated in the cart and set down inside) {Yes(_insideWreckOk)}, then restored at stop {line0.LastRideStop} and wrecked with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {string.Join(" then ", _wreckSpares)}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}, then wrecked until no spare was left {Yes(_lastWreckOk)}, then, the joiner walked off an edge on its own (fallen here {Yes(_walkOffFell)}), wiped by the crevasse and risen beside the cart with the joiner {Yes(_wipeOk)}; the riders fought their boarders and were topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {rides}"));
+            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props && joiner && chase && thrown && _ridePitRound && _insideWreckOk && _wreckOk && _heapHalt && _lastWreckOk && _wipeOk && RideHijackOk;
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}, home by its live switch back thrown from the seat {Yes(_rideBackTaken)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; boarded again from stop 3 to the kiln's {Yes(_joinRideOnDone)}; the hijack at stop 3: {RideHijackSummary}; the left-behind spare: refused while the train was held at the kiln's stop {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the parked train's place {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down outside {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the lift boarded {Yes(_liftBoarded)}, halted behind the train inside {(_liftDone ? FormattableString.Invariant($"{_liftGap:0.00} m") : "NO")} ({(_liftOk ? "ok" : "NOT ok")}); the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; ride {line0.LastRide}'s pit switch thrown from the client's seat and the train round the pit {Yes(_ridePitRound)}; the wreck at the end of the line inside (no spare, the joiner seated in the cart and set down inside) {Yes(_insideWreckOk)}, then restored at stop {line0.LastRideStop} and wrecked with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {string.Join(" then ", _wreckSpares)}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}, then wrecked until no spare was left {Yes(_lastWreckOk)}, then, the joiner walked off an edge on its own (fallen here {Yes(_walkOffFell)}), wiped by the crevasse and risen beside the cart with the joiner {Yes(_wipeOk)}; the riders fought their boarders and were topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {rides}"));
             return;
         }
-        if (_elapsed > 560) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
+        if (_elapsed > 660) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]"); // plan 16 Task 9: the hijack steps at stop 3 add about 70 s (560 before)
     }
 
     // the end of the pass (plan 5 task 11; plan 15 Ruling 42): once the first client has left, the cart is wrecked where it stands by a test hook,
@@ -629,6 +630,7 @@ public partial class NetTestFlow : Node
             hero.Shove(beside);
             GD.Print(FormattableString.Invariant($"[net-server] ride: {RideJoinerName} is put beside the cart at stop {k} to board again, {beside.DistanceTo(rc.Cart.GlobalPosition):0.00} m from it (gate up: {rc.GateUp(k)})"));
         }
+        if (RideHijackHolds(k)) return; // plan 16 Task 9: at stop 3 the hijack steps come first (the joiner rides the roll back seated, then the relief train)
         if (_joinOnShoved == k && _joinOnBoarded != k && hero.Seated && hero.Cart == rc.Cart)
         {
             _joinOnBoarded = k;
@@ -1406,6 +1408,7 @@ public partial class NetTestFlow : Node
             net.Disconnect("test finished");
             return;
         }
+        if (main.Builder.CurrentFloor == 12 && Dungeon.Rails.RailController.Instance is { } hijackRc && IsInstanceValid(hijackRc)) RideHijackWatch(client, main, hijackRc); // plan 16 Task 9 (NetTestFlow.Hijack.cs)
         FightBoarders(main);
         RideSoundSample(client);
         switch (_step)
@@ -1483,6 +1486,7 @@ public partial class NetTestFlow : Node
                 // the drop and falls with it (the final review's I1), and is out of the cart from then until it has boarded again at the next stop
                 var onDeck = me.Cart is Dungeon.Rails.SlagCart && Dungeon.Rails.RailEncounterController.Instance is { } cavern && IsInstanceValid(cavern) && rc.StopIndex == CavernStop(rc, cavern);
                 if (RideBackFromFall(net, rc, me)) return;
+                if (RideHijackRider(net, main, rc, me)) return; // plan 16 Task 9: out at stop 3 through both hijacks, then into the relief train
                 var inW1 = _dpStep is >= 2 and < 9 && me.Cart == rc.WagonAt(1); // ride 4's double press won: in wagon 1 for a second or two
                 if (!_rideFallOut && (!me.Seated || me.Cart != rc.Cart && !onDeck && !inW1)) { Finish("[net]", false, $"ride: our hero is not in the cart at stop {rc.StopIndex} (seated {me.Seated})"); net.Disconnect("test finished"); return; }
                 if (RideDoublePress(net, main, rc, me, "the rider")) return; // ride 4: both clients press for wagon 1's place at once (plan 14)
@@ -1986,7 +1990,7 @@ public partial class NetTestFlow : Node
         if (_takeStarted || _cavDone || main.Rebuilding || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || main.Party?.Local is not { } me
             || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc) || enc.GetParent() != root
             || Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || CavernStop(rc, enc) is not (>= 0 and var stop)) return;
-        var onRide = rc.StopIndex == stop && rc.State.Mode == Dungeon.Rails.CartMode.Rolling;
+        var onRide = rc.StopIndex == stop && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && !rc.HijackLive; // a hijack's roll back at stop 3 (plan 16) is not ride 4
         if (onRide && !_cavSawRide)
         {
             // plan 14: the cavern's ride with the long train: its wagons as this client has them, its rear the front less the train's length
@@ -2558,6 +2562,7 @@ public partial class NetTestFlow : Node
                 if (rc == null || me == null) return;
                 var line = Line(rc);
                 var heldHere = rc.State.Mode == Dungeon.Rails.CartMode.Held && !rc.Halted;
+                if (RideHijackJoiner(net, main, rc, me)) return; // plan 16 Task 9: at stop 3 the hijack steps first (NetTestFlow.Hijack.cs)
                 if (RideDoublePress(net, main, rc, me, "the joiner")) return; // ride 4: both clients press for wagon 1's place at once (plan 14)
                 RideCavernLeaps(net, main, rc, me, joiner: true); // ride 4: the brake across the bridge's call, the leap across and back
                 if (me.Seated && me.Cart == rc.Cart)

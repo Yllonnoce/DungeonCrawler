@@ -538,11 +538,13 @@ public partial class NetTestFlow
     }
 
     // the throw seen here (both clients): the call (a BarkMsg or the log's line), the BoarderThrow glow (EnemyStateMsg), the PropEvt
-    // wagon:{k} "thrown:{id}" (the server's clock as this client has it), then the copy hidden and seated nowhere
+    // wagon:{k} "thrown:{id}" (the server's clock as this client has it), then the copy hidden and seated nowhere. The glow is the thrower's
+    // own (plan 16 Task 9, the T6 carry): a hijack's driver is told as BoarderThrow too (its glow retold at 1.5 s), so each enemy's last
+    // BoarderThrow telegraph is kept by its net id and the throw takes its wagon's boarder's, never the latest of anyone's
     private readonly List<(double At, string How)> _throwCalls = new();
-    private double _glowAt = double.NaN;
-    private int _glowHound = -1;
-    private readonly List<(string Id, string Ref, double At, double GlowAt, int GlowHound)> _thrownHere = new();
+    /// <summary>Each enemy's last BoarderThrow telegraph here (server time), by its net id.</summary>
+    private readonly Dictionary<int, double> _glowsBy = new();
+    private readonly List<(string Id, string Ref, double At, double GlowAt, int GlowHound, string GlowHow)> _thrownHere = new();
     private readonly HashSet<string> _thrownTold = new();
     /// <summary>The ids of the crew thrown that this client heard of (its PropEvt), for a later rebuild's check.</summary>
     private readonly HashSet<string> _thrownIds = new();
@@ -554,20 +556,37 @@ public partial class NetTestFlow
         switch (m)
         {
             case EnemyStateMsg es when es.State == Enemies.TelegraphRules.BoarderThrow:
-                _glowAt = client.ServerNow;
-                _glowHound = es.NetId;
+                _glowsBy[es.NetId] = client.ServerNow;
                 break;
             case PropEvt pe when pe.What.StartsWith("thrown:", StringComparison.Ordinal) && pe.Ref.StartsWith(NetRefs.WagonKind + ":", StringComparison.Ordinal):
             {
                 var id = pe.What["thrown:".Length..];
                 _thrownIds.Add(id);
-                _thrownHere.Add((id, pe.Ref, client.ServerNow, _glowAt, _glowHound));
+                var (glowAt, glowHound, how) = ThrowGlow(pe.Ref);
+                _thrownHere.Add((id, pe.Ref, client.ServerNow, glowAt, glowHound, how));
                 break;
             }
             case BarkMsg bark when IsThrowCall(bark.Text):
                 _throwCalls.Add((client.ServerNow, "heard (BarkMsg)"));
                 break;
         }
+    }
+
+    /// <summary>
+    /// The glow a throw off <paramref name="wagonRef"/> (wagon:{k}) answers to: its wagon's boarder's own last BoarderThrow telegraph (by its net
+    /// id), or, with no boarder on that rim here, the latest telegraph of an enemy never seen driving the cart (a hijack's driver is told as
+    /// BoarderThrow too). NaN and −1 with none.
+    /// </summary>
+    private (double At, int Hound, string How) ThrowGlow(string wagonRef)
+    {
+        var k = int.TryParse(wagonRef[(NetRefs.WagonKind.Length + 1)..], out var n) ? n : -1;
+        if (Rails.RailController.Instance is { } rc && IsInstanceValid(rc) && rc.WagonAt(k) is { } w && w.Boarders[0] is { } b && IsInstanceValid(b) && b.Carrier == w
+            && _glowsBy.TryGetValue(b.NetId, out var own))
+            return (own, b.NetId, $"wagon {k}'s boarder's own telegraph (by its net id)");
+        var best = (At: double.NaN, Hound: -1);
+        foreach (var (hound, at) in _glowsBy)
+            if (!_hwDrivers.Contains(hound) && (double.IsNaN(best.At) || at > best.At)) best = (at, hound);
+        return (best.At, best.Hound, $"no boarder on wagon {k}'s rim here: the latest telegraph of an enemy that never drove the cart");
     }
 
     /// <summary>A line in the log here: the throw's call in the log's words when nobody seated was there to say it.</summary>
@@ -585,7 +604,7 @@ public partial class NetTestFlow
     private void RideThrowWatch(ClientWorld client, Rails.RailController rc)
     {
         if (_thrownHere.Count == 0 || ObjectiveController.Instance is not CrewRescueController crew) return;
-        foreach (var (id, wagonRef, at, glowAt, glowHound) in _thrownHere)
+        foreach (var (id, wagonRef, at, glowAt, glowHound, glowHow) in _thrownHere)
         {
             if (_thrownTold.Contains(id)) continue;
             var npc = crew.Crew.FirstOrDefault(n => IsInstanceValid(n) && n.Id == id);
@@ -602,7 +621,7 @@ public partial class NetTestFlow
             if (seatedIn != null) why.Add($"seated in {seatedIn}");
             if (call.How == null) why.Add("no call heard before it");
             if (double.IsNaN(glowAt) || glowAt > at || at - glowAt > 3.0) why.Add("no BoarderThrow glow seen before it");
-            GD.Print(FormattableString.Invariant($"[net] ride: {name} thrown from wagon {k} here (PropEvt), hidden {after:0.0} s later, {(seatedIn == null ? "seated nowhere" : $"seated in {seatedIn}")} (the call {(call.How != null ? $"{call.How} at t={call.At:0.000}" : "NOT heard")}; the glow on hound {glowHound} at t={glowAt:0.000}, the throw's PropEvt at t={at:0.000}, hidden at t={client.ServerNow:0.000}) ({(why.Count == 0 ? "ok" : "FAIL: " + string.Join("; ", why))})"));
+            GD.Print(FormattableString.Invariant($"[net] ride: {name} thrown from wagon {k} here (PropEvt), hidden {after:0.0} s later, {(seatedIn == null ? "seated nowhere" : $"seated in {seatedIn}")} (the call {(call.How != null ? $"{call.How} at t={call.At:0.000}" : "NOT heard")}; the glow on hound {glowHound} at t={glowAt:0.000}, the throw's PropEvt at t={at:0.000}, hidden at t={client.ServerNow:0.000}; the glow is {glowHow}) ({(why.Count == 0 ? "ok" : "FAIL: " + string.Join("; ", why))})"));
         }
     }
 

@@ -177,6 +177,7 @@ public partial class RailController
     {
         _partyWatch.Reset(); // no watchdog: the roll grinds nowhere
         _anyBrake = false;
+        if (NetSession.Instance?.TestRide == true) RideHijackTrace(); // the RIDE server's half-second line (Task 9)
         if (_driverHeld && (Cart.Driver is not { } d || !IsInstanceValid(d) || !d.IsAlive || d.Carrier != Cart)) { DriverLost(Cart.Driver, "the driver is dead"); if (!HijackLive) return; } // a death drops it and brakes (Ruling 11's brake)
         if (Hijack == HijackPhase.Glow) { TickGlow(dt); return; } // held under the glow: the brake comes off at its end
         if (Hijack is HijackPhase.Gone or HijackPhase.ReliefIn) _goneSeconds += dt; // since the train went: the relief's wait and its hold's line
@@ -585,4 +586,72 @@ public partial class RailController
 
     /// <summary>Test hook: the live roll back's brake goes on (<see cref="BrakeRollBack"/>, "the test").</summary>
     internal void DebugEndRollBack() => BrakeRollBack("the test");
+
+    // ---- the RIDE pass's hooks and trace (Task 9, Ruling 21) -------------------------------------------------------------------
+
+    /// <summary>
+    /// Test hook (the RIDE server's, or a single-player test flow's, as <see cref="DebugWreck"/>): an <c>enemy.horde_cinder</c> made the cart's
+    /// driver now (<see cref="TakeDriver"/>: the glow, then the roll back), with no siege and no tag pacing (the RIDE server has neither: Ruling 2).
+    /// Its hp is held above 1 (only the grip ends it). Null, with nothing spawned, unless <see cref="HijackMayStart"/> holds.
+    /// </summary>
+    internal Enemy? DebugHijack()
+    {
+        if (NetSession.IsClient || NetSession.IsNetworked && NetSession.Instance is not { TestServer: true, TestRide: true }) return null;
+        if (!Current || Main.Instance?.Builder is not { } builder || !HijackMayStart()) return null;
+        if (builder.SpawnEnemy(HijackRules.Cinder, StandBesideLane(Cart.GlobalPosition), builder.CurrentFloor) is not { } e) return null;
+        e.DebugHoldHp = true;
+        if (TakeDriver(e)) return e;
+        e.DebugHoldHp = false;
+        e.Kill();
+        return null;
+    }
+
+    /// <summary>
+    /// Test hook (as <see cref="DebugHijack"/>): one sure melee blow of 1 on the cart's driver, dealt as party member <paramref name="member"/>'s
+    /// (its stats and its name: <see cref="Enemy.ReceiveAttack"/> credits that member), so <see cref="OnDriverHurt"/> counts it as that member's
+    /// hit from where it sits. The RIDE pass's stand-in for a remote player's swing (pre-flight F19).
+    /// </summary>
+    internal void DebugStrikeDriver(int member)
+    {
+        if (NetSession.IsClient || NetSession.IsNetworked && NetSession.Instance is not { TestServer: true, TestRide: true }) return;
+        if (Cart.Driver is not { } d || !IsInstanceValid(d) || !d.IsAlive || Main.Instance?.Party is not { } party || member < 0 || member >= party.Members.Length) return;
+        var m = party.Members[member];
+        d.ReceiveAttack(m.Stats, new Combat.AttackProfile { MinDamage = 1, MaxDamage = 1, Kind = Combat.AttackKind.Melee }, new Combat.HitContext { DefenderStunned = true }, party.Rng, m.Name);
+    }
+
+    /// <summary>The RIDE pass's hijack lines come every this many seconds of the server's clock while a hijack is live.</summary>
+    internal const double HijackTraceEvery = 0.5;
+    private long _hijackTraceGrid = long.MinValue;
+
+    /// <summary>
+    /// The RIDE server, each hijack tick: on each half second of the server's clock, the phase, the cart's S and V, and each coupled wagon's S
+    /// (<see cref="HijackWagonsTrace"/>), with the run's facing. Each client prints its own (RailNet); the pass pairs them by t.
+    /// </summary>
+    private void RideHijackTrace()
+    {
+        if (NetSession.Instance is not { TestServer: true, TestRide: true } net) return;
+        var grid = (long)Math.Floor(net.Now / HijackTraceEvery);
+        if (grid == _hijackTraceGrid) return;
+        _hijackTraceGrid = grid;
+        GD.Print(FormattableString.Invariant($"[net-server] ride: hijack {Hijack} S={State.S:0.00} V={State.V:0.00} t={net.Now:0.000} wagons={HijackWagonsTrace()} facing={(Party.Facing >= 0 ? "+1" : "-1")}"));
+    }
+
+    /// <summary>
+    /// The RIDE pass: each coupled wagon's S where it stands (its body measured on the line near the cart, not its place reckoned), as
+    /// <c>W1:S,W2:S,…</c>, or "-" with none coupled (gone into the dark). Both peers' (a client's from its posed copies).
+    /// </summary>
+    internal string HijackWagonsTrace()
+    {
+        if (_train.Count == 0 || !Party.Track.Valid) return "-";
+        var b = new System.Text.StringBuilder();
+        var s = State.S;
+        for (var k = 0; k < _train.Count; k++)
+        {
+            var w = _train.Wagons[k];
+            if (k > 0) b.Append(',');
+            var at = IsInstanceValid(w) && Party.Track.Measure(w.GlobalPosition, s, TrainRules.Spacing * (k + 1) + 3f, out var body) ? body.S : float.NaN;
+            b.Append('W').Append(IsInstanceValid(w) ? w.Number : 0).Append(':').Append(at.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        return b.ToString();
+    }
 }
