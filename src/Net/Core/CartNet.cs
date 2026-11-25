@@ -122,6 +122,12 @@ public sealed class CartStateDto
     // or in the air is not listed: its LeapMsg flies it.
     public List<int>? Boarders { get; set; }
     public List<int>? WagonBoarders { get; set; }
+    /// <summary>
+    /// The party's cart: the hijack's phase (plan 16 Task 5, protocol 18; a <c>HijackPhase</c>, 0 none). A client reverses the cart's run (its facing
+    /// kept forward while it rolls toward lower S) in the roll back and its brake, and drives the roll back's ramp (<c>HijackRules</c>). While the
+    /// cart has a driver, <see cref="Boarders"/> has a third entry: the driver's net id.
+    /// </summary>
+    public byte Hijack { get; set; }
 
     /// <summary>The server's clock (<c>NetSession.Instance.Now</c>) when this state was true.</summary>
     public double ServerTime { get; set; }

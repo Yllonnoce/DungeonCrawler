@@ -7,11 +7,11 @@ using Godot;
 namespace DungeonCrawler.Core;
 
 // ---- --test-stop-trap[=siege|ambush|roll|wonback|gotaway|limits|pockets|alcove] (plan 16) ---------------------------------------
-// The stop trap's flows, one variant a run, each added by the task that builds it (T3: =siege, the default; T4: =ambush). Every variant runs on the
+// The stop trap's flows, one variant a run, each added by the task that builds it (T3: =siege, the default; T4: =ambush; T5: =roll). Every variant runs on the
 // built-in campaign's floor 12 at lethality 1 (ForcedLethality ??= 1), with no gathering and no AI trace; every hero is topped up to full
 // HP each second (a downed one stood up first) unless the flow is taking them down. NoPortals is off for =siege, =wonback and =gotaway;
 // NoAmbush is off for =ambush, =pockets and =alcove (Ruling 22). The cull frees (kills, as the other floor-12 flows do) every enemy but the
-// variant's own: siege creatures, stop guards and the stop walls' ambushers here; the later tasks spare their hijackers and alcove shooters. Prints
+// variant's own: siege creatures, stop guards, the stop walls' ambushers and a variant's own (_stKeep: =roll's cinder) here; the later tasks spare their hijackers and alcove shooters. Prints
 // [stoptrap] lines and [stoptrap] RESULT ok ({variant}) or [stoptrap] RESULT FAIL ({variant}): {why}.
 public partial class DebugTools
 {
@@ -23,7 +23,7 @@ public partial class DebugTools
     private bool _stNoTopUp;
     private int _stRevived;
     /// <summary>The variants built so far (each task adds its own).</summary>
-    private static readonly string[] StopTrapVariants = { "siege", "ambush" };
+    private static readonly string[] StopTrapVariants = { "siege", "ambush", "roll" };
 
     /// <summary>The flag: the variant, its switches and its budget (Ruling 22).</summary>
     private void StopTrapArgs(string arg)
@@ -77,6 +77,7 @@ public partial class DebugTools
         {
             case "siege": RunStopTrapSiege(main, layout, root, rc, portals); break;
             case "ambush": RunStopTrapAmbush(main, layout, root, rc, portals); break;
+            case "roll": RunStopTrapRoll(main, layout, root, rc); break;
         }
     }
 
@@ -106,12 +107,14 @@ public partial class DebugTools
         foreach (var e in Enemies.Enemy.Live)
         {
             if (!IsInstanceValid(e) || !e.IsAlive || e.GetParent() != root) continue;
-            if (portals.IsSiegeCreature(e) || HoldsAStop(main, layout, e) || walls?.IsStopAmbusher(e) == true) continue;
+            if (portals.IsSiegeCreature(e) || HoldsAStop(main, layout, e) || walls?.IsStopAmbusher(e) == true || _stKeep.Contains(e)) continue;
             _stCull.Add(e);
         }
         foreach (var e in _stCull) e.Kill();
     }
     private readonly List<Enemies.Enemy> _stCull = new();
+    /// <summary>The variant's own creatures the cull spares (=roll's cinder on the rails).</summary>
+    private readonly HashSet<Enemies.Enemy> _stKeep = new();
 
     /// <summary>The heroes up now, by cell (the sites' clearances are judged from these, as the siege picks them).</summary>
     private static List<GridPos> StopTrapHeroCells(Main main)

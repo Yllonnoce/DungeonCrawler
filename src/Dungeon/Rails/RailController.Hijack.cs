@@ -1,0 +1,208 @@
+using DungeonCrawler.Core;
+using DungeonCrawler.Enemies;
+using DungeonCrawler.Net;
+using DungeonCrawler.Party;
+using Godot;
+
+namespace DungeonCrawler.Dungeon.Rails;
+
+/// <summary>
+/// The hijack's reverse roll (plan 16 Task 5, spec section 3): the party's train, held at a stop, rolls backwards along the line. Its run then
+/// travels toward lower S (<see cref="CartRun.Dir"/> −1) while it faces forward (<see cref="CartRun.Reversing"/>: <see cref="CartRun.Facing"/> +1),
+/// so the cart is unturned and its wagons stay on the lower-S side, leading; every peer poses it so (the wire's <c>CartStateDto.Hijack</c>).
+/// It ramps at 0.5 m/s² to 4 m/s toward its limit (<see cref="HijackRules.LimitS"/>: 40 m back, or 5 m short of a hole or a live hazard of the
+/// ride behind), judges run-overs and warns from its leading face (the last wagon's back, <see cref="HijackLead"/>), brakes when told
+/// (<see cref="BrakeRollBack"/>, or at its limit with no driver: Ruling 11), then rolls forward to its stop at 2 m/s and is held there again.
+/// It raises <see cref="CartEventKind.Hijacked"/> and <see cref="CartEventKind.HijackOver"/>, never a departure or an arrival: no ride
+/// arms, no snapshot is taken, no stop is counted, and the watchdog, the jump, the obstacles and the arrival are never judged. Not saved: a load
+/// or a wreck stands the train whole and forward (<see cref="ResetHijack"/>). Server and solo; a client follows the wire.
+/// </summary>
+public partial class RailController
+{
+    /// <summary>The hijack's phase (a client's from the wire).</summary>
+    public HijackPhase Hijack { get; private set; }
+    /// <summary>A hijack is under way (any phase but None).</summary>
+    public bool HijackLive => Hijack != HijackPhase.None;
+    /// <summary>The live roll back's limit (the cart's middle S), or NaN.</summary>
+    public float HijackLimitS { get; private set; } = float.NaN;
+    /// <summary>
+    /// How far the leading face stands past the cart's own front in its way of travel: the train's wagons (<c>wagons × Spacing</c>) while it
+    /// rolls back, else 0 (the cart's own front leads).
+    /// </summary>
+    public float HijackLead => Party.Reversing ? _train.Count * TrainRules.Spacing : 0f;
+    /// <summary>The stop the live hijack rolled back from (and returns to), or −1.</summary>
+    internal int HijackStop { get; private set; } = -1;
+    /// <summary>Why the roll back's brake went on (the return's held line names it).</summary>
+    private string _hijackWhy = "";
+    private readonly List<(float From, float To)> _rollBackHazards = new();
+
+    /// <summary>
+    /// The roll back's limit from <paramref name="stop"/> as the line stands now (<see cref="HijackRules.LimitS"/> over the encounter controller's
+    /// <see cref="RailEncounterController.CollectRollBackHazards"/>), and what cut it short of the 40 m (null when nothing did).
+    /// </summary>
+    internal float RollBackLimitAt(int stop, out string? cut)
+    {
+        cut = null;
+        if (stop < 0 || stop >= StopS.Length) return float.NaN;
+        var enc = RailEncounterController.Instance is { } e && IsInstanceValid(e) && e.GetParent() == GetParent() ? e : null;
+        if (enc != null) enc.CollectRollBackHazards(_rollBackHazards);
+        else _rollBackHazards.Clear();
+        var stopS = StopS[stop];
+        var limit = HijackRules.LimitS(stopS, _train.Count, _rollBackHazards);
+        if (limit > stopS - HijackRules.RollBackReach)
+            foreach (var (from, to) in _rollBackHazards)
+                if (from < stopS && Mathf.Abs(HijackRules.LimitS(stopS, _train.Count, new[] { (from, to) }) - limit) < 1e-3f) { cut = $"cut by the hazard at S={from:0.0}..{to:0.0}"; break; }
+        return limit;
+    }
+
+    /// <summary>
+    /// The brake comes off (server and solo): the train held at its stop starts rolling back toward its limit with <paramref name="driver"/> (null:
+    /// none, the debug roll) holding the cart. A Hijacked event is raised; the countdown, if any, is cancelled.
+    /// </summary>
+    internal void BeginRollBack(Enemy? driver)
+    {
+        if (NetSession.IsClient || !Current || StopS.Length == 0) return;
+        if (State.Mode != CartMode.Held || Halted || Hijack is not (HijackPhase.None or HijackPhase.Glow)) return;
+        var k = StopIndex;
+        var limit = RollBackLimitAt(k, out var cut);
+        Boarding.Cancel();
+        Cart.Driver = driver;
+        Hijack = HijackPhase.RollingBack;
+        HijackStop = k;
+        HijackLimitS = limit;
+        _hijackWhy = "";
+        Party.Dir = -1;
+        Party.Reversing = true;
+        Party.Limit = limit;
+        Party.State = State with { Mode = CartMode.Rolling, V = 0f };
+        SetCartLayer();
+        Party.Settle(); // it sets off from a standstill
+        _hitAt.Clear();
+        _warnedAt.Clear();
+        _partyWatch.Reset();
+        Raise(new CartEvent(CartEventKind.Hijacked, Stop: k));
+        GD.Print($"[rails] hijack: the train rolls back from stop {k} (limit S={limit:0.0}, {StopS[k] - limit:0.0} m of roll{(cut != null ? $"; {cut}" : "")})");
+        RefreshHud();
+    }
+
+    /// <summary>The roll back's brake goes on (<paramref name="why"/>: a knock-off, a death, the limit, the test): it stops, then returns to its stop.</summary>
+    internal void BrakeRollBack(string why)
+    {
+        if (NetSession.IsClient || Hijack != HijackPhase.RollingBack) return;
+        Hijack = HijackPhase.Braking;
+        _hijackWhy = why;
+        GD.Print($"[rails] hijack: the brake goes on at S={State.S:0.0} at {State.V:0.00} m/s ({why})");
+        RefreshHud();
+    }
+
+    /// <summary>
+    /// Each physics tick while a hijack is live, in place of the held and rolling ticks (server and solo): the phase's input steps the run, the
+    /// run-over is judged from the leading face and the warning looks the way of travel. Never the obstacles, the jump, the arrival or the watchdog.
+    /// </summary>
+    private void TickHijack(PartyController party, float dt)
+    {
+        _partyWatch.Reset(); // no watchdog: the roll grinds nowhere
+        _anyBrake = false;
+        if (Hijack is HijackPhase.Glow or HijackPhase.Gone || State.Mode == CartMode.Wrecked) return; // held under the glow (T6), or gone (T7)
+        if (Hijack is HijackPhase.Braking or HijackPhase.Returning or HijackPhase.ReliefIn && State.Mode == CartMode.Held) { NextHijackPhase(); return; } // held at its limit as the brake went on, or at its stop
+        Party.Step(HijackRules.InputFor(Hijack, Party.SlopeAhead, _train.Count, Party.Limit), dt);
+        var lead = HijackLead;
+        RunOver(party, lead);
+        if (State.Plating <= 0f) { Wreck(); return; } // a big body run over took the last of it
+        if (State.Mode == CartMode.Held || Hijack == HijackPhase.Braking && State.V <= 0f) { NextHijackPhase(); return; }
+        Warn(party, lead);
+    }
+
+    /// <summary>The run came to a stand: at its limit (it brakes there), stopped by the brake (it returns), or held at its stop again (over).</summary>
+    private void NextHijackPhase()
+    {
+        switch (Hijack)
+        {
+            case HijackPhase.RollingBack: OnLimit(); break;
+            case HijackPhase.Braking: StartReturn(); break;
+            case HijackPhase.Returning or HijackPhase.ReliefIn: EndHijack(); break;
+        }
+    }
+
+    /// <summary>The roll back reached its limit. With no driver aboard the train brakes and comes back for good (Ruling 11; T7's got-away needs a driver).</summary>
+    private void OnLimit()
+    {
+        GD.Print($"[rails] hijack: the train reaches its limit at S={State.S:0.0} (stop {HijackStop} at S={StopS[HijackStop]:0.0})");
+        BrakeRollBack("the limit");
+    }
+
+    /// <summary>Stopped on the brake: the run turns to its way of travel again and rolls forward to its stop at walking pace.</summary>
+    private void StartReturn()
+    {
+        var k = HijackStop;
+        Hijack = HijackPhase.Returning;
+        Party.Dir = 1;
+        Party.Reversing = false;
+        Party.Limit = StopS[k];
+        HijackLimitS = float.NaN;
+        GD.Print($"[rails] hijack: the train stops at S={State.S:0.0} and rolls forward to stop {k} ({StopS[k] - State.S:0.0} m)");
+        if (StopS[k] - State.S < 0.02f) { Party.State = State with { S = StopS[k], V = 0f, Mode = CartMode.Held }; EndHijack(); return; }
+        Party.State = State with { Mode = CartMode.Rolling, V = 0f };
+        SetCartLayer();
+        Party.Settle();
+        RefreshHud();
+    }
+
+    /// <summary>Held at its stop again: as it was before the hijack (the gate, the cage hold and the countdown work as before). HijackOver is raised.</summary>
+    private void EndHijack()
+    {
+        var k = HijackStop;
+        Hijack = HijackPhase.None;
+        HijackStop = -1;
+        HijackLimitS = float.NaN;
+        Party.Dir = 1;
+        Party.Reversing = false;
+        Party.Limit = StopS[k];
+        Party.State = State with { S = StopS[k], V = 0f, Mode = CartMode.Held };
+        Party.Settle();
+        SetCartLayer();
+        Cart.Speed = 0f;
+        Raise(new CartEvent(CartEventKind.HijackOver, Stop: k));
+        GD.Print($"[rails] hijack over at stop {k}: the train held again ({(_hijackWhy.Length > 0 ? _hijackWhy : "no brake")})");
+        if (PlayerAboard() && GateClear && !Boarding.Running && StopIndex < StopS.Length - 1) StartBoarding();
+        RefreshHud();
+    }
+
+    /// <summary>
+    /// A load, a rise or a wreck: no hijack (it is not saved). The run faces and travels forward again, and a driver still carried is set down
+    /// beside the lane. The caller stands the train (<see cref="Restore"/>, a spare's takeover).
+    /// </summary>
+    private void ResetHijack(string why)
+    {
+        if (Cart.Driver is { } driver && IsInstanceValid(driver) && driver.Carrier == Cart) driver.Drop(StandBesideLane(driver.GlobalPosition));
+        Cart.FreeDriver();
+        var was = Hijack;
+        Hijack = HijackPhase.None;
+        HijackStop = -1;
+        HijackLimitS = float.NaN;
+        _hijackWhy = "";
+        Party.Dir = 1;
+        Party.Reversing = false;
+        Cart.Reversing = false;
+        if (was != HijackPhase.None) GD.Print($"[rails] hijack ends ({why}): it was {was}");
+    }
+
+    // ---- test hooks ------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Test hook (--test-stop-trap=roll; the RIDE server's): a driverless roll back from the stop the train is held at, only at stops 1..N−2 with
+    /// room to roll (<see cref="HijackRules.RollRoom"/>). False when none started.
+    /// </summary>
+    internal bool DebugRollBack()
+    {
+        if (NetSession.IsClient || NetSession.IsNetworked && NetSession.Instance is not { TestServer: true, TestRide: true }) return false;
+        if (HijackLive || State.Mode != CartMode.Held || Halted || StopIndex < 1 || StopIndex > StopS.Length - 2) return false;
+        if (!HijackRules.RollRoom(StopS[StopIndex], RollBackLimitAt(StopIndex, out _))) return false;
+        GD.Print($"[rails] test: a driverless roll back from stop {StopIndex}");
+        BeginRollBack(null);
+        return Hijack == HijackPhase.RollingBack;
+    }
+
+    /// <summary>Test hook: the live roll back's brake goes on (<see cref="BrakeRollBack"/>, "the test").</summary>
+    internal void DebugEndRollBack() => BrakeRollBack("the test");
+}

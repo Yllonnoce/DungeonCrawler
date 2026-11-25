@@ -89,8 +89,10 @@ public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
     public float Speed { get; set; }
     /// <summary>How hard the line bends here (1/m, signed), set by the RailController each tick.</summary>
     public float Curvature { get; set; }
-    /// <summary>The cart's velocity in the world: forward (−Z) at <see cref="Speed"/>.</summary>
-    public Vector3 Velocity => -GlobalTransform.Basis.Z * Speed;
+    /// <summary>The cart rolls backwards, against the way it faces (the party's in a hijack's roll back, plan 16). Set with its speed.</summary>
+    public bool Reversing { get; set; }
+    /// <summary>The cart's velocity in the world: forward (−Z) at <see cref="Speed"/>, backward while it is <see cref="Reversing"/> (a get-out's momentum, a shot from a seat).</summary>
+    public Vector3 Velocity => -GlobalTransform.Basis.Z * (Reversing ? -Speed : Speed);
     /// <summary>
     /// A co-op client's copy: the run it is posed on and the follower that moves it (set by whoever follows it), so a seated
     /// headset's comfort vignette reads the server's ride (<see cref="CartFollower.AuthV"/>, <see cref="CartRun.MotionAt"/>),
@@ -194,6 +196,18 @@ public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
             if (SpotFree(i)) { Boarders[i] = who; return i; }
         return -1;
     }
+
+    /// <summary>
+    /// The hijacker who holds the party's cart (plan 16): it stands at its own spot (<see cref="DriverSpotTransform"/>), apart from the two rim
+    /// spots, and goes on the wire as the cart's third boarder. Null when none.
+    /// </summary>
+    public Enemy? Driver { get; set; }
+
+    /// <summary>The driver's spot in world space: mid-tub at the front rim, <see cref="BoarderLift"/> above it, facing in (back along the tub).</summary>
+    public Transform3D DriverSpotTransform() => GlobalTransform * new Transform3D(new Basis(Vector3.Up, Mathf.Pi), new Vector3(0f, TubBottom + TubHeight + BoarderLift, -TubLength / 2f + 0.08f));
+
+    /// <summary>The driver's spot is free again (the body, if this cart still carries it, is its caller's to set down).</summary>
+    public void FreeDriver() => Driver = null;
 
     private bool SpotFree(int i) => Boarders[i] == null || !GodotObject.IsInstanceValid(Boarders[i]) || Boarders[i]!.IsQueuedForDeletion() || !Boarders[i]!.IsAlive;
 

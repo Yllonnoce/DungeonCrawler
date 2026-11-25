@@ -144,6 +144,7 @@ public partial class RailController
     private string SparePrompt(int stop, Adventurer hero)
     {
         if (!NetSession.IsNetworked || !Current || _spares.At(stop) is not { } spare) return "";
+        if (HijackLive) return ""; // no spare is offered while the train is hijacked (plan 16)
         var onFoot = SpareRules.OnFootPlayer(IsPlayer(hero), hero.Seated, hero.Downed || hero.Parked, spare.TubDistance(hero));
         return SpareRules.Prompt(onFoot, MayChaseAt(stop));
     }
@@ -155,6 +156,7 @@ public partial class RailController
     private void UseSpare(int stop, Adventurer actor)
     {
         if (NetSession.IsClient || !Current || !IsInstanceValid(actor) || _spares.At(stop) == null) return;
+        if (HijackLive) { GD.Print($"[rails] spare {stop}: refused (a hijack is live)"); return; } // nor taken (plan 16)
         var onFoot = SpareRules.OnFootPlayer(IsPlayer(actor), actor.Seated, actor.Downed || actor.Parked, 0f);
         if (SpareRules.Prompt(onFoot, MayChaseAt(stop)).Length == 0) return;
         StartChase(stop, actor);

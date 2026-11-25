@@ -502,6 +502,20 @@ public partial class RailEncounterController : Node
         }
     }
 
+    /// <summary>
+    /// What a train rolled back from a stop must stop short of (plan 16, Ruling 10): the party lane's holes (<see cref="CollectPartyLaneHoles"/>),
+    /// each live ore heap's face (S..S), a ride runaway still lingering on the party line (its span), and ride 4's whole bridge span standing or
+    /// gone (a load stands it whole: a deck over the cavern is no place to roll onto). <paramref name="into"/> is cleared first.
+    /// </summary>
+    internal void CollectRollBackHazards(List<(float From, float To)> into)
+    {
+        CollectPartyLaneHoles(into);
+        foreach (var p in _pieces)
+            if (p.Heap is { IsAlive: true } heap && IsInstanceValid(heap)) into.Add((heap.FaceS, heap.FaceS));
+        if (_rideRunaway is { OnSpur: false } w && IsInstanceValid(w.Body)) into.Add((Mathf.Min(w.Run.BackS, w.Run.FrontS), Mathf.Max(w.Run.BackS, w.Run.FrontS)));
+        if (!float.IsNaN(BridgeFromS) && !float.IsNaN(BridgeToS)) into.Add((BridgeFromS, BridgeToS));
+    }
+
     /// <summary>The nearest live ore heap's face on the party line at or ahead of <paramref name="frontS"/> (a chaser halts at it as the party cart does), or +∞.</summary>
     internal float LiveHeapFaceAhead(float frontS)
     {

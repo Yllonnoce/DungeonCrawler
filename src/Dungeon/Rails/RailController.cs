@@ -541,6 +541,7 @@ public partial class RailController : Node
         _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
+        ResetHijack("the cart is restored"); // not saved: the train stands whole and forward at its stop
         if (StopS.Length == 0) return;
         StopIndex = Math.Clamp(stopIndex, 0, StopS.Length - 1);
         Party.Reset(new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating));
@@ -1132,7 +1133,8 @@ public partial class RailController : Node
         if (State.Mode != CartMode.Rolling) Party.Settle(); // a cart that does not roll is posed where it stands
         _gates.Tick(dt);
 
-        if (State.Mode == CartMode.Held)
+        if (HijackLive) TickHijack(party, dt); // the reverse roll (plan 16): its own tick, never the held one's boarding or the ride's judges
+        else if (State.Mode == CartMode.Held)
         {
             var playerAboard = PlayerAboard();
             if (!playerAboard) SetDownRiders(); // no player aboard: companions do not ride off on their own
@@ -1163,7 +1165,7 @@ public partial class RailController : Node
             }
         }
 
-        if (State.Mode == CartMode.Rolling)
+        if (!HijackLive && State.Mode == CartMode.Rolling)
         {
             var input = Inputs(party, new CartInput(Party.SlopeAhead, false, 0, _train.Count, Party.Limit));
             Party.Step(input, dt);
@@ -1177,7 +1179,7 @@ public partial class RailController : Node
             else if (State.Mode == CartMode.Held) { SetCartLayer(); Arrive(); }
             else { Warn(party); Watch(dt); }
         }
-        else { _partyWatch.Reset(); _anyBrake = false; } // a brake held into a stop is a fresh press on the next ride's first rolling tick (BridgeRules.NewPress)
+        else if (!HijackLive) { _partyWatch.Reset(); _anyBrake = false; } // a brake held into a stop is a fresh press on the next ride's first rolling tick (BridgeRules.NewPress)
 
         Party.Sync();
         _train.Sync();
@@ -1190,7 +1192,7 @@ public partial class RailController : Node
     // ---- run-over --------------------------------------------------------------------------------
 
     /// <summary>Judge the bodies near the cart's front (<see cref="RunOverSweep"/>): hit ones take the run-over outcome (<see cref="RunOverEffects"/>), big enemies are also knocked aside and dent the plating, and the riders feel it.</summary>
-    private void RunOver(PartyController party)
+    private void RunOver(PartyController party, float lead = 0f)
     {
         _bodies.Clear();
         foreach (var hero in party.Adventurers)
@@ -1206,7 +1208,7 @@ public partial class RailController : Node
             }
         }
         var run = JudgedRun(); // the lane the front is on
-        RunOverSweep.Judge(run, _bodies, _now, _hitAt, _hits);
+        RunOverSweep.Judge(run, _bodies, _now, _hitAt, _hits, lead); // a train rolling back leads with its last wagon (plan 16)
         if (_hits.Count == 0) return;
 
         var damage = RunOverEffects.Apply(_hits, SourceName, TierRules.Lethality, SetAsideFor(run), _onHit);
@@ -1221,13 +1223,13 @@ public partial class RailController : Node
     /// "Cart coming!" for a hero on foot with the cart bearing down (<see cref="RailWarn.Ahead"/>): a seated hero calls it in their own words
     /// (<see cref="RailCalls"/>, else the log), once per hero per few seconds. The bell is the cart's own (<see cref="CartSound"/>).
     /// </summary>
-    private void Warn(PartyController party)
+    private void Warn(PartyController party, float lead = 0f)
     {
         var run = JudgedRun(); // the lane the front is on
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) continue;
-            if (!RailWarn.Ahead(run.Track, run.State.S, State.V, hero.GlobalPosition)) continue;
+            if (!RailWarn.Ahead(run.Track, run.State.S, State.V, hero.GlobalPosition, run.Dir, lead)) continue; // the way of travel, from the leading face
             if (_warnedAt.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
             _warnedAt[hero.Index] = _now;
             RailCalls.Say(party, Cart, BarkTrigger.CartComing, "Cart coming!");
@@ -1273,6 +1275,7 @@ public partial class RailController : Node
         else Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
         RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here (at the lip, for a fall): the cart's sound sees no wreck (a spare takes over in this call)
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
+        ResetHijack("the train is wrecked"); // after the tumble (thrown the way it went): a spare stands forward
         if (lost == null) EventBus.Instance.Log(inside ? ExitBridgeRules.WreckLog : "The cart is wrecked!"); // a fall has said why
         Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
         _exitTaken.Clear();

@@ -129,6 +129,7 @@ public partial class RailNet
     private void ForgetBoarder(Enemy hound)
     {
         Forget(_rails.Cart.Boarders, hound);
+        if (_rails.Cart.Driver == hound) _rails.Cart.FreeDriver();
         var train = _rails.Train;
         for (var k = 0; k < train.Count; k++) if (IsInstanceValid(train[k])) Forget(train[k].Boarders, hound);
         static void Forget(Enemy?[] held, Enemy hound) { for (var i = 0; i < held.Length; i++) if (held[i] == hound) held[i] = null; }
@@ -149,6 +150,7 @@ public partial class RailNet
     {
         if (!IsInstanceValid(_rails.Cart)) return;
         Reconcile(_rails.Cart, _rails.Cart.Boarders, d.Boarders, 0, d.ServerTime);
+        ReconcileDriver(d.Boarders);
         var train = _rails.Train;
         for (var k = 0; k < train.Count; k++)
             if (IsInstanceValid(train[k])) Reconcile(train[k], train[k].Boarders, d.WagonBoarders, k, d.ServerTime);
@@ -178,11 +180,32 @@ public partial class RailNet
         }
     }
 
+    /// <summary>
+    /// Client: the party cart's third boarder entry is the hijack's driver (plan 16): carried at the cart's driver spot while named, let go where it
+    /// stands once it is not. No allocation unless it changes.
+    /// </summary>
+    private void ReconcileDriver(List<int>? wanted)
+    {
+        var cart = _rails.Cart;
+        var at = cart.Boarders.Length;
+        var want = wanted != null && at < wanted.Count ? wanted[at] : -1;
+        var have = cart.Driver;
+        if (have != null && (!IsInstanceValid(have) || have.IsQueuedForDeletion() || have.Carrier != cart)) { cart.FreeDriver(); have = null; }
+        if (have != null && have.NetId == want) return;
+        if (have != null) { cart.FreeDriver(); have.Drop(have.GlobalPosition); }
+        if (want < 0 || NetSession.Instance?.Client?.EnemyByNetId(want) is not { } driver || InFlight(driver)) return;
+        ForgetBoarder(driver);
+        if (driver.Leaping) driver.LandAt(driver.GlobalPosition);
+        cart.Driver = driver;
+        driver.Carry(cart, () => IsInstanceValid(cart) ? cart.DriverSpotTransform() : new Transform3D(Basis.Identity, driver.GlobalPosition));
+    }
+
     /// <summary>Pose the boarders this client holds on the carts it runs (each rendered frame, after the carts).</summary>
     private void FollowBoarders()
     {
         if (!IsInstanceValid(_rails.Cart)) return;
         Follow(_rails.Cart, _rails.Cart.Boarders);
+        if (_rails.Cart.Driver is { } driver && IsInstanceValid(driver) && driver.Carrier == _rails.Cart) driver.FollowCarrier(); // the hijack's driver (plan 16)
         var train = _rails.Train; // by index: a foreach over the interface would box its enumerator every frame
         for (var k = 0; k < train.Count; k++) if (IsInstanceValid(train[k])) Follow(train[k], train[k].Boarders);
         static void Follow(Node3D body, Enemy?[] held)
