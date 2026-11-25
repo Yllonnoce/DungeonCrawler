@@ -677,7 +677,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             PlayAnim("HitReact", force: true);
             return;
         }
-        if (state is "Attack" or "Shoot") BeginWindup(WindupSeconds);
+        if (TelegraphRules.WindsUp(state)) BeginWindup(WindupSeconds); // an Attack, a Shoot or an alcove shooter's
         else if (state == TelegraphRules.RailSlam)
         {
             TelegraphFx.HandGlow(this, TelegraphRules.RailSlamWindup); // the kiln golem's fist, as the server's glows

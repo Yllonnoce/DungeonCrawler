@@ -39,7 +39,7 @@ public sealed class AlcoveState : AiState
 
     public AlcoveState(AlcovePost post) => _post = post;
 
-    public override string Name => "Alcove";
+    public override string Name => TelegraphRules.Alcove; // its wind-ups are told under it: a client winds up on it (TelegraphRules.WindsUp)
     public override bool Unaware => false;
     public AlcovePhase Phase { get; private set; } = AlcovePhase.Hidden;
     public AlcovePost Post => _post;

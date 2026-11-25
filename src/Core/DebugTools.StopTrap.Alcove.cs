@@ -20,7 +20,7 @@ namespace DungeonCrawler.Core;
 //  hidden: no hit on a shooter before it steps out; every shooter a reinforcement;
 //  pinned: within 0.3 m of its back while hidden, of its mouth while shooting, of the line between them while stepping out;
 //  waking: each steps out with the front 35 +- 2 m off;
-//  firing: only within 25 m, at a seated hero, a wind-up every 1.6 +- 0.25 s while it has a target (one that waited for a target, or lost a
+//  firing: every wind-up told (EnemyTelegraph) under a state a client winds up on (TelegraphRules.WindsUp); only within 25 m, at a seated hero, a wind-up every 1.6 +- 0.25 s while it has a target (one that waited for a target, or lost a
 //    wind-up, starts no earlier than 1.35 s after the last);
 //  lead aim pays: a bolt hits a seated hero side-on (its path more than 45 degrees off the track) at least once;
 //  no crew: every bolt's target a hero of the party;
@@ -83,7 +83,7 @@ public partial class DebugTools
     private readonly Dictionary<Enemies.Enemy, (Vector3 Back, Vector3 Mouth, float S)> _alPosts = new();
     private readonly Dictionary<Enemies.Enemy, double> _alLastFire = new();
     private readonly Dictionary<Enemies.Enemy, bool> _alLostSince = new();
-    private int _alLogRead, _alArmsRead, _alClaimed = -1, _alFires, _alCadenceOk;
+    private int _alLogRead, _alArmsRead, _alClaimed = -1, _alFires, _alCadenceOk, _alToldWindups;
     private Adventurer? _alSeeker;
     private float _alMaxPinned;
     private bool _alLeversThrown, _alRefugeDone;
@@ -106,10 +106,17 @@ public partial class DebugTools
         };
         Action<Combat.Projectile> fired = p => { if (p.Shooter is { } sh && IsInstanceValid(sh) && enc.IsAlcoveShooter(sh)) _alBolts.Add(p); };
         Action<int, float> damaged = (index, amount) => AlcoveHeroHit(main, index);
+        Action<Enemies.Enemy, string> told = (e, state) => // what a client is told (EnemyStateMsg): every wind-up must be one it plays (fix round 1)
+        {
+            if (state == "Stagger" || !IsInstanceValid(e) || !enc.IsAlcoveShooter(e)) return;
+            if (Enemies.TelegraphRules.WindsUp(state)) _alToldWindups++;
+            else if (_alFaults.Count < 8) _alFaults.Add($"{e.Name}'s wind-up was told as \"{state}\", which a client does not wind up on");
+        };
         bus.EnemyHurt += hurt;
         bus.ProjectileFired += fired;
         bus.MemberDamaged += damaged;
-        _staticUnhooks.Add(() => { bus.EnemyHurt -= hurt; bus.ProjectileFired -= fired; bus.MemberDamaged -= damaged; });
+        bus.EnemyTelegraph += told;
+        _staticUnhooks.Add(() => { bus.EnemyHurt -= hurt; bus.ProjectileFired -= fired; bus.MemberDamaged -= damaged; bus.EnemyTelegraph -= told; });
     }
 
     /// <summary>A hero was hurt: a tracked bolt where it stands is a shooter's hit (the bolt is still in the tree, at its hit point, while the hit is dealt).</summary>
@@ -418,7 +425,7 @@ public partial class DebugTools
         var hiddenHits = _alHurt.Count(h => h.Phase == AlcovePhase.Hidden);
         GD.Print($"[stoptrap] alcove: placed per ride [{string.Join(", ", placed)}] (total {total}); {_alSeen.Count} shooter(s) seen, {steppedOut.Count} stepped out, {gone.Count} gone 30 m behind, {_alSeen.Count - gone.Count} killed or cleared; "
             + $"{_alFires} bolt(s) fired, {_alCadenceOk} at the 1.6 s cadence; {_alHits.Count} hit(s) on heroes ({sideOn.Count} seated side-on: [{string.Join(", ", sideOn.Select(h => $"{h.Shooter}->{h.Hero} {h.OffTrack:0}deg"))}]); "
-            + $"{_alHurt.Count} hurt(s) on shooters ({hiddenHits} while hidden); the farthest off its spot {_alMaxPinned:0.000} m");
+            + $"{_alHurt.Count} hurt(s) on shooters ({hiddenHits} while hidden); the farthest off its spot {_alMaxPinned:0.000} m; {_alToldWindups} wind-up(s) told as a client's wind-up");
         if (placed.Any(n => n < 0)) { StopTrapFail($"a ride never armed its shooters: [{string.Join(", ", placed)}]"); return; }
         if (total < AlcoveRules.MinTotal) { StopTrapFail($"{total} shooters on the floor, under {AlcoveRules.MinTotal}"); return; }
         if (placed.Max() < AlcoveRules.MinBestRide) { StopTrapFail($"no ride placed {AlcoveRules.MinBestRide}"); return; }
@@ -426,6 +433,7 @@ public partial class DebugTools
         if (neverOut.Count > 0) { StopTrapFail($"never stepped out: [{string.Join(", ", neverOut)}]"); return; }
         if (lostTrack.Any(e => IsInstanceValid(e) && e.IsAlive)) { StopTrapFail($"stepped out and neither gone nor dead: [{string.Join(", ", lostTrack.Select(e => e.Name))}]"); return; }
         if (_alFires == 0 || _alCadenceOk == 0) { StopTrapFail($"{_alFires} bolt(s), {_alCadenceOk} at the cadence"); return; }
+        if (_alToldWindups < _alFires) { StopTrapFail($"{_alToldWindups} wind-up(s) told in a state a client winds up on, for {_alFires} bolt(s)"); return; }
         if (sideOn.Count == 0) { StopTrapFail("no bolt hit a seated hero side-on"); return; }
         StopTrapOk($"[{string.Join(", ", placed)}] placed ({total}), {steppedOut.Count} woke at 35 m, {_alFires} bolts ({_alCadenceOk} at 1.6 s), {sideOn.Count} side-on hit(s), {gone.Count} gone 30 m behind, none after an arrival; the claim kept, the refuge clear");
     }
