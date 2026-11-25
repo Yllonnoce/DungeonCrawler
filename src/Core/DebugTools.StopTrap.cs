@@ -7,7 +7,7 @@ using Godot;
 namespace DungeonCrawler.Core;
 
 // ---- --test-stop-trap[=siege|ambush|roll|wonback|gotaway|limits|pockets|alcove] (plan 16) ---------------------------------------
-// The stop trap's flows, one variant a run, each added by the task that builds it (T3: =siege, the default; T4: =ambush; T5: =roll; T6: =wonback). Every variant runs on the
+// The stop trap's flows, one variant a run, each added by the task that builds it (T3: =siege, the default; T4: =ambush; T5: =roll; T6: =wonback; T7: =gotaway, =limits). Every variant runs on the
 // built-in campaign's floor 12 at lethality 1 (ForcedLethality ??= 1), with no gathering and no AI trace; every hero is topped up to full
 // HP each second (a downed one stood up first) unless the flow is taking them down. NoPortals is off for =siege, =wonback and =gotaway;
 // NoAmbush is off for =ambush, =pockets and =alcove; NoHijack is off for =wonback and =gotaway only (Ruling 22). The cull frees (kills, as the other floor-12 flows do) every enemy but the
@@ -23,7 +23,7 @@ public partial class DebugTools
     private bool _stNoTopUp;
     private int _stRevived;
     /// <summary>The variants built so far (each task adds its own).</summary>
-    private static readonly string[] StopTrapVariants = { "siege", "ambush", "roll", "wonback" };
+    private static readonly string[] StopTrapVariants = { "siege", "ambush", "roll", "wonback", "gotaway", "limits" };
 
     /// <summary>The flag: the variant, its switches and its budget (Ruling 22).</summary>
     private void StopTrapArgs(string arg)
@@ -80,6 +80,8 @@ public partial class DebugTools
             case "ambush": RunStopTrapAmbush(main, layout, root, rc, portals); break;
             case "roll": RunStopTrapRoll(main, layout, root, rc); break;
             case "wonback": RunStopTrapWonback(main, layout, root, rc, portals); break;
+            case "gotaway": RunStopTrapGotAway(main, layout, root, rc, portals); break;
+            case "limits": RunStopTrapLimits(rc); break;
         }
     }
 

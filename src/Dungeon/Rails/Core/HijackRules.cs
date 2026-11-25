@@ -3,7 +3,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// Where a hijack of the party's train stands (plan 16, spec section 3): None; Glow (the driver calls and glows, the train still held);
 /// RollingBack (the train rolls backwards from its stop, against the way of travel, facing forward); Braking (the brake goes on, still
-/// rolling back); Returning (forward to its stop at walking pace); Gone (it got away: T7); ReliefIn (a relief train rolls in: T7).
+/// rolling back); Returning (forward to its stop at walking pace); Gone (it got away: the cart hidden, the wagons uncoupled); ReliefIn (a relief
+/// train rolls in from the limit to the stop).
 /// On the wire as <c>CartStateDto.Hijack</c> (a byte).
 /// </summary>
 public enum HijackPhase : byte { None, Glow, RollingBack, Braking, Returning, Gone, ReliefIn }
@@ -137,4 +138,55 @@ public static class HijackRules
 
     /// <summary>The limit leaves room for a hijack: at least <see cref="MinRoll"/> of roll behind the stop.</summary>
     public static bool RollRoom(float stopS, float limitS) => stopS - limitS >= MinRoll;
+
+    // ---- Task 7: the hijack, got away ----------------------------------------------------------------------------------------
+
+    /// <summary>While the train rolls back with a driver, a prisoner is put off it this often (s, call): the first at this many seconds of the roll.</summary>
+    public const float ThrowEvery = 3f;
+    /// <summary>A train gone at its limit is followed by a relief train this many seconds later (s, call).</summary>
+    public const float ReliefAfter = 12f;
+    /// <summary>A crew member a hijack put off books a seat from this far (m, spec Ruling 3): the usual <see cref="TrainRules.BoardReach"/> for everyone else.</summary>
+    public const float ThrownBoardReach = 60f;
+    /// <summary>The departure waits for the crew a hijack put off at most this long after the train is held at its stop again (s, spec Ruling 3).</summary>
+    public const float ThrownWaitMax = 30f;
+
+    /// <summary>The next prisoner is put off now: <paramref name="thrown"/> already off after <paramref name="rollingSeconds"/> of the roll back (one every <see cref="ThrowEvery"/>).</summary>
+    public static bool ThrowDue(float rollingSeconds, int thrown) => rollingSeconds >= (thrown + 1) * ThrowEvery - 1e-4f;
+
+    /// <summary>
+    /// Who is put off next (Ruling 13): <paramref name="train"/> is the coupled wagons in coupling order (nearest the cart first) with their crew seats
+    /// held; the last wagon goes first, and within a wagon its rear bench seat 5 then 4 (<see cref="BoarderRules.ThrowSeat"/>). Null: nobody aboard.
+    /// </summary>
+    public static (int Wagon, int Seat)? NextThrow(IReadOnlyList<(int Wagon, bool Seat4, bool Seat5)> train)
+    {
+        for (var i = train.Count - 1; i >= 0; i--)
+            if (BoarderRules.ThrowSeat(train[i].Seat4, train[i].Seat5) is int seat) return (train[i].Wagon, seat);
+        return null;
+    }
+
+    /// <summary>The relief train comes now, <paramref name="goneSeconds"/> after the train was gone (<see cref="ReliefAfter"/>).</summary>
+    public static bool ReliefDue(float goneSeconds) => goneSeconds >= ReliefAfter - 1e-4f;
+
+    /// <summary>
+    /// The departure waits for crew a hijack put off (spec Ruling 3): <paramref name="thrownOnTheWay"/> of them still on the way (up or down, not yet
+    /// seated nor dead) and under <see cref="ThrownWaitMax"/> since the train was held at its stop again (+inf: it never was).
+    /// </summary>
+    public static bool HoldsForThrown(int thrownOnTheWay, float sinceHeldAgain) => thrownOnTheWay > 0 && sinceHeldAgain < ThrownWaitMax;
+
+    /// <summary>At <see cref="ThrownWaitMax"/> a thrown crew member walking to its seat within <see cref="ThrownBoardReach"/> sits in at once; farther ones stay on foot.</summary>
+    public static bool SeatsThrownAtOnce(float sinceHeldAgain, float distance) => sinceHeldAgain >= ThrownWaitMax && distance <= ThrownBoardReach;
+
+    /// <summary>
+    /// Floor 12's roll-back limits as measured on the shipped layout with four wagons (Ruling 26): stop → the limit (the cart's middle S) and
+    /// whether it leaves room for a hijack. <c>--test-stop-trap=limits</c> fails when the built floor's limit moves off its row by more than 0.1.
+    /// Measured 2026-11-25: stops 1-3 at the 40 m cap (stop 3's broken bridge is on the slag line: the party lane behind it has no hole), stop 4
+    /// cut by ride 4's whole bridge span (903.1..991.1, standing or gone: Ruling 10) to 14.9 m of roll.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<int, (float LimitS, bool RollRoom)> ShippedLimits = new Dictionary<int, (float LimitS, bool RollRoom)>
+    {
+        [1] = (243.187f, true),  // stop 1 at S 283.187: the 40 m cap
+        [2] = (448.841f, true),  // stop 2 at S 488.841: the 40 m cap
+        [3] = (730.109f, true),  // stop 3 at S 770.109: the 40 m cap
+        [4] = (1007.556f, true), // stop 4 at S 1022.470: cut by ride 4's bridge span 903.056..991.056
+    };
 }

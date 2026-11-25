@@ -743,7 +743,7 @@ public partial class RailController : Node
     /// The cart takes a hero on foot as its mode stands (every peer: a client's from the wire): held, or rolling back, braking or returning at a
     /// walking speed under a hijack (plan 16, Ruling 12: <see cref="HijackRules.MayBoard"/>).
     /// </summary>
-    private bool MayBoardOnFoot => State.Mode == CartMode.Held || State.Mode == CartMode.Rolling && HijackRules.MayBoard(Hijack, State.V);
+    private bool MayBoardOnFoot => State.Mode == CartMode.Held && Hijack != HijackPhase.Gone || State.Mode == CartMode.Rolling && HijackRules.MayBoard(Hijack, State.V); // a train gone into the dark takes nobody (plan 16 Task 7)
 
     /// <summary>Ride 4's leap offers <paramref name="hero"/> this cart back from a slag cart's deck (plan 13), on every role.</summary>
     private bool LeapOffered(Adventurer hero) => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.LeapOfferFor(hero) == Cart;

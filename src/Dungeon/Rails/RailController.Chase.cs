@@ -87,7 +87,7 @@ public partial class RailController
     public int SpareStopOf(MineCart cart) => _spares.StopOf(cart);
 
     /// <summary>The S of the train's last body's back, one half length further back: the S the chaser's centre stops short of (<see cref="SpareRules.TrainBackS"/>).</summary>
-    private float TrainBackS => SpareRules.TrainBackS(Party.BackS, _train.Count, WagonSpacing);
+    private float TrainBackS => SpareRules.TrainBackS(Party.RearS, _train.Count, WagonSpacing); // facing-aware: a hijack's roll back keeps the wagons on the lower-S side
 
     /// <summary>
     /// The chaser's (and a relief's) limit now: behind the train's last body, never past the stop after the one the train last reached, and with a

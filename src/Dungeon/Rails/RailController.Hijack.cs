@@ -24,6 +24,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// is carried at the cart's driver spot and glows for <see cref="HijackRules.BrakeGlow"/> (the Glow phase, the train still held), then lets the
 /// brake off. The driver has the wagon boarder's grip (<see cref="OnDriverHurt"/>): knocked off, or dead, the brake goes on and the train
 /// returns to its stop. The cart may be boarded on foot while it rolls back, brakes or returns at walking speeds (<see cref="HijackRules.MayBoard"/>).
+/// Task 7 lets it get away: while it rolls back with its driver the prisoners are put off alive one every 3 s (<see cref="TickThrows"/>); at its
+/// limit with the driver still aboard the train is gone (<see cref="GoneAtLimit"/>: the rest set down, the driver and the boarders leap off, the
+/// cart hidden and the wagons uncoupled), and 12 s later a relief train rolls in from the limit and is held at the stop (<see cref="SendHijackRelief"/>).
 /// </summary>
 public partial class RailController
 {
@@ -55,6 +58,21 @@ public partial class RailController
     private int _hijacksTaken;
     /// <summary>Seconds left of a wipe's rise's grace (the restore after a rise at the cart): no hijack starts meanwhile.</summary>
     private float _riseGraceLeft;
+    /// <summary>Seconds of the roll back with a driver aboard (the throws are timed by it: <see cref="HijackRules.ThrowDue"/>).</summary>
+    private float _rollSeconds;
+    /// <summary>Crew put off the rolling train on the way, and set down where it is gone, in this hijack.</summary>
+    private int _putOffOnWay, _putOffAtLimit;
+    /// <summary>Seconds since the train was gone at its limit (the relief comes at <see cref="HijackRules.ReliefAfter"/>).</summary>
+    private float _goneSeconds;
+    private readonly List<(int Wagon, bool Seat4, bool Seat5)> _throwView = new();
+    private readonly List<Enemy> _leapingOff = new();
+    /// <summary>The relief train's "Cart coming!" throttle (by hero), as a chaser's.</summary>
+    private readonly Dictionary<int, double> _reliefWarned = new();
+
+    /// <summary>Test hook: the crew put off the rolling train on the way in the live (or last) hijack.</summary>
+    internal int PutOffOnWay => _putOffOnWay;
+    /// <summary>Test hook: the crew set down where the train was gone in the live (or last) hijack.</summary>
+    internal int PutOffAtLimit => _putOffAtLimit;
 
     /// <summary>A wipe's rise at the cart was this many seconds ago or less (<see cref="StopSiegeRules.RiseGrace"/>): no hijack starts and no runner runs.</summary>
     internal bool InRiseGrace => _riseGraceLeft > 0f;
@@ -82,9 +100,13 @@ public partial class RailController
     /// The roll back's limit from <paramref name="stop"/> as the line stands now (<see cref="HijackRules.LimitS"/> over the encounter controller's
     /// <see cref="RailEncounterController.CollectRollBackHazards"/>), and what cut it short of the 40 m (null when nothing did).
     /// </summary>
-    internal float RollBackLimitAt(int stop, out string? cut)
+    internal float RollBackLimitAt(int stop, out string? cut) => RollBackLimitAt(stop, out cut, out _);
+
+    /// <summary><see cref="RollBackLimitAt(int, out string?)"/>, with the span that cut it (null: the 40 m cap): the =limits flow prints it.</summary>
+    internal float RollBackLimitAt(int stop, out string? cut, out (float From, float To)? cutBy)
     {
         cut = null;
+        cutBy = null;
         if (stop < 0 || stop >= StopS.Length) return float.NaN;
         var enc = RailEncounterController.Instance is { } e && IsInstanceValid(e) && e.GetParent() == GetParent() ? e : null;
         if (enc != null) enc.CollectRollBackHazards(_rollBackHazards);
@@ -93,7 +115,7 @@ public partial class RailController
         var limit = HijackRules.LimitS(stopS, _train.Count, _rollBackHazards);
         if (limit > stopS - HijackRules.RollBackReach)
             foreach (var (from, to) in _rollBackHazards)
-                if (from < stopS && Mathf.Abs(HijackRules.LimitS(stopS, _train.Count, new[] { (from, to) }) - limit) < 1e-3f) { cut = $"cut by the hazard at S={from:0.0}..{to:0.0}"; break; }
+                if (from < stopS && Mathf.Abs(HijackRules.LimitS(stopS, _train.Count, new[] { (from, to) }) - limit) < 1e-3f) { cut = $"cut by the hazard at S={from:0.0}..{to:0.0}"; cutBy = (from, to); break; }
         return limit;
     }
 
@@ -117,6 +139,8 @@ public partial class RailController
         Boarding.Cancel();
         Cart.Driver = driver;
         Hijack = HijackPhase.RollingBack;
+        _rollSeconds = 0f;
+        _putOffOnWay = _putOffAtLimit = 0;
         HijackStop = k;
         HijackLimitS = limit;
         _hijackWhy = "";
@@ -155,14 +179,138 @@ public partial class RailController
         _anyBrake = false;
         if (_driverHeld && (Cart.Driver is not { } d || !IsInstanceValid(d) || !d.IsAlive || d.Carrier != Cart)) { DriverLost(Cart.Driver, "the driver is dead"); if (!HijackLive) return; } // a death drops it and brakes (Ruling 11's brake)
         if (Hijack == HijackPhase.Glow) { TickGlow(dt); return; } // held under the glow: the brake comes off at its end
-        if (Hijack == HijackPhase.Gone || State.Mode == CartMode.Wrecked) return; // gone (T7)
-        if (Hijack is HijackPhase.Braking or HijackPhase.Returning or HijackPhase.ReliefIn && State.Mode == CartMode.Held) { NextHijackPhase(); return; } // held at its limit as the brake went on, or at its stop
+        if (Hijack is HijackPhase.Gone or HijackPhase.ReliefIn) _goneSeconds += dt; // since the train went: the relief's wait and its hold's line
+        if (Hijack == HijackPhase.Gone) { TickGone(); return; } // the train is gone: the relief train comes after its wait
+        if (State.Mode == CartMode.Wrecked) return;
+        if ((Hijack is HijackPhase.Braking or HijackPhase.Returning or HijackPhase.ReliefIn) && State.Mode == CartMode.Held) { NextHijackPhase(); return; } // held at its limit as the brake went on, or at its stop
         Party.Step(HijackRules.InputFor(Hijack, Party.SlopeAhead, _train.Count, Party.Limit), dt);
         var lead = HijackLead;
         RunOver(party, lead);
         if (State.Plating <= 0f) { Wreck(); return; } // a big body run over took the last of it
+        if (Hijack == HijackPhase.RollingBack && _driverHeld) TickThrows(dt); // the prisoners put off one every 3 s, the last wagon's rear seat first
         if (State.Mode == CartMode.Held || Hijack == HijackPhase.Braking && State.V <= 0f) { NextHijackPhase(); return; }
-        Warn(party, lead);
+        if (Hijack == HijackPhase.ReliefIn && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.GetParent() == GetParent())
+            enc.WarnPartyLane(Party, Cart, _reliefWarned, party); // the empty relief train warns as a party-lane chaser does: the thrown crew walking back on the line step to a refuge
+        else Warn(party, lead);
+    }
+
+    // ---- the got-away (Task 7) ---------------------------------------------------------------------
+
+    /// <summary>
+    /// While the train rolls back with a driver (server and solo; Ruling 13): at 3 s of the roll and every 3 s after, the next prisoner by
+    /// <see cref="HijackRules.NextThrow"/> (the last coupled wagon first, its seat 5 then 4) is put off alive beside its wagon
+    /// (<see cref="CrewRescueController.PutOffAlive"/>, never the lethal throw) and follows the party.
+    /// </summary>
+    private void TickThrows(float dt)
+    {
+        _rollSeconds += dt;
+        if (!HijackRules.ThrowDue(_rollSeconds, _putOffOnWay)) return;
+        if (PutOffNext() is { } npc) { _putOffOnWay++; GD.Print($"[rails] hijack: {npc.NpcName} put off {_rollSeconds:0.00} s into the roll at S={State.S:0.0}"); }
+    }
+
+    /// <summary>The next prisoner by <see cref="HijackRules.NextThrow"/> put off alive (<see cref="CrewRescueController.PutOffAlive"/>); null with nobody aboard.</summary>
+    private Npc? PutOffNext()
+    {
+        if (Crew is not { } crew) return null;
+        _throwView.Clear();
+        foreach (var wagon in _train.Wagons)
+            if (IsInstanceValid(wagon)) _throwView.Add((wagon.Number, CrewIn(wagon, TrainRules.CrewSeats[0]) != null, CrewIn(wagon, TrainRules.CrewSeats[1]) != null));
+        if (HijackRules.NextThrow(_throwView) is not { } next || WagonAt(next.Wagon) is not { } w || CrewIn(w, next.Seat) is not { } npc) return null;
+        crew.PutOffAlive(npc, w);
+        return npc.Seated ? null : npc; // never met: PutOffAlive always unseats
+    }
+
+    /// <summary>The crew member seated in <paramref name="seat"/> of <paramref name="wagon"/>, or null.</summary>
+    private static Npc? CrewIn(TrainWagon wagon, int seat)
+        => wagon.Seats.OccupantOf(seat) is int id && wagon.Riders.TryGetValue(id, out var rider) && rider is Npc { Crew: true, Dead: false } npc && IsInstanceValid(npc) ? npc : null;
+
+    /// <summary>This floor's crew controller, or null.</summary>
+    private CrewRescueController? Crew => ObjectiveController.Instance is CrewRescueController crew && IsInstanceValid(crew) && crew.GetParent() == GetParent() ? crew : null;
+
+    /// <summary>
+    /// The roll back reached its limit with a driver aboard (Rulings 13 and 14): it got away. The crew still aboard are set down alive beside their
+    /// wagons, a hero seated in the train beside the lane, and the driver and every boarder leap off into the fight (alive, aggro on). The cart is
+    /// hidden (not solid) and every wagon uncoupled and hidden: the train rolls on into the dark, and <see cref="TickGone"/> brings a relief train
+    /// <see cref="HijackRules.ReliefAfter"/> later. No spare is spent.
+    /// </summary>
+    private void GoneAtLimit()
+    {
+        var k = HijackStop;
+        while (_putOffAtLimit < _train.Count * TrainRules.CrewSeats.Length && PutOffNext() != null) _putOffAtLimit++; // bounded: each call empties a seat
+        _exitTaken.Clear();
+        foreach (var rider in Aboard()) GetOut(rider); // held at V 0: beside the lane, no throw
+        SetDownWagonHeroes(wreckToll: false);
+        var driver = Cart.Driver;
+        SetDownDriver(); // beside the lane, aggro on
+        if (driver != null && IsInstanceValid(driver) && driver.IsAlive) driver.ChangeState(new Enemies.Ai.ChaseState()); // a fresh chase: a carried one lapses after 9 s unseen (unaware), and nothing in the roll needs it hunting
+        var boarders = LeapOffBoarders();
+        HideWreck();
+        _train.UncoupleAll();
+        Cart.Speed = 0f;
+        Hijack = HijackPhase.Gone;
+        _goneSeconds = 0f;
+        EventBus.Instance.Log(StopTrapLines.GoneLog);
+        GD.Print($"[rails] hijack: {_putOffOnWay} crew put off on the way, {_putOffAtLimit} set down at the limit; the train is gone at S={State.S:0.0}");
+        GD.Print($"[rails] hijack: {(driver != null && IsInstanceValid(driver) ? driver.Name : "no driver")} and {boarders} boarder(s) leap off at the limit (stop {k})");
+        RefreshHud();
+    }
+
+    /// <summary>
+    /// Every enemy carried by the train but its driver (a wagon's boarder, a spared hijacker, a cart rim's) set down beside the lane alive, in a fresh
+    /// chase (a carried chase may have lapsed: its 9 s without sight). The encounter controller lets each leap go at its next tick. Returns how many.
+    /// </summary>
+    private int LeapOffBoarders()
+    {
+        _leapingOff.Clear();
+        foreach (var wagon in _train.Wagons)
+            if (IsInstanceValid(wagon))
+                foreach (var b in wagon.Boarders) if (b != null && IsInstanceValid(b) && b.IsAlive && b.Carrier == wagon) _leapingOff.Add(b);
+        foreach (var b in Cart.Boarders) if (b != null && IsInstanceValid(b) && b.IsAlive && b.Carrier == Cart && b != Cart.Driver) _leapingOff.Add(b);
+        foreach (var b in _leapingOff)
+        {
+            b.Drop(StandBesideLane(b.GlobalPosition));
+            b.BoardTarget = null;
+            b.DeathDrop = null;
+            b.ChangeState(new Enemies.Ai.ChaseState()); // a fresh chase, as the driver's
+        }
+        var n = _leapingOff.Count;
+        _leapingOff.Clear();
+        return n;
+    }
+
+    /// <summary>The train is gone (server and solo): after <see cref="HijackRules.ReliefAfter"/> the relief train is shown at the limit and rolls in.</summary>
+    private void TickGone()
+    {
+        if (HijackRules.ReliefDue(_goneSeconds)) SendHijackRelief();
+    }
+
+    /// <summary>
+    /// The relief train after a got-away (Ruling 14): the cart shown again at the limit with full plating, every wagon coupled fresh and empty
+    /// (<see cref="CoupleFresh"/>), rolling forward (the ReliefIn phase, 4 m/s, judged as any forward run and warned as a party-lane chaser is: the
+    /// crew it comes for, walking back on the line, step to a refuge) to be held at its stop:
+    /// <see cref="EndHijack"/> raises HijackOver there. It is not an arrival, and no spare is used.
+    /// </summary>
+    private void SendHijackRelief()
+    {
+        var k = HijackStop;
+        var at = State.S;
+        Cart.Visible = true;
+        Party.Dir = 1;
+        Party.Reversing = false;
+        Cart.Reversing = false;
+        Party.Limit = StopS[k];
+        Party.Reset(new CartState(at, 0f, CartMode.Rolling, CartRules.MaxPlating));
+        Hijack = HijackPhase.ReliefIn;
+        SetCartLayer();
+        _hitAt.Clear();
+        _warnedAt.Clear();
+        _reliefWarned.Clear();
+        Party.Sync();
+        Party.PoseAt(at);
+        CoupleFresh("a relief train after the hijack");
+        Party.LastInput = HijackRules.InputFor(Hijack, Party.SlopeAhead, _train.Count, Party.Limit) with { StopAt = Party.Limit };
+        GD.Print($"[rails] hijack: a relief train rolls in from S={at:0.0} to stop {k} ({StopS[k] - at:0.0} m), {_goneSeconds:0.0} s after the train went");
+        RefreshHud();
     }
 
     /// <summary>The run came to a stand: at its limit (it brakes there), stopped by the brake (it returns), or held at its stop again (over).</summary>
@@ -176,11 +324,15 @@ public partial class RailController
         }
     }
 
-    /// <summary>The roll back reached its limit. With no driver aboard the train brakes and comes back for good (Ruling 11; T7's got-away needs a driver).</summary>
+    /// <summary>
+    /// The roll back reached its limit: with a driver aboard the train is gone (<see cref="GoneAtLimit"/>); with none (the debug roll) it brakes and
+    /// comes back for good (Ruling 11).
+    /// </summary>
     private void OnLimit()
     {
-        GD.Print($"[rails] hijack: the train reaches its limit at S={State.S:0.0} (stop {HijackStop} at S={StopS[HijackStop]:0.0})");
-        BrakeRollBack("the limit");
+        GD.Print($"[rails] hijack: the train reaches its limit at S={State.S:0.0} (stop {HijackStop} at S={StopS[HijackStop]:0.0}){(_driverHeld ? " with its driver" : "")}");
+        if (_driverHeld && Cart.Driver != null) GoneAtLimit();
+        else BrakeRollBack("the limit");
     }
 
     /// <summary>Stopped on the brake: the run turns to its way of travel again and rolls forward to its stop at walking pace.</summary>
@@ -206,6 +358,7 @@ public partial class RailController
     private void EndHijack()
     {
         var k = HijackStop;
+        var relief = Hijack == HijackPhase.ReliefIn; // the relief train after a got-away (Task 7)
         SetDownDriver(); // a driver still aboard (one that rode the roll to its limit) gets down beside the lane, aggro on (the T5 review's M8)
         Hijack = HijackPhase.None;
         HijackStop = -1;
@@ -218,7 +371,15 @@ public partial class RailController
         Party.LastInput = default;
         SetCartLayer();
         Cart.Speed = 0f;
+        if (relief) _hijackWhy = "the relief train";
         Raise(new CartEvent(CartEventKind.HijackOver, Stop: k));
+        if (relief)
+        {
+            GD.Print($"[rails] hijack: the relief train is held at stop {k} ({_goneSeconds:0.0} s after the train went)");
+            EventBus.Instance.Log(StopTrapLines.ReliefLog);
+            var who = CallCrew(StopTrapLines.CrewRelief, $"relief:{k}:{_hijacksTaken}");
+            GD.Print($"[rails] hijack: \"{StopTrapLines.CrewRelief}\" ({who})");
+        }
         GD.Print($"[rails] hijack over at stop {k}: the train held again ({(_hijackWhy.Length > 0 ? _hijackWhy : "no brake")})");
         if (PlayerAboard() && GateClear && !Boarding.Running && StopIndex < StopS.Length - 1) StartBoarding();
         RefreshHud();
@@ -235,6 +396,7 @@ public partial class RailController
         Cart.FreeDriver();
         _driverHeld = false;
         _glowLeft = 0f;
+        _rollSeconds = _goneSeconds = 0f;
         var was = Hijack;
         Hijack = HijackPhase.None;
         HijackStop = -1;
@@ -289,10 +451,13 @@ public partial class RailController
     }
 
     /// <summary>The crew's bark at a hijack's start: the nearest up freed crew member's (subtitle only), else the log's. Says who.</summary>
-    private string CallCartTaken(int stop)
+    private string CallCartTaken(int stop) => CallCrew(StopTrapLines.CrewCartTaken, $"hijack:{stop}:{_hijacksTaken}");
+
+    /// <summary>A crew bark (<paramref name="text"/>, subtitle only) said by the nearest up freed crew member under <paramref name="key"/>, else logged. Says who.</summary>
+    private string CallCrew(string text, string key)
     {
         Npc? speaker = null;
-        if (ObjectiveController.Instance is CrewRescueController crew && IsInstanceValid(crew) && crew.GetParent() == GetParent())
+        if (Crew is { } crew)
         {
             var at = Cart.GlobalPosition;
             var best = float.MaxValue;
@@ -303,9 +468,9 @@ public partial class RailController
                 if (d < best) { best = d; speaker = n; }
             }
         }
-        if (speaker != null && AdventureDirector.Instance?.SayAs(speaker, StopTrapLines.Say(StopTrapLines.CrewCartTaken), $"hijack:{stop}:{_hijacksTaken}", urgent: true) == true)
+        if (speaker != null && AdventureDirector.Instance?.SayAs(speaker, StopTrapLines.Say(text), key, urgent: true) == true)
             return $"{speaker.NpcName} shouts";
-        EventBus.Instance.Log(StopTrapLines.CrewCartTaken);
+        EventBus.Instance.Log(text);
         return "the log calls it";
     }
 

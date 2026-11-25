@@ -25,6 +25,13 @@ public static class StopTrapLines
     /// <summary>The log line when the braked train turns back for its stop.</summary>
     public const string ReturnLog = "The train rolls back to the platform.";
 
+    /// <summary>The log line when the hijacked train reaches its limit with its driver and is gone (plan 16 Task 7).</summary>
+    public const string GoneLog = "The train rolls on into the dark.";
+    /// <summary>The log line when the relief train after a got-away is held at the stop.</summary>
+    public const string ReliefLog = "A relief train rolls up to the platform.";
+    /// <summary>The crew's bark at the relief train: said by the nearest up freed crew member, else logged.</summary>
+    public const string CrewRelief = "Another train! Get us aboard!";
+
     /// <summary>A creature's name with its article, capitalised for a line's start: "Cinder Imp" gives "A cinder imp", "Ember Hound" "An ember hound".</summary>
     public static string AName(string displayName)
     {

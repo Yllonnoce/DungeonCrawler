@@ -225,7 +225,7 @@ public partial class RailController : ISlopeSource
                 // (the taken player's own screen has its unseat pose before this state, on the same ordered stream: its hero already stands at
                 // the hold point, out of the seat and not yet told fallen; it sat there at the last state, so it rode all the same, seen from
                 // where its eye last was in the seat, BridgeRules.LocalRode)
-                if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.BackS, _train.Count, WagonSpacing) <= enc.BridgeToS)
+                if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.RearS, _train.Count, WagonSpacing) <= enc.BridgeToS)
                 {
                     // in the train: the cart or a coupled wagon, each rider seen from its own car (the final review's M2)
                     var me = Core.Main.Instance?.Party?.Local is { } local && IsInstanceValid(local) ? local : null;

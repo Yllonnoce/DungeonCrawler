@@ -63,7 +63,10 @@ public static class TrainRules
     public static bool SeatsAtOnce(float boardingElapsed, float distance) => boardingElapsed >= BoardMax && distance <= BoardReach;
 
     /// <summary>A booking stands while the train boards here, the walker is up, and it is within <see cref="BoardReach"/>.</summary>
-    public static bool KeepsBooking(bool boardsHere, bool up, float distance) => boardsHere && up && distance <= BoardReach;
+    public static bool KeepsBooking(bool boardsHere, bool up, float distance) => KeepsBooking(boardsHere, up, distance, BoardReach);
+
+    /// <summary>A booking stands while the train boards here, the walker is up, and it is within <paramref name="reach"/> (a hijack's thrown crew: <see cref="HijackRules.ThrownBoardReach"/>).</summary>
+    public static bool KeepsBooking(bool boardsHere, bool up, float distance, float reach) => boardsHere && up && distance <= reach;
 
     /// <summary>
     /// Where a crew member saved in <paramref name="saved"/> sits again (a load, a wipe's rise): that seat when the train has it and it is

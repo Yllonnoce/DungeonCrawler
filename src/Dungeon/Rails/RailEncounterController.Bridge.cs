@@ -188,6 +188,18 @@ public partial class RailEncounterController
         if (p.Bridge is { Gone: > 0 } || !float.IsNaN(CollapseS)) StandBridge(p, "held by the test");
     }
 
+    /// <summary>
+    /// Test hook (--test-stop-trap=limits, plan 16 Ruling 10): the live bridge gone, every cell given way at once as a whole collapse leaves it (no
+    /// collapse runs). Returns the cells gone.
+    /// </summary>
+    internal int DebugBridgeGone()
+    {
+        if (_bridgePiece?.Bridge is not { } bridge || !IsInstanceValid(bridge)) return 0;
+        bridge.GiveWay(bridge.Count, GetParent() as Node3D);
+        GD.Print($"[rails] test: bridge {_bridgePiece.Plan.Id} gone ({bridge.Gone}/{bridge.Count} cells)");
+        return bridge.Gone;
+    }
+
     // ---- the collapse ----------------------------------------------------------------------------
 
     /// <summary>

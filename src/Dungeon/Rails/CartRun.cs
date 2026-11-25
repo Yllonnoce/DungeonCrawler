@@ -58,6 +58,11 @@ public sealed class CartRun
 
     /// <summary>The trailing end's S.</summary>
     public float BackS => State.S - Dir * CartRules.HalfLength;
+    /// <summary>
+    /// The S of its body's back face, the way it faces (<see cref="Facing"/>): <see cref="BackS"/> on every run but a reverse roll, where the back
+    /// of the way of travel is the body's front (plan 16). The party train's rear is built on this (the T5 review's M7).
+    /// </summary>
+    public float RearS => State.S - Facing * CartRules.HalfLength;
 
     /// <summary>S moved in <see cref="Dir"/> over the last step.</summary>
     public bool Moving => Dir >= 0 ? State.S > PrevS : State.S < PrevS;

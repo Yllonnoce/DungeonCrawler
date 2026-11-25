@@ -456,7 +456,7 @@ public partial class RailNet
     }
 
     /// <summary>Client: our own train's last body's back S, as this screen shows it (the RIDE pass reads it too).</summary>
-    internal float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
+    internal float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.RearS, _rails.Train.Count, RailController.WagonSpacing);
 
     /// <summary>Client: a runaway on the party line rings behind our train by the server's rule (<see cref="RunawayRules.Rings"/>), from its own place: positional.</summary>
     private void RingBehind(ClientCart cc, float s, float dt)

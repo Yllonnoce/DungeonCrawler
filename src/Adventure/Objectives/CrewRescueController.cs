@@ -325,6 +325,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     protected override void Tick(float dt, Main main)
     {
         if (main.RiseAtCartPending) return; // a wipe's rise is coming: the floor is built again from the arrival, and nothing won now may outlive it
+        if (!NetSession.IsClient) TickThrown(dt); // the crew a hijack put off: thrown until they sit or die (plan 16 Task 7)
         TickBoarding(dt);
         if (IslandFloor) { ReadIsland(); BringEscortsIn(); } // Grisel is brought in, won or not (plan 15 Ruling 36)
         if (Completed) return;
@@ -588,15 +589,20 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>The booking of <paramref name="npc"/> (its wagon and seat), or null when it walks to none (test hook and the prints).</summary>
     internal (int Wagon, int Seat)? BookingOf(Npc npc) => _bookings.TryGetValue(npc, out var b) ? (b.Wagon, b.Seat) : null;
 
-    /// <summary>The rail controller's <see cref="RailController.CrewBoardingHolds"/>: crew on the way at that stop, under <see cref="TrainRules.BoardMax"/> (Ruling 6).</summary>
-    private bool HoldsDeparture(int stop) => _rails != null && IsInstanceValid(_rails) && TrainRules.HoldsDeparture(OnTheWay(stop), _rails.BoardingElapsed);
+    /// <summary>
+    /// The rail controller's <see cref="RailController.CrewBoardingHolds"/>: crew on the way at that stop, under <see cref="TrainRules.BoardMax"/> (Ruling 6),
+    /// or crew a hijack there put off still on the way, under <see cref="HijackRules.ThrownWaitMax"/> since the train was held there again (plan 16 Ruling 3).
+    /// </summary>
+    private bool HoldsDeparture(int stop) => _rails != null && IsInstanceValid(_rails)
+        && (TrainRules.HoldsDeparture(OnTheWay(stop), _rails.BoardingElapsed) || HijackRules.HoldsForThrown(ThrownOnTheWay(stop), SinceHeldAgain(stop)));
 
     /// <summary>
     /// Every tick, server and solo (Ruling 5): an open cage's crew who are up get out and follow; each booking is walked, sat in at
     /// <see cref="TrainRules.HopReach"/> (or at once at <see cref="TrainRules.BoardMax"/> within <see cref="TrainRules.BoardReach"/>), or
     /// ended (the train left, wrecked or halted, the walker went down or fell behind); and while the train is held at a stop short of the
     /// last, every freed crew member up and on foot within <see cref="TrainRules.BoardReach"/> books the first empty seat in
-    /// <see cref="TrainRules.SeatOrder"/>. Grisel (an escort) is no crew member: she never takes a wagon seat.
+    /// <see cref="TrainRules.SeatOrder"/>. Grisel (an escort) is no crew member: she never takes a wagon seat. Crew a hijack put off (plan 16 Task 7)
+    /// book and keep a booking within <see cref="HijackRules.ThrownBoardReach"/>, and sit in at once only by <see cref="HijackRules.SeatsThrownAtOnce"/>.
     /// </summary>
     private void TickBoarding(float dt)
     {
@@ -616,8 +622,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
                 if (npc.Seated) { EndBooking(npc, b, "seated elsewhere"); continue; }
                 var wagon = rails.WagonAt(b.Wagon);
                 var distance = Flat(npc.GlobalPosition, b.Spot);
+                var thrown = IsThrown(npc); // a hijack put it off: 60 m and the 30 s wait (plan 16 Ruling 3)
                 string? why = null;
-                if (!TrainRules.KeepsBooking(boardsHere, !npc.Downed, distance))
+                if (!TrainRules.KeepsBooking(boardsHere, !npc.Downed, distance, BookingReach(npc)))
                     why = !boardsHere ? rails.State.Mode switch { CartMode.Rolling => "the train left", CartMode.Wrecked => "the cart was wrecked", _ => rails.Halted ? "the train is halted on the line" : "the end of the line" }
                         : npc.Downed ? "down" : $"{distance:0.0} m off";
                 else if (wagon is not { Coupled: true }) why = $"W{b.Wagon} is gone";
@@ -627,9 +634,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
                 {
                     if (SitInWagon(npc, wagon!, b)) GD.Print($"[CrewRescue] {npc.NpcName} sits in W{b.Wagon} seat {b.Seat} after {_boardClock - b.Since:0.0} s");
                 }
-                else if (TrainRules.SeatsAtOnce(rails.BoardingElapsed, distance))
+                else if (thrown ? HijackRules.SeatsThrownAtOnce(SinceHeldAgain(b.Stop), distance) : TrainRules.SeatsAtOnce(rails.BoardingElapsed, distance)) // thrown crew: only the 30 s rule (Ruling 34)
                 {
-                    if (SitInWagon(npc, wagon!, b)) GD.Print($"[CrewRescue] {npc.NpcName} sat in at once at {TrainRules.BoardMax:0} s ({distance:0.0} m)");
+                    if (SitInWagon(npc, wagon!, b)) GD.Print(thrown ? $"[CrewRescue] {npc.NpcName} sat in at once at the thrown crew's {HijackRules.ThrownWaitMax:0} s ({distance:0.0} m)" : $"[CrewRescue] {npc.NpcName} sat in at once at {TrainRules.BoardMax:0} s ({distance:0.0} m)");
                 }
                 else if (npc.MoveTarget is not { } goal || goal == b.Spot) { npc.MoveTarget = b.Spot; npc.MoveOverride = true; } // a pocket's or a test's walk comes first, and gives it back
             }
@@ -641,13 +648,14 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         {
             if (!IsInstanceValid(npc) || npc.Dead || npc.Downed || npc.Seated || !npc.Freed || _bookings.ContainsKey(npc) || CageOf(npc) is { Open: false }) continue;
             if (FirstFreeSeat(order) is not { } seat || rails.WagonAt(seat.Wagon) is not { } wagon) return; // the train is full
-            if (Flat(npc.GlobalPosition, wagon.GlobalPosition) > TrainRules.BoardReach + 1.5f * DungeonBuilder.CellSize) continue; // far off: its spot is a cell from the wagon at most
-            var spot = rails.StandBesideLane(wagon.GlobalPosition);
+            var reach = BookingReach(npc); // 60 m for crew a hijack put off (plan 16 Ruling 3)
+            if (Flat(npc.GlobalPosition, wagon.GlobalPosition) > reach + 1.5f * DungeonBuilder.CellSize) continue; // far off: its spot is a cell from the wagon at most
+            var spot = BookingSpot(npc, wagon);
             var distance = Flat(npc.GlobalPosition, spot);
-            if (distance > TrainRules.BoardReach) continue;
+            if (distance > reach) continue;
             var b = new Booking { Wagon = seat.Wagon, Seat = seat.Seat, Stop = rails.StopIndex, Spot = spot, Since = _boardClock };
             _bookings[npc] = b;
-            GD.Print($"[CrewRescue] {npc.NpcName} books W{b.Wagon} seat {b.Seat} at stop {b.Stop} ({distance:0.0} m)");
+            GD.Print($"[CrewRescue] {npc.NpcName} books W{b.Wagon} seat {b.Seat} at stop {b.Stop} ({distance:0.0} m{(IsThrown(npc) ? ", put off by the hijack" : "")})");
             if (distance <= TrainRules.HopReach) { if (SitInWagon(npc, wagon, b)) GD.Print($"[CrewRescue] {npc.NpcName} sits in W{b.Wagon} seat {b.Seat} after 0.0 s"); }
             else { npc.MoveTarget = spot; npc.MoveOverride = true; }
         }
@@ -754,6 +762,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private void OnCartEvent(CartEvent e)
     {
         if (NetSession.IsClient || _rails == null || !IsInstanceValid(_rails)) return;
+        OnHijackCartEvent(e);
         if (e.Kind == CartEventKind.OnFoot) { LetOutOfTrain(); return; } // no cart left: the train's crew get out and follow the lead
         if (e.Kind is CartEventKind.Boarding or CartEventKind.CageHeld) { WarnLocked(e.Stop); return; }
         if (e.Kind != CartEventKind.Departed) return;
