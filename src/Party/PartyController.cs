@@ -317,7 +317,7 @@ public partial class PartyController : Node3D
     public Adventurer? NearestAlive(Vector3 point)
         => Active.Where(a => !a.Downed).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(point)).FirstOrDefault();
 
-    public void SetMouseCaptured(bool captured) => Input.MouseMode = captured ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
+    public void SetMouseCaptured(bool captured) => Input.MouseMode = captured && DebugTools.Instance?.NoMouseCapture != true ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
 
     public void ApplySettings() { foreach (var a in Adventurers) a.ApplySettings(); }
 

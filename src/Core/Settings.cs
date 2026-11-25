@@ -249,15 +249,21 @@ public static class Settings
             var mode = Fullscreen ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed;
             if (DisplayServer.WindowGetMode() != mode) DisplayServer.WindowSetMode(mode);
             if (!Fullscreen && DisplayServer.WindowGetSize() != Resolution) DisplayServer.WindowSetSize(Resolution);
-            if (!Vr.Active && (Engine.GetMainLoop() as SceneTree)?.Root is { } root) // the headset drives its own render scale
-            {
-                var scale = GraphicsRules.SnapScale(RenderScale);
-                root.Scaling3DMode = GraphicsRules.UsesFsr(scale) ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
-                root.Scaling3DScale = scale;
-            }
+            if ((Engine.GetMainLoop() as SceneTree)?.Root is { } root) ApplyRenderScale(root);
         }
         foreach (var (action, key) in _binds) Bind(action, key);
         if (Main.Instance?.InGame == true) { Main.Instance.Party.ApplySettings(); Main.Instance.ApplyHaze(); }
+    }
+
+    /// <summary>
+    /// The render scale on the root viewport (<see cref="GraphicsRules.ViewportScale"/>): the saved step, FSR below full; full and bilinear in a
+    /// headset. Settings.Load applies it before the headset starts, so <see cref="Vr.Start"/> calls it again once the headset is the display.
+    /// </summary>
+    public static void ApplyRenderScale(Viewport viewport)
+    {
+        var (scale, fsr) = GraphicsRules.ViewportScale(RenderScale, Vr.Active);
+        viewport.Scaling3DMode = fsr ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
+        viewport.Scaling3DScale = scale;
     }
 
     public static void Rebind(string action, Key key)

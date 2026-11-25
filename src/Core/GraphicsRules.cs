@@ -24,6 +24,17 @@ public static class GraphicsRules
         return best;
     }
 
+    /// <summary>
+    /// What the root viewport is given for the saved <paramref name="setting"/>: its snapped step and whether FSR draws it. In a headset the
+    /// setting does nothing (the headset drives its own scale): full scale, no FSR, whatever was saved.
+    /// </summary>
+    public static (float Scale, bool Fsr) ViewportScale(float setting, bool vr)
+    {
+        if (vr) return (1f, false);
+        var scale = SnapScale(setting);
+        return (scale, UsesFsr(scale));
+    }
+
     /// <summary>Whether this scale is drawn with FSR (any step below full); full scale uses bilinear, which at 1.0 is no scaling at all.</summary>
     public static bool UsesFsr(float scale) => scale < 0.999f;
 }

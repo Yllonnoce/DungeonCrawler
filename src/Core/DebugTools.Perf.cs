@@ -9,10 +9,12 @@ namespace DungeonCrawler.Core;
 // ---- --test-perf[=crowd|ride] ----------------------------------------------------------------------------------
 // Windowed only (never headless, never in flows.sh): the built-in campaign's floor 12 measured at fixed settings, kept in memory and
 // never saved (VSync off, windowed 1280x720, Haze 0.5, render scale 100 %, shadows on, Show FPS off). Lethality pinned to the minimum,
-// every hero topped up to full HP each second (a downed one stood up), no gathering, no portals, nothing culled. Each run measures one
-// phase. =crowd (the default; no ambushers either): rc.Restore(4), the party steps out beside the cart on stop 4's platform, 12 creatures
-// (5 horde cinders, 4 ember hounds, 3 forge priests) spawned 10-20 m around it and sent at the party, the floor's own enemies alive;
-// 5 s discarded, 20 s measured. It is the tick diet's before-and-after row, and stands in for the stop siege's "before". =ride
+// every hero topped up to full HP each second (a downed one stood up), no gathering, no portals, nothing culled, the mouse never captured
+// (a window without focus cannot grab it). Frame times are wall time (FrameClock). Each run measures one phase. =crowd (the default; no
+// ambushers either): rc.Restore(4), the party steps out beside the cart on stop 4's platform, 12 creatures (5 horde cinders, 4 ember
+// hounds, 3 forge priests) spawned 10-20 m around it and sent at the party, the floor's own enemies alive; every enemy is held at 1 HP or
+// more (Enemy.DebugHoldHp) so the load stays the same through the measure (it fails if the alive count changes); 5 s discarded, 20 s
+// measured. It is the tick diet's before-and-after row, and stands in for the stop siege's "before". =ride
 // (ambushers on): rc.Restore(0), the party seated, departs and rides ride 1 with every set piece and enemy alive; measured from 5 s after
 // the departure to the arrival at stop 1. Prints the phase's [perf] line and [perf] RESULT ok.
 public partial class DebugTools
@@ -23,13 +25,18 @@ public partial class DebugTools
     private float _pfClock, _pfTopUp;
     private int _pfRevived;
     private readonly PerfWindow _pfWindow = new();
+    private readonly FrameClock _pfWall = new();
+    private (int Alive, int Aware) _pfAtStart;
+    /// <summary>--test-perf: the mouse is never captured (an unfocused window cannot grab it, and X11 logs an ERROR when it tries).</summary>
+    public bool NoMouseCapture { get; private set; }
 
     private const float PerfCrowdDiscard = 5f, PerfCrowdMeasure = 20f, PerfRideSettle = 5f;
     private static readonly (string Id, int Count)[] PerfCrowd = { ("enemy.horde_cinder", 5), ("enemy.ember_hound", 4), ("enemy.forge_priest", 3) };
 
-    /// <summary>The phase's settings, in memory only: the spec's Ruling 5 (1280x720 windowed, VSync off, Haze 0.5, render scale 100 %).</summary>
-    private static void PerfSettings()
+    /// <summary>The phase's settings, in memory only: plan 16's Ruling 22, after the spec's Ruling 5 (1280x720 windowed, VSync off, Haze 0.5, render scale 100 %).</summary>
+    private void PerfSettings()
     {
+        NoMouseCapture = true;
         Settings.VSync = false;
         Settings.Fullscreen = false;
         Settings.Resolution = new Vector2I(1280, 720);
@@ -44,13 +51,14 @@ public partial class DebugTools
         var main = Main.Instance;
         void Fail(string why) { GD.Print($"[perf] RESULT FAIL ({_pfPhase}): {why}"); _done = true; GetTree().Quit(1); }
         if (_pfStep == 0 && DisplayServer.GetName().Equals("headless", StringComparison.OrdinalIgnoreCase)) { Fail("--test-perf is windowed only"); return; }
-        if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
+        var wall = _pfWall.Tick(); // every call: a frame's wall time is measured from the call on the frame before
+        if (main?.Builder.Layout is not { } layout || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         var dt = (float)GetProcessDeltaTime();
         _pfClock += dt;
         var party = main.Party;
         if (RailController.Instance is not { } rc || RailEncounterController.Instance is not { } enc) { if (_pfClock > 3f) Fail("floor 12 has no line"); return; }
         PerfTopUp(party, dt);
-        if (_pfStep > 0) _pfWindow.Add(dt);
+        if (_pfStep > 0 && wall is { } frame) _pfWindow.Add(frame);
 
         if (_pfPhase == "crowd") RunPerfCrowd(main, layout, rc, Fail);
         else RunPerfRide(main, layout, rc, enc, Fail);
@@ -67,6 +75,9 @@ public partial class DebugTools
             if (a.Downed) { a.Revive(); _pfRevived++; }
             a.State.Hp = a.State.Stats[Characters.Stat.MaxHp];
         }
+        if (_pfPhase != "crowd" || _pfStep == 0) return;
+        foreach (var n in GetTree().GetNodesInGroup("enemies")) // the crowd's load held: nobody dies of the party's blows (new arrivals too)
+            if (n is Enemies.Enemy e && IsInstanceValid(e) && e.IsAlive) e.DebugHoldHp = true;
     }
 
     private void RunPerfCrowd(Main main, FloorLayout layout, RailController rc, Action<string> fail)
@@ -83,17 +94,25 @@ public partial class DebugTools
                 party.Teleport(stand + Vector3.Up * 0.3f, rc.Cart.GlobalPosition);
                 var spawned = PerfSpawnCrowd(main, layout, rc.Cart.GlobalPosition);
                 if (spawned < 12) { fail($"only {spawned} of the 12 creatures spawned"); return; }
+                foreach (var n in GetTree().GetNodesInGroup("enemies")) if (n is Enemies.Enemy e && IsInstanceValid(e) && e.IsAlive) e.DebugHoldHp = true; // before the first blow lands
                 GD.Print($"[perf] crowd: rc.Restore(4), the party beside the cart at {DungeonBuilder.WorldToCell(stand)}, 12 creatures sent 10-20 m out; lethality {TierRules.Lethality}");
                 _pfStep++; _pfClock = 0f;
                 break;
             }
             case 1 when _pfClock >= PerfCrowdDiscard:
                 _pfWindow.Reset();
+                _pfAtStart = PerfWindow.CountEnemies(GetTree());
+                GD.Print($"[perf] crowd: the measure starts with {_pfAtStart.Alive} enemies alive ({_pfAtStart.Aware} aware)");
                 _pfStep++; _pfClock = 0f;
                 break;
-            case 2 when _pfClock >= PerfCrowdMeasure:
+            case 2 when _pfWindow.Frames.Elapsed >= PerfCrowdMeasure:
+            {
+                var end = PerfWindow.CountEnemies(GetTree());
+                GD.Print($"[perf] crowd: the measure ends with {end.Alive} enemies alive ({end.Aware} aware)");
+                if (end.Alive != _pfAtStart.Alive) { fail($"the crowd's load changed: {_pfAtStart.Alive} alive at the start, {end.Alive} at the end"); return; }
                 PerfReport();
                 break;
+            }
         }
     }
 

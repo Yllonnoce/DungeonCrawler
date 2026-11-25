@@ -9,26 +9,38 @@ namespace DungeonCrawler.Core;
 /// <see cref="PerfRules.LineEvery"/> s of frames, the mean and worst-second fps, the worst frame, the mean process and physics ms, the
 /// mean draw calls, and the enemies alive and aware, with the floor and whether the party is on a cart. A frame over
 /// <see cref="PerfRules.SlowFrameMs"/> gets its own line, at most one each <see cref="PerfRules.SlowLineGap"/> s, carrying the slow frames
-/// counted since the last one. A headless server's fps is its own loop's rate. The frame a floor was built in is not counted (the load).
+/// counted since the last one. Frame times are wall time between frames (<see cref="FrameClock"/>), not the engine's process delta, which
+/// Godot caps on a long frame. A headless server's fps is its own loop's rate. After a floor is built, <see cref="PerfRules.BuildGrace"/> s of
+/// frames are not counted (the load), and a frame the tree was paused through is skipped.
 /// </summary>
 public partial class PerfMonitor : Node
 {
     private readonly PerfWindow _window = new();
+    private readonly FrameClock _clock = new();
     private Node? _floorRoot;
+    private float _grace;
     private float _sinceSlowLine = PerfRules.SlowLineGap;
     private int _slowSince;
 
     public override void _Process(double delta)
     {
+        var wall = _clock.Tick();
         var main = Main.Instance;
         if (main == null || !main.InGame || main.Builder.FloorRoot is not { } root) { _floorRoot = null; return; }
         if (root != _floorRoot)
-        {   // a new floor (or the same one built again): its build frame is the load, not play
+        {   // a new floor (or the same one built again): the load and its settling are not play
             _floorRoot = root;
+            _grace = PerfRules.BuildGrace;
             _window.Reset();
             return;
         }
-        var dt = (float)delta;
+        if (wall is not { } dt) return; // the tree was paused through it: not one frame
+        if (_grace > 0f)
+        {
+            _grace -= dt;
+            if (_grace <= 0f) { _window.Reset(); _sinceSlowLine = PerfRules.SlowLineGap; _slowSince = 0; }
+            return;
+        }
         _window.Add(dt);
         _sinceSlowLine += dt;
         var ms = dt * 1000f;
@@ -58,6 +70,26 @@ public partial class PerfMonitor : Node
         if (party.Local is { } me) return IsInstanceValid(me) && me.Seated;
         foreach (var a in party.Adventurers) if (IsInstanceValid(a) && a.Seated) return true;
         return false;
+    }
+}
+
+/// <summary>
+/// Wall time between frames: <see cref="Tick"/> once a frame gives the seconds since the call on the frame before, or null when the last
+/// call was not on the frame before (the first call, a paused tree, a skipped call). Not the engine's process delta, which Godot cuts to
+/// at most <c>max_physics_steps_per_frame</c> physics steps (about 133 ms at 60 Hz) however long the frame really took.
+/// </summary>
+public sealed class FrameClock
+{
+    private ulong _lastUsec, _lastFrame;
+
+    public float? Tick()
+    {
+        var now = Time.GetTicksUsec();
+        var frame = Engine.GetProcessFrames();
+        float? dt = _lastUsec != 0 && frame == _lastFrame + 1 ? (float)((now - _lastUsec) / 1_000_000.0) : null;
+        _lastUsec = now;
+        _lastFrame = frame;
+        return dt;
     }
 }
 

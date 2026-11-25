@@ -32,6 +32,7 @@ public static class Vr
         DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled); // the headset sets the pace, not the monitor
         viewport.UseXR = true;
         Active = true;
+        Settings.ApplyRenderScale(viewport); // the flat render scale, applied at Settings.Load before the headset was up, is undone: the headset drives its own
         if (xr is OpenXRInterface openXr)
         {
             MatchPhysicsTo(openXr.DisplayRefreshRate);

@@ -465,20 +465,26 @@ fail on a loaded machine, so it needs the machine alone. `flows.sh` refuses netw
 (`PerfMonitor`, a node Main adds the first time a floor is built; `PerfRules.LineEvery`):
 
 ```
-[perf] floor=12 cart=yes fps avg=332 min=250 worst_ms=116.7 process_ms=10.53 physics_ms=6.77 draws=765 enemies=19 aware=2
+[perf] floor=12 cart=yes fps avg=359 min=328 worst_ms=93.2 process_ms=18.28 physics_ms=7.97 draws=303 enemies=19 aware=2
 ```
 
-- `avg`: frames over the window's time; `min`: the fewest frames in any complete second of it; `worst_ms`: the longest frame.
+- Frame times are wall time between consecutive frames (`FrameClock`, `Time.GetTicksUsec`), not the engine's process delta.
+  Godot cuts that delta to at most `max_physics_steps_per_frame` physics steps (about 133 ms at 60 Hz), so a long hitch would
+  read short.
+- `avg`: frames over the window's time; `min`: the fewest frames in any complete second of it (a frame counts in the second it
+  ends in); `worst_ms`: the longest frame.
 - `process_ms` and `physics_ms`: Godot's `TIME_PROCESS` and `TIME_PHYSICS_PROCESS` monitors, averaged over the window's frames.
   The engine refreshes both once a second with the **longest** step of that second, so they read as the typical worst step per
   second, not a per-frame mean (at 300 fps a `process_ms` of 11 means one frame each second took about 11 ms).
 - `draws`: the mean `RENDER_TOTAL_DRAW_CALLS_IN_FRAME` (0 headless).
 - `enemies`: alive in the `enemies` group; `aware`: those of them not unaware (a client reads the server's flag).
 - `cart`: the local hero is seated (a dedicated server: any hero is).
-- A headless server's fps is its own loop's rate. The frame a floor is built in (the load) is left out, and the window starts again.
+- A headless server's fps is its own loop's rate.
+- After a floor is built, 2 s of frames (`PerfRules.BuildGrace`) are left out: the load and its settling. They print no
+  slow-frame line, and the window starts again after them. A frame the tree was paused through is skipped.
 
 **The slow-frame line.** A frame over 50 ms (`PerfRules.SlowFrameMs`) prints
-`[perf] slow frame 124 ms (floor 12, cart yes; 2 slow since the last line)`, at most once a second (`SlowLineGap`). The count
+`[perf] slow frame 93 ms (floor 12, cart yes; 1 slow since the last line)`, at most once a second (`SlowLineGap`). The count
 includes this frame and every slow frame since the last slow-frame line (those in between were not printed).
 
 **Settings (Display, after "Haze in the air"):**
@@ -486,19 +492,23 @@ includes this frame and every slow frame since the last slow-frame line (those i
 - "Render scale" (`display/render_scale`): 100 % / 85 % (FSR) / 70 % (FSR) / 50 % (FSR). The root viewport's `Scaling3DScale`,
   with `Scaling3DMode` FSR below 100 % and bilinear at 100 %. A saved value is snapped to the nearest step
   (`GraphicsRules.SnapScale`; the higher on a tie, 100 % for a missing or non-numeric value). It does nothing in a headset,
-  which drives its own scale.
+  which drives its own scale (`GraphicsRules.ViewportScale`). Settings load and apply before the headset starts, so
+  `Vr.Start` puts the viewport back to full scale and bilinear once the headset is the display.
 - "Shadows" (`display/shadows`, on by default): the local hero's torch casts shadows. It is the only shadowed light in the game.
 - The Haze slider at 0 already turns the volumetric fog off.
 
 **The perf flow.** `--test-perf[=crowd|ride]` runs windowed only (headless it fails at once). It is never run in `flows.sh`.
 Each run measures one phase on the built-in campaign's floor 12. Every phase uses the same settings, kept in memory and never
 saved: VSync off, windowed 1280x720, Haze 0.5, render scale 100 %, shadows on, Show FPS off. It also sets lethality 1, tops
-every hero up to full HP each second, and turns off gathering and portals. Nothing is culled.
+every hero up to full HP each second, and turns off gathering and portals. Nothing is culled. The mouse is never captured: an
+unfocused window cannot grab it, and X11 logs `ERROR: NO GRAB` when it tries. A run passes with exit 0, its `[perf] RESULT ok`
+line and no `ERROR` line.
 
 - `crowd` (the default; ambushers off as well). The cart is restored at stop 4 (`rc.Restore(4)`) and the party stands beside it
   on the platform. 12 creatures (5 `enemy.horde_cinder`, 4 `enemy.ember_hound`, 3 `enemy.forge_priest`) are spawned 10-20 m
-  around it and sent at the party. The floor's own enemies stay alive and the companions are on Hold. It discards 5 s and
-  measures 20 s. This phase is the enemy tick diet's before-and-after row. It also stands in for the stop siege's "before",
+  around it and sent at the party. The floor's own enemies stay alive and the companions are on Hold. Every enemy is held at
+  1 HP or more (`Enemy.DebugHoldHp`), so the load stays the same through the measure. The flow prints the alive and aware count
+  at its start and end, and fails if the alive count changed. It discards 5 s and measures 20 s of wall time. This phase is the enemy tick diet's before-and-after row. It also stands in for the stop siege's "before",
   since the siege does not exist yet when the baseline is taken.
 - `ride` (ambushers on, so the alcove shooters appear in it once they exist). The cart is restored at stop 0, the party sits
   down, departs and rides ride 1 with every set piece and enemy alive. It measures from 5 s after the departure to the arrival
@@ -511,22 +521,25 @@ slowest 1 % of frames (their mean frame time). `alloc_kb` is the managed memory 
 
 ```bash
 dotnet build DungeonCrawler.csproj
-for P in crowd ride; do XDG_DATA_HOME=$(mktemp -d) timeout 300 godot --path . --print-fps --resolution 1280x720 -- --test-perf=$P 2>&1 | tee /tmp/perf-$P.txt | grep -E "^\[perf\]"; done
+for P in crowd ride; do XDG_DATA_HOME=$(mktemp -d) timeout 300 godot --path . --print-fps --resolution 1280x720 -- --test-perf=$P 2>&1 | tee /tmp/perf-$P.txt | grep -E "^\[perf\]|^ERROR"; done
 ```
 
-**Baseline (plan 16 Task 1, 2026-11-24).** Dev laptop: RTX 5070 Laptop GPU, 240 Hz panel, platform profile `performance`.
-The run is before the tick diet and before the siege.
+**Baseline (plan 16 Task 1, 2026-11-24, after its fix round: wall-time frames, the crowd held).** Dev laptop: RTX 5070
+Laptop GPU, 240 Hz panel, platform profile `performance`, machine otherwise idle. Two runs of each phase, before the tick diet
+and before the siege. Each run had exit 0, `RESULT ok` and no `ERROR` line.
 
-| Phase | Median fps | 1% low | Worst second | Worst frame | Process ms | Physics ms | alloc_kb | Enemies (aware) |
-|---|---|---|---|---|---|---|---|---|
-| crowd (run 1) | 300 | 87 | 236 | 46.8 ms | 10.93 | 16.83 | 105409 | 23 (8) |
-| crowd (run 2) | 270 | 79 | 244 | 41.2 ms | 13.24 | 16.74 | 116484 | 23 (7) |
-| ride | 330 | 90 | 201 | 124.0 ms | 15.13 | 7.03 | 190321 | 18 (1) |
+| Phase | Frames / s | Median fps | 1% low | Worst second | Worst frame | Process ms | Physics ms | Draws | alloc_kb | Enemies (aware) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| crowd (run 1) | 4256 / 20.0 | 312 | 52 | 190 | 50.9 ms | 12.66 | 16.48 | 866 | 109827 | 29 (14) |
+| crowd (run 2) | 4307 / 20.0 | 315 | 58 | 188 | 40.5 ms | 10.83 | 15.26 | 866 | 110890 | 29 (14) |
+| ride (run 1) | 14378 / 48.1 | 347 | 85 | 217 | 94.3 ms | 13.47 | 6.34 | 954 | 186375 | 18 (1) |
+| ride (run 2) | 14203 / 48.1 | 342 | 83 | 218 | 103.7 ms | 14.67 | 6.78 | 965 | 185488 | 18 (1) |
 
-- Crowd: about 5.3-5.5 MB a second of managed allocation, with 23 enemies alive (the 17 of the floor plus the crowd, less
-  those the party killed).
-- Ride: 48.1 s measured. Its worst frame was a single 124 ms hitch.
-- The two crowd runs differ by 10 % in median, so compare medians across at least two runs.
+- Crowd: 29 enemies alive (the floor's 17 and the crowd's 12) and 14 aware, the same at the start and end of both runs. The
+  mean fps (about 215) is far under the median: the slow frames carry the cost. The process allocates about 5.5 MB a second.
+- Ride: both runs had one hitch of about 95-105 ms during ride 1, and a 53 ms frame later on.
+- An earlier take, with the engine's capped delta and a crowd the party thinned to 23, is superseded. Its worst frames were
+  floors rather than measurements.
 
 ### Known gaps
 

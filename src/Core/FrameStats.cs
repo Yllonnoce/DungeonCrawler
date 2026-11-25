@@ -31,14 +31,17 @@ public sealed class FrameStats
         _sortedValid = false;
         _elapsed += frameSeconds;
         if (frameSeconds > _worstFrame) _worstFrame = frameSeconds;
-        _inSecond++;
-        while (_elapsed >= _secondEnd - BoundaryEpsilon)
-        {
-            // the frame that ends a second counts in it; a frame longer than a second leaves the seconds it spans with none
-            if (_worstSecond < 0 || _inSecond < _worstSecond) _worstSecond = _inSecond;
-            _inSecond = 0;
-            _secondEnd += 1.0;
-        }
+        // the seconds this frame passes whole close before it lands: a frame longer than a second leaves the seconds it spans with none
+        while (_elapsed > _secondEnd + BoundaryEpsilon) CloseSecond();
+        _inSecond++; // the frame counts in the second it ends in (one ending on a boundary, in the second it closes)
+        if (_elapsed >= _secondEnd - BoundaryEpsilon) CloseSecond();
+    }
+
+    private void CloseSecond()
+    {
+        if (_worstSecond < 0 || _inSecond < _worstSecond) _worstSecond = _inSecond;
+        _inSecond = 0;
+        _secondEnd += 1.0;
     }
 
     /// <summary>Frames over elapsed time (the perf line's avg); 0 for an empty window.</summary>
@@ -106,6 +109,9 @@ public static class PerfRules
     public const float SlowFrameMs = 50f;
     /// <summary>At most one slow-frame line this often (seconds); the slow frames between are counted in the next.</summary>
     public const float SlowLineGap = 1f;
+
+    /// <summary>After a floor is built, this many seconds of frames are not counted (the load's settling: first draws, shader and model warm-up).</summary>
+    public const float BuildGrace = 2f;
 
     public static bool Slow(float frameMs) => frameMs > SlowFrameMs;
 }
