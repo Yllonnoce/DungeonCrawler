@@ -66,7 +66,7 @@ public partial class RailController
     private float _goneSeconds;
     private readonly List<(int Wagon, bool Seat4, bool Seat5)> _throwView = new();
     private readonly List<Enemy> _leapingOff = new();
-    /// <summary>The relief train's "Cart coming!" throttle (by hero), as a chaser's.</summary>
+    /// <summary>The return's and the relief train's "Cart coming!" throttle (by hero), as a chaser's.</summary>
     private readonly Dictionary<int, double> _reliefWarned = new();
 
     /// <summary>Test hook: the crew put off the rolling train on the way in the live (or last) hijack.</summary>
@@ -189,8 +189,8 @@ public partial class RailController
         if (State.Plating <= 0f) { Wreck(); return; } // a big body run over took the last of it
         if (Hijack == HijackPhase.RollingBack && _driverHeld) TickThrows(dt); // the prisoners put off one every 3 s, the last wagon's rear seat first
         if (State.Mode == CartMode.Held || Hijack == HijackPhase.Braking && State.V <= 0f) { NextHijackPhase(); return; }
-        if (Hijack == HijackPhase.ReliefIn && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.GetParent() == GetParent())
-            enc.WarnPartyLane(Party, Cart, _reliefWarned, party); // the empty relief train warns as a party-lane chaser does: the thrown crew walking back on the line step to a refuge
+        if ((Hijack is HijackPhase.Returning or HijackPhase.ReliefIn) && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.GetParent() == GetParent())
+            enc.WarnPartyLane(Party, Cart, _reliefWarned, party); // forward, back to its stop (the return, the relief train): it warns as a party-lane chaser does, so the crew it put off, walking back on the line, step to a refuge
         else Warn(party, lead);
     }
 
@@ -351,6 +351,7 @@ public partial class RailController
         SetCartLayer();
         Party.Settle();
         Party.LastInput = HijackRules.InputFor(Hijack, Party.SlopeAhead, _train.Count, Party.Limit) with { StopAt = Party.Limit }; // no Brake left over from the brake's tick (the T5 review's M13)
+        _reliefWarned.Clear();
         RefreshHud();
     }
 

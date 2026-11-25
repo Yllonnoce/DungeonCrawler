@@ -628,6 +628,12 @@ public partial class DebugTools
     //      held, so it books from beyond 25 m (the 60 m reach) and the countdown holds at 0 while it walks back.
     //  Pass 3 (a save mid-roll, Review Focus 2): saved at 5 s of RollingBack and loaded: Held at stop 3, Hijack None, no driver, the train whole and
     //      facing forward; the crew put off before the save on foot, the rest seated; nobody thrown; the siege's first wave 10 +- 0.5 s after its restart.
+    //  Pass 4 (won back after the throws: the T7 review's Important 1, the ruled cap): the crew seated as in pass 2; after the third throw the lead
+    //      knocks the driver off from foot; the second crew member put off is moved 40-55 m and the third 70-90 m back from the stop's W1 and held
+    //      there (test walks); the first one put off is set on the line 8 m ahead of the returning cart. The brake and the return (warned as a
+    //      party-lane chaser) run nobody down; held again with the lead > 12 m behind the
+    //      rear, it is not left behind and no relief cart comes; the near one books from beyond 25 m and, still held out, sits in at once at the
+    //      30 s cap; the far one is no longer thrown after the cap and stays on foot; the departure waits 30 s from HijackOver and arms ride 4.
     //  Throughout (Ruling 32): no "straggler ... freed" line names a runner, the driver or a wagon's hijacker (the driver lives at the limit, up to
     //  52 m from the stop and unseen, until the relief is held).
     private const int GaStop = 3;
@@ -643,6 +649,14 @@ public partial class DebugTools
     private readonly List<string> _gaFaults = new();
     private readonly Dictionary<Npc, float> _gaFarAtHold = new();
     private readonly HashSet<Enemy> _gaBoarders = new();
+    // pass 4 (won back after the throws; the T7 review's Important 1 and the ruled cap)
+    private Npc? _gaNear, _gaFar, _gaOnLine;
+    private Vector3 _gaNearPin, _gaFarPin;
+    private double _gaKnockAt;
+    private float _gaNearBookD = float.NaN;
+    private bool _gaMovedBehind, _gaFarChecked;
+    private int _gaReliefs;
+    private readonly List<string> _gaRunOver = new();
     private bool _gaListening, _gaFreeParty, _gaHoldEngaged;
     private double _gaMark, _gaRollAt, _gaGoneAt, _gaReliefAt, _gaHoldAt, _gaBoardAt, _gaLoadAt;
     private float _gaLimit, _gaMaxV, _gaHoldClock;
@@ -660,7 +674,11 @@ public partial class DebugTools
         if (_gaListening) return;
         _gaListening = true;
         var bus = EventBus.Instance;
-        Action<string> message = text => { if (text == StopTrapLines.GoneLog || text == StopTrapLines.ReliefLog || text == StopTrapLines.CrewRelief) _gaLines.Add((StNow, text)); };
+        Action<string> message = text =>
+        {
+            if (text == StopTrapLines.GoneLog || text == StopTrapLines.ReliefLog || text == StopTrapLines.CrewRelief) _gaLines.Add((StNow, text));
+            if (_gaPass == 4 && text.Contains(" runs over ") && _gaSeats.Any(c => IsInstanceValid(c.Npc) && text.Contains(c.Npc.NpcName))) _gaRunOver.Add(text);
+        };
         Action<Npc, Line> said = (npc, line) => { if (line.Text == StopTrapLines.CrewRelief) _gaLines.Add((StNow, $"{npc.NpcName}: {line.Text}")); };
         Action<int, float, int> started = (stop, delay, _) => _gaStarts.Add((StNow, stop, delay));
         Action<int, int, IReadOnlyList<GridPos>, IReadOnlyList<int>, int, int> opened = (stop, wave, _, _, _, _) => _gaWaves.Add((StNow, stop, wave));
@@ -723,7 +741,7 @@ public partial class DebugTools
         if (_stStep >= 1) { HjSweep(trap); HjHold(trap); }
         if (_stStep == 1 && portals.SiegeStop == GaStop && (_hjWaveAt += dt) >= 2.5f) { _hjWaveAt = 0f; portals.DebugSiegeNow(); } // hurried until the roll (never after pass 3's load)
         if (_stStep is >= 1 and <= 3 && !_gaFreeParty) GaHoldParty(party, dt);
-        if (_stStep is >= 2 and <= 4) GaWatchCrew(rc, ctrl, layout);
+        if (_stStep is (>= 2 and <= 4) or (>= 20 and <= 22)) GaWatchCrew(rc, ctrl, layout);
 
         switch (_stStep)
         {
@@ -747,6 +765,7 @@ public partial class DebugTools
                 _gaOff.Clear(); _gaSat.Clear(); _gaBooked.Clear(); _gaFarAtHold.Clear(); _gaBoarders.Clear();
                 _gaKilled = null; _gaDriver = null; _gaMaxV = 0f; _gaHoldEngaged = false;
                 _gaSpares = rc.SparesLeft;
+                _gaReliefs = rc.ReliefsSent;
                 _gaMark = StNow;
                 var tagged = trap.DebugTagNext();
                 GD.Print($"[stoptrap] gotaway: pass {_gaPass}: rc.Restore({GaStop}) at S={rc.State.S:0.0}; {killed} holder(s) die by the test's hand; crew [{string.Join(", ", _gaSeats.Select(c => $"{c.Npc.NpcName} W{c.Wagon} s{c.Seat}"))}]; the party held at {DungeonBuilder.WorldToCell(_gaHold)} ({GaHoldAhead:0} m up the line); limit S={rc.RollBackLimitAt(GaStop, out _):0.0}; tagged {(tagged != null ? tagged.Name : "the next spawn")}; spares left {_gaSpares}");
@@ -767,8 +786,9 @@ public partial class DebugTools
                 Next();
                 break;
             }
-            case 2: // (a) the throws; (b) gone (pass 3: the save at 5 s)
+            case 2: // (a) the throws; (b) gone (pass 3: the save at 5 s; pass 4: won back, from step 20)
             {
+                if (_gaPass == 4) { _stStep = 20; _stClock = 0f; _hjSub = 0; _hjSwings = 0; _hjBlowAt = 0; break; }
                 if (_gaPass == 2 && _gaKilled == null && _gaOff.Count > 0)
                 {
                     var first = _gaOff.OrderBy(o => o.Value.At).First();
@@ -1002,10 +1022,158 @@ public partial class DebugTools
                 GD.Print($"[stoptrap] gotaway: after the load the siege restarted {start.At - _gaLoadAt:0.00} s after the load call with a {start.Delay:0.0} s grace; wave {w1.Wave} {t:0.00} s after");
                 if (w1.Wave != 1 || Mathf.Abs(start.Delay - StopSiegeRules.LoadGrace) > 1e-3f || Math.Abs(t - StopSiegeRules.LoadGrace) > 0.5) { Fail($"the load's first wave was wave {w1.Wave} at {t:0.00} s (grace {start.Delay:0.0}), not wave 1 at 10 +- 0.5"); return; }
                 _gaSummary.Add($"pass 3: saved at 5 s of the roll, loaded whole at stop {GaStop} with {_gaOffBeforeSave.Count} put off on foot; wave 1 {t:0.00} s after");
+                _gaPass = 4;
+                _stStep = 0; _stClock = 0f; _hjSub = 0;
+                break;
+            }
+            case 20: // pass 4 (won back after the throws): the near and far crew placed; the lead knocks the driver off from foot after the third throw
+            {
+                GaNoCrewDowned(Fail);
+                var off = _gaOff.OrderBy(o => o.Value.At).Select(o => o.Key).ToList();
+                if (off.Count >= 2 && _gaNear == null) { _gaNear = off[1]; _gaNearPin = GaPlaceBack(rc, ctrl, _gaNear, 40f, 55f, Fail); }
+                if (off.Count >= 3 && _gaFar == null) { _gaFar = off[2]; _gaFarPin = GaPlaceBack(rc, ctrl, _gaFar, 70f, 90f, Fail); }
+                if (_gaNear != null) GaPin(_gaNear, _gaNearPin);
+                if (_gaFar != null) GaPin(_gaFar, _gaFarPin);
+                var d = _gaDriver!;
+                if (rc.Cart.Driver != d)
+                {
+                    if (rc.Hijack is not (HijackPhase.Braking or HijackPhase.Returning)) { Fail($"the driver went and the train is {rc.Hijack}, not braking or returning"); return; }
+                    _gaKnockAt = StNow;
+                    var hits = _hjDriverHits.Count(h => h.E == d);
+                    GD.Print($"[stoptrap] gotaway: (pass 4) {d.Name} knocked off {_gaKnockAt - _gaRollAt:0.00} s into the roll after {hits} hit(s) in {_hjSwings} swing(s); put off [{string.Join(", ", off.Select(n => n.NpcName))}], aboard [{string.Join(", ", GaLiving().Where(n => n.Seated).Select(n => n.NpcName))}]");
+                    if (off.Count < 3 || _gaNear == null || _gaFar == null) { Fail($"only {off.Count} crew were put off before the knock-off"); return; }
+                    HjKill(d);
+                    foreach (var w in rc.Train) foreach (var b in w.Boarders) if (b != null && IsInstanceValid(b) && b.Carrier == w) HjKill(b); // a later wave's wagon hijacker: not this pass's business
+                    Next();
+                    break;
+                }
+                if (rc.Hijack != HijackPhase.RollingBack) { Fail($"the roll became {rc.Hijack} before the driver was knocked off"); return; }
+                if (StNow - _gaRollAt < 3 * HijackRules.ThrowEvery + 0.05) break; // after the third throw
+                if (_hjSwings >= 14) { Fail($"{_hjSwings} swings did not knock the driver off"); return; }
+                if (me == null || me.BladeSwinging || StNow - _hjBlowAt < 0.4) break;
+                _gaFreeParty = true;
+                _hjStruck = d;
+                me.Teleport(HjBesideCart(rc), d.GlobalPosition);
+                HjSwing(party, me, d);
+                _hjSwings++;
+                _hjBlowAt = StNow;
+                break;
+            }
+            case 21: // pass 4: the brake and the return (warned as a party-lane chaser), held again; nobody downed; the relief's meeting kept
+            {
+                GaNoCrewDowned(Fail);
+                GaPin(_gaNear!, _gaNearPin);
+                GaPin(_gaFar!, _gaFarPin);
+                if (_hjSub == 0)
+                {
+                    if (rc.Hijack == HijackPhase.Returning && _gaOnLine == null && _gaOff.Keys.FirstOrDefault(n => n != _gaNear && n != _gaFar && IsInstanceValid(n) && !n.Dead && !n.Seated) is { } walker)
+                    {
+                        // the first one put off stands on the line 8 m ahead of the returning cart's front: the return's warning must send it to a refuge
+                        _gaOnLine = walker;
+                        var at = rc.Party.Track.Point(rc.Party.FrontS + 8f) + Vector3.Up * 0.1f;
+                        ctrl.DebugPutOnFoot(walker.Id, at);
+                        var cell = DungeonBuilder.WorldToCell(walker.GlobalPosition);
+                        GD.Print($"[stoptrap] gotaway: (pass 4) {walker.NpcName} stands on the line at {cell} (rail {layout.IsRail(cell)}) 8 m ahead of the returning cart's front (S={rc.Party.FrontS:0.0}, V {rc.State.V:0.00})");
+                        if (!layout.IsRail(cell)) { Fail("the walker was not set on the line"); return; }
+                    }
+                    if (rc.Hijack == HijackPhase.Returning && rc.State.S >= rc.StopS[GaStop] - 3f && !_gaMovedBehind) // the lead > 12 m behind the train's rear as it is held
+                    {
+                        _gaMovedBehind = true;
+                        _gaHold = rc.StandBesideLane(rc.Party.Track.Point(rc.StopS[GaStop] - TrainRules.Length(4) + CartRules.HalfLength - 20f));
+                        party.Teleport(_gaHold + Vector3.Up * 0.3f, rc.Cart.GlobalPosition);
+                    }
+                    var over = HjEventAt(CartEventKind.HijackOver, _gaKnockAt);
+                    if (over < 0) { if (StNow - _gaKnockAt > 40) Fail($"the train never came back after the knock-off ({rc.Hijack}, S={rc.State.S:0.00})"); break; }
+                    if (rc.LeftBehindNow) { Fail("the lead behind the returned train is left behind (a relief cart would come for a train that came back)"); return; }
+                    if (StNow - over < 1.0) break;
+                    _gaHoldAt = over;
+                    var thrown = ctrl.ThrownIds.ToHashSet();
+                    var rear = rc.State.S - TrainRules.Length(rc.Train.Count) + CartRules.HalfLength;
+                    var behind = rear - rc.PlayerLineS;
+                    var w1 = rc.WagonAt(1)!;
+                    foreach (var n in GaLiving()) _gaFarAtHold[n] = new Vector2(n.GlobalPosition.X - w1.GlobalPosition.X, n.GlobalPosition.Z - w1.GlobalPosition.Z).Length();
+                    GD.Print($"[stoptrap] gotaway: (pass 4) held again at S={rc.State.S:0.000} {_gaHoldAt - _gaKnockAt:0.00} s after the knock-off; thrown [{string.Join(", ", thrown)}]; {_gaNear!.NpcName} {_gaFarAtHold[_gaNear]:0.0} m, {_gaFar!.NpcName} {_gaFarAtHold[_gaFar]:0.0} m from W1; the lead {behind:0.0} m behind the rear for 1 s, left behind {rc.LeftBehindNow}, reliefs sent {rc.ReliefsSent} (were {_gaReliefs}); the relief train {rc.Hijack}");
+                    if (rc.State.Mode != CartMode.Held || Mathf.Abs(rc.State.S - rc.StopS[GaStop]) > 0.05f || rc.Hijack != HijackPhase.None) { Fail("the won-back train is not held at its stop"); return; }
+                    if (_gaOnLine == null) { Fail("no crew member was set on the line ahead of the return"); return; }
+                    if (!thrown.SetEquals(_gaOff.Keys.Where(n => IsInstanceValid(n) && !n.Dead && !n.Seated).Select(n => n.Id))) { Fail("ThrownIds are not the crew put off still on foot"); return; }
+                    if (behind <= ReliefRules.LeftBehindRange) { Fail($"the lead stood only {behind:0.0} m behind the train's rear: the check needs over 12"); return; }
+                    if (rc.ReliefsSent != _gaReliefs) { Fail("a relief cart was sent for the train that came back"); return; }
+                    if (!(_gaFarAtHold[_gaFar] > HijackRules.ThrownBoardReach)) { Fail($"the far crew member is only {_gaFarAtHold[_gaFar]:0.0} m away"); return; }
+                    _hjSub = 1;
+                    _gaFreeParty = true;
+                    if (!RideBoard(main, layout, rc, out var why)) { Fail(why); return; }
+                    _gaBoardAt = StNow;
+                    Next();
+                }
+                break;
+            }
+            case 22: // pass 4: the departure waits from HijackOver; the cap seats the near one at once and ends the far one's status
+            {
+                GaNoCrewDowned(Fail);
+                RideWaiveCages(main, rc, "stoptrap");
+                var near = _gaNear!;
+                var far = _gaFar!;
+                if (ctrl.BookingOf(near) != null && float.IsNaN(_gaNearBookD)) _gaNearBookD = _gaFarAtHold.GetValueOrDefault(near); // its booking came at the hold, from where it stood
+                if (ctrl.BookingOf(far) != null) { Fail($"{far.NpcName}, beyond 60 m, booked a seat"); return; }
+                if (!near.Seated) GaPin(near, _gaNearPin); // a test's walk: it stays out until the cap
+                if (!far.Seated) GaPin(far, _gaFarPin);
+                if (StNow - _gaHoldAt >= HijackRules.ThrownWaitMax + 0.5 && !_gaFarChecked)
+                {
+                    _gaFarChecked = true;
+                    GD.Print($"[stoptrap] gotaway: (pass 4) at the cap +0.5 s: {near.NpcName} seated {near.Seated}, {far.NpcName} seated {far.Seated}, thrown [{string.Join(", ", ctrl.ThrownIds)}]");
+                    if (ctrl.ThrownIds.Contains(far.Id)) { Fail($"{far.NpcName} is still thrown after the 30 s cap"); return; }
+                }
+                var dep = HjEventAt(CartEventKind.Departed, _gaBoardAt);
+                if (dep < 0) { if (StNow - _gaHoldAt > 45) Fail($"no departure 45 s after the hold (boarding {rc.Boarding.Running}, thrown on the way {ctrl.ThrownOnTheWay(GaStop)})"); break; }
+                if (StNow - dep < 1.0) break;
+                var waited = dep - _gaHoldAt;
+                var nearAt = _gaSat.TryGetValue(near, out var na) ? na - _gaHoldAt : double.NaN;
+                var others = _gaOff.Keys.Where(n => n != near && n != far && IsInstanceValid(n) && !n.Dead).ToList();
+                GD.Print($"[stoptrap] gotaway: (pass 4) departed {waited:0.00} s after HijackOver; {near.NpcName} booked from {_gaNearBookD:0.0} m and sat at +{nearAt:0.00}; {far.NpcName} on foot {!far.Seated}, thrown {ctrl.ThrownIds.Contains(far.Id)}, at the cap checked {_gaFarChecked}; [{string.Join(", ", others.Select(n => $"{n.NpcName} sat at +{(_gaSat.TryGetValue(n, out var t) ? t - _gaHoldAt : double.NaN):0.00}"))}]; armed ride {enc?.ArmedRide}; reliefs sent {rc.ReliefsSent}");
+                if (!(_gaNearBookD > TrainRules.BoardReach && _gaNearBookD <= HijackRules.ThrownBoardReach)) { Fail($"{near.NpcName} did not book from beyond 25 m within 60 ({_gaNearBookD:0.0} m)"); return; }
+                if (!(Math.Abs(nearAt - HijackRules.ThrownWaitMax) <= 0.2)) { Fail($"{near.NpcName} sat at +{nearAt:0.00}, not at once at the 30 s cap"); return; }
+                if (waited < HijackRules.ThrownWaitMax - 0.15) { Fail($"the train left {waited:0.00} s after HijackOver, before the thrown crew's cap"); return; }
+                if (far.Seated || far.Dead || !_gaFarChecked || ctrl.ThrownIds.Contains(far.Id)) { Fail($"{far.NpcName} (beyond 60 m) did not stay on foot as an ordinary freed crew member"); return; }
+                if (others.Any(n => !_gaSat.TryGetValue(n, out var t) || t > dep + 0.05)) { Fail("a thrown crew member within reach was not seated before the train left"); return; }
+                if (enc?.ArmedRide != GaStop + 1 || rc.ReliefsSent != _gaReliefs) { Fail($"the departure armed ride {enc?.ArmedRide} (want {GaStop + 1}), or a relief cart came ({rc.ReliefsSent} sent, were {_gaReliefs})"); return; }
+                _gaSummary.Add($"pass 4: won back after {_gaOff.Count} throws; the return ran nobody down ({_gaOnLine?.NpcName} on the line 8 m ahead stepped clear); {near.NpcName} booked from {_gaNearBookD:0.0} m and sat at once at the cap (+{nearAt:0.00}); {far.NpcName} beyond 60 m stayed on foot, no longer thrown; the departure waited {waited:0.00} s from HijackOver; no relief cart");
                 StopTrapOk($"{string.Join("; ", _gaSummary)}; no hijacker freed by the cull");
                 break;
             }
         }
+    }
+
+    /// <summary>Pass 4: no crew member of the train downed or dead (the returning train warns them off the line), and no run-over of one logged.</summary>
+    private void GaNoCrewDowned(Action<string> fail)
+    {
+        if (_gaRunOver.Count > 0) { fail($"the train ran over crew: {string.Join("; ", _gaRunOver)}"); return; }
+        if (GaLiving().Count != _gaSeats.Count || _gaSeats.Any(c => c.Npc.Downed)) fail($"crew downed or dead in the won-back hijack: [{string.Join(", ", _gaSeats.Where(c => !IsInstanceValid(c.Npc) || c.Npc.Dead || c.Npc.Downed).Select(c => c.Npc.NpcName))}]");
+    }
+
+    /// <summary>A test's walk: <paramref name="npc"/> holds at <paramref name="at"/> (a booking's walk yields to it, a refuge's too).</summary>
+    private static void GaPin(Npc npc, Vector3 at)
+    {
+        if (!IsInstanceValid(npc) || npc.Seated) return;
+        npc.MoveTarget = at;
+        npc.MoveOverride = true;
+    }
+
+    /// <summary>Pass 4: <paramref name="npc"/> set down beside the line behind the limit, <paramref name="min"/>-<paramref name="max"/> m from the stop's W1, and held there.</summary>
+    private Vector3 GaPlaceBack(RailController rc, CrewRescueController ctrl, Npc npc, float min, float max, Action<string> fail)
+    {
+        var w1At = rc.Party.Track.Point(rc.StopS[GaStop] - TrainRules.Spacing);
+        for (var sb = rc.StopS[GaStop] - 10f; sb > rc.StopS[GaStop] - 120f; sb -= 2f)
+        {
+            var p = rc.StandBesideLane(rc.Party.Track.Point(sb));
+            var fd = new Vector2(p.X - w1At.X, p.Z - w1At.Z).Length();
+            if (fd < min || fd > max) continue;
+            ctrl.DebugPutOnFoot(npc.Id, p);
+            GaPin(npc, p);
+            GD.Print($"[stoptrap] gotaway: (pass 4) {npc.NpcName} waits at {DungeonBuilder.WorldToCell(p)}, {fd:0.0} m from the stop's W1");
+            return p;
+        }
+        fail($"no place beside the line {min:0}-{max:0} m from the stop's W1");
+        return npc.GlobalPosition;
     }
 
     // ---- --test-stop-trap=limits (plan 16 Task 7, Ruling 26; the T5 review's M15) ------------------------------------------------------

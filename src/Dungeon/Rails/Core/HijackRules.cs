@@ -174,7 +174,16 @@ public static class HijackRules
     public static bool HoldsForThrown(int thrownOnTheWay, float sinceHeldAgain) => thrownOnTheWay > 0 && sinceHeldAgain < ThrownWaitMax;
 
     /// <summary>At <see cref="ThrownWaitMax"/> a thrown crew member walking to its seat within <see cref="ThrownBoardReach"/> sits in at once; farther ones stay on foot.</summary>
-    public static bool SeatsThrownAtOnce(float sinceHeldAgain, float distance) => sinceHeldAgain >= ThrownWaitMax && distance <= ThrownBoardReach;
+    public static bool SeatsThrownAtOnce(float sinceHeldAgain, float distance)
+        => !float.IsPositiveInfinity(sinceHeldAgain) && sinceHeldAgain >= ThrownWaitMax && distance <= ThrownBoardReach; // +inf: never held again at its stop
+
+    /// <summary>
+    /// A crew member a hijack put off is still "thrown" (its 60 m reach, the departure's wait, the sit-in at the cap): until the train, held at its
+    /// stop again (<paramref name="sinceHeldAgain"/> finite), has waited <see cref="ThrownWaitMax"/>, or until it <paramref name="departed"/>. After
+    /// that one still on foot is an ordinary freed crew member (25 m), never seated at once at this stop or a later one.
+    /// </summary>
+    public static bool StillThrown(float sinceHeldAgain, bool departed)
+        => !departed && (float.IsPositiveInfinity(sinceHeldAgain) || sinceHeldAgain < ThrownWaitMax);
 
     /// <summary>
     /// Floor 12's roll-back limits as measured on the shipped layout with four wagons (Ruling 26): stop → the limit (the cart's middle S) and

@@ -8,7 +8,7 @@ namespace DungeonCrawler.Adventure.Objectives;
 /// The crew a hijack put off the train (plan 16 Task 7, spec section 3 "Getting away" and its Ruling 3). A prisoner put off the rolling-back
 /// train, or set down where it got away, is set down alive beside its wagon (<see cref="PutOffAlive"/>, never the lethal <see cref="ThrowCrew"/>)
 /// and follows the party. It is "thrown" until it sits, dies, or the floor changes (a load or a restore: it is then an ordinary freed crew
-/// member). A thrown crew member books a seat from <see cref="HijackRules.ThrownBoardReach"/> (60 m; everyone else 25 m), and the departure from
+/// member), and at most until the 30 s cap after the train is held again or the train's departure (Ruling 15 as ruled in the T7 review). A thrown crew member books a seat from <see cref="HijackRules.ThrownBoardReach"/> (60 m; everyone else 25 m), and the departure from
 /// its stop waits while any is on the way, up to <see cref="HijackRules.ThrownWaitMax"/> after the train is held there again (HijackOver: the
 /// return or the relief train). At that cap a thrown walker within 60 m of its seat sits in at once; farther ones stay on foot. A hijack never
 /// kills crew and never counts them lost: crew who die on the way are lost as in any fight. Server and solo; nothing of it is saved.
@@ -79,20 +79,36 @@ public partial class CrewRescueController
         return n;
     }
 
-    /// <summary>Each tick (server and solo): the clock since the train was held again runs; a thrown crew member who sat or died is thrown no more.</summary>
+    /// <summary>Each tick (server and solo), before the boarding: the clock since the train was held again runs; a thrown crew member who sat or died is thrown no more.</summary>
     private void TickThrown(float dt)
     {
         if (!float.IsPositiveInfinity(_sinceHeldAgain)) _sinceHeldAgain += dt;
         if (_thrown.Count == 0) return;
         _thrownGone.Clear();
         foreach (var npc in _crew)
-            if (_thrown.ContainsKey(npc.Id) && (!IsInstanceValid(npc) || npc.Dead || npc.Seated)) _thrownGone.Add(npc.Id);
-        foreach (var id in _thrownGone)
-        {
-            _thrown.Remove(id);
-            GD.Print($"[CrewRescue] {id} is no longer thrown");
-        }
+            if ((!IsInstanceValid(npc) || npc.Dead || npc.Seated) && _thrown.ContainsKey(npc.Id)) _thrownGone.Add(npc.Id); // Id is a plain property: readable on a freed one
+        EndThrown(_thrownGone, "sat or died");
+    }
+
+    /// <summary>
+    /// Each tick (server and solo), after the boarding (so the cap's sit-in at once comes first): at <see cref="HijackRules.ThrownWaitMax"/> since the
+    /// train was held again, the crew of that stop still thrown (beyond 60 m, or not booked) are thrown no more (<see cref="HijackRules.StillThrown"/>):
+    /// ordinary freed crew on foot.
+    /// </summary>
+    private void ExpireThrown()
+    {
+        if (_thrown.Count == 0) return;
         _thrownGone.Clear();
+        foreach (var (id, stop) in _thrown)
+            if (!HijackRules.StillThrown(SinceHeldAgain(stop), departed: false)) _thrownGone.Add(id);
+        EndThrown(_thrownGone, $"the {HijackRules.ThrownWaitMax:0} s cap");
+    }
+
+    private void EndThrown(List<string> ids, string why)
+    {
+        foreach (var id in ids)
+            if (_thrown.Remove(id)) GD.Print($"[CrewRescue] {id} is no longer thrown ({why})");
+        ids.Clear();
     }
 
     /// <summary>The train's hijack events as the crew hear them: held again (HijackOver) starts the 30 s wait; a restore makes every thrown one ordinary.</summary>
@@ -106,6 +122,13 @@ public partial class CrewRescueController
                 if (ThrownOnTheWay(e.Stop) is var n and > 0) GD.Print($"[CrewRescue] the train held again at stop {e.Stop}: the departure waits up to {HijackRules.ThrownWaitMax:0} s for {n} thrown crew");
                 break;
             case CartEventKind.Hijacked:
+                _heldAgainStop = -1;
+                _sinceHeldAgain = float.PositiveInfinity;
+                break;
+            case CartEventKind.Departed: // the train left (Ruling 15 as ruled in the T7 review): those still on foot are ordinary freed crew
+                _thrownGone.Clear();
+                foreach (var (id, stop) in _thrown) if (!HijackRules.StillThrown(SinceHeldAgain(stop), departed: true)) _thrownGone.Add(id);
+                EndThrown(_thrownGone, "the train left");
                 _heldAgainStop = -1;
                 _sinceHeldAgain = float.PositiveInfinity;
                 break;

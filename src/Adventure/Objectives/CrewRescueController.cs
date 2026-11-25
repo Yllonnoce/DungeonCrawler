@@ -327,6 +327,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (main.RiseAtCartPending) return; // a wipe's rise is coming: the floor is built again from the arrival, and nothing won now may outlive it
         if (!NetSession.IsClient) TickThrown(dt); // the crew a hijack put off: thrown until they sit or die (plan 16 Task 7)
         TickBoarding(dt);
+        if (!NetSession.IsClient) ExpireThrown(); // after the boarding: the 30 s cap's sit-in at once comes first
         if (IslandFloor) { ReadIsland(); BringEscortsIn(); } // Grisel is brought in, won or not (plan 15 Ruling 36)
         if (Completed) return;
         if (_cages.Count == 0 || (_crew.Count == 0 && ClosedCages == 0)) { Complete(); return; } // no cage could stand anywhere (Build warned), or nobody to bring home: waived
