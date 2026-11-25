@@ -57,8 +57,9 @@ public partial class DebugTools
     }
 
     /// <summary>What a variant changed in memory goes back (the setting it moved).</summary>
-    private void StopTrapRestore() => Settings.Reinforcements = _stReinforcementsWas;
-    private float _stReinforcementsWas = 1f;
+    private void StopTrapRestore() { if (_stReinforcementsWas is { } was) Settings.Reinforcements = was; }
+    /// <summary>The setting as the flow found it (null until a variant reads it: an early failure leaves the setting alone).</summary>
+    private float? _stReinforcementsWas;
 
     private void RunStopTrapTest()
     {

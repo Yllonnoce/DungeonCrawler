@@ -108,16 +108,7 @@ public partial class PortalSpawner
     }
 
     /// <summary>Ruling 5: the siege keeps every silence of <see cref="RefreshSilence"/> but an empty roster (it has its own).</summary>
-    private (bool Silent, string Why) SiegeSilence()
-    {
-        if (!PortalRules.Enabled(Intensity)) return (true, "reinforcements are off in Settings");
-        if (DebugTools.Instance?.NoPortals == true) return (true, "--no-portals");
-        var bossFloor = PortalRules.BossFloorFor(_floor);
-        if ((Game.Instance?.Floors.TryGetValue(bossFloor, out var s) == true && s.BossDefeated) || (bossFloor == _floor && Main.Instance?.BossDefeatedThisFloor == true))
-            return (true, $"the boss of floor {bossFloor} is dead");
-        if (Objectives.ObjectiveController.Instance is Objectives.RitualController { Active: true }) return (true, "the ritual's breaches are enough");
-        return (false, "");
-    }
+    private (bool Silent, string Why) SiegeSilence() => Silence(rosterCounts: false);
 
     /// <summary>With the floor-wide silence re-read (every 2 s): a siege a silence now covers ends at once.</summary>
     private void CheckSiegeSilence()

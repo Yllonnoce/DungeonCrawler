@@ -894,6 +894,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         return push;
     }
 
+    /// <summary>Test hook (plan 16, Ruling 24): no hazard kills it (a cart running it over, a fall): the stop siege's rooted stragglers live to be freed.</summary>
+    internal bool DebugHazardProof { get; set; }
+
     /// <summary>Test hook (plan 16, Ruling 24): rooted where it stands, it neither steers nor walks a path (<see cref="MoveToward"/> and <see cref="MoveAlongPathToward"/> do nothing).</summary>
     internal bool DebugRooted { get; set; }
 
@@ -1320,7 +1323,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// </summary>
     public void KillByEnvironment(string sourceName, HazardDamage kind, bool quiet = false)
     {
-        if (!IsAlive) return;
+        if (!IsAlive || DebugHazardProof) return;
         _environmentalKill = true;
         _quietDeath = quiet;
         if (!quiet) EventBus.Instance.Log($"{sourceName} {HazardRules.Verb(kind)} {DisplayName}.");

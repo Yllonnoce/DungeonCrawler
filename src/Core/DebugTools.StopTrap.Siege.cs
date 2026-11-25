@@ -13,15 +13,15 @@ namespace DungeonCrawler.Core;
 // The stop siege, in order (any step out of its window fails):
 //  (a) the load restart: rc.Restore(1), the party beside the cart, stop 1's cage opened (its crew are the warning's speakers on the
 //      condemned branch): no wave for 10 s, then wave 1 at 10 +- 0.5 s with 1 portal x 2, SiegeFirstLog logged and the warning said
-//      once in stop 1's siege (queued behind the stop's own narration); every site of every wave in its stop's room or within 3 cells of it, 6 m or more from every up hero, 4 m from
-//      the cage and every platform cell, never a rail or pocket cell, and the waves' portals 8 m apart; PressureSeconds still while any
-//      siege runs.
+//      within 3 s of wave 1's first creature, once (the same at stop 2's first arrival, never again on a restart); every site of every
+//      wave in its stop's room or within 3 cells of it, 6 m or more from every up hero, 4 m from the cage and every platform cell, never
+//      a rail or pocket cell, and the waves' portals 8 m apart; PressureSeconds still while any siege runs.
 //  (b) nobody fighting (the companions hold fire, the lead idle on the platform): wave 2 at +14 +- 0.5 s, wave 3 at +28, wave 4 waits
 //      (alive 6/6); the alive count never over the stop's cap.
 //  (c) rc.DebugKillHolders(1): the gate up within 1 s with siege creatures alive.
 //  (d) the lead boards (RideOnTo) and the train departs: "siege at stop 1: off (the train left)", the siege creatures rooted where they
-//      stand (DebugHoldSiegeCreatures), no wave on ride 2, one straggler freed per rooted creature before the arrival at stop 2 (one
-//      the departing train or a slag cart runs over is dead instead, and counted so; at least one is freed).
+//      stand (DebugHoldSiegeCreatures) and kept alive through the ride (DebugHoldHp, DebugHazardProof: no cart runs them down), no wave
+//      on ride 2, one straggler freed per rooted creature before the arrival at stop 2.
 //  (e) stop 2's arrival: wave 1 at 4 +- 0.5 s with 2 portals x 2, wave 2 12 +- 0.5 s later.
 //  (f) at 8/8, DebugClearAlive, Reinforcements 2 and RefreshSilence: the next gap 8 +- 0.5 s.
 //  (f2) wave 4 hurried to 8/8, one creature killed (7/8): the next wave sends exactly 1 creature through 1 portal.
@@ -29,6 +29,7 @@ namespace DungeonCrawler.Core;
 //  (h) every hero to 0 HP: after the rise at stop 2 (Main.RoseAtCart), no wave for 15 s, then wave 1.
 //  (i) Reinforcements 0 and RefreshSilence: "off (reinforcements are off in Settings)" within 2 s, no portal opens for 20 s.
 // Finally each stop's warning was said once (stops 1 and 2: never again on a restart).
+// Stops 3 and 4 are not ridden here; --test-perf=siege runs stop 4's real siege.
 public partial class DebugTools
 {
     private const string StSlot = "stoptraptest";
@@ -102,9 +103,41 @@ public partial class DebugTools
             PortalSpawner.DebugStragglerFreed -= freed;
             Npc.Said -= said;
         });
-        EventBus.Instance.Message += text => _stLastLog = text;
-        EventBus.Instance.PortalOpened += _ => _stPortalsOpened.Add(StNow);
-        EventBus.Instance.EnemyDied += e => { if (_stRootedNames.Contains(e.Name)) _stRootedDied.Add(e.Name); };
+        Action<string> message = text => _stLastLog = text;
+        Action<Vector3> portal = _ => _stPortalsOpened.Add(StNow);
+        Action<Enemies.Enemy> died = e => { if (_stRootedNames.Contains(e.Name)) _stRootedDied.Add(e.Name); };
+        var bus = EventBus.Instance;
+        bus.Message += message;
+        bus.PortalOpened += portal;
+        bus.EnemyDied += died;
+        _staticUnhooks.Add(() => { bus.Message -= message; bus.PortalOpened -= portal; bus.EnemyDied -= died; });
+    }
+
+    /// <summary>Each siege creature through (physics time, stop, wave), heard on each floor's spawner.</summary>
+    private readonly List<(double At, int Stop, int Wave)> _stSpawns = new();
+    private PortalSpawner? _stSpawnsOf;
+
+    /// <summary>Each frame: the current spawner's siege creatures are heard (a load or a rise builds a new one).</summary>
+    private void StopTrapWatchSpawns(PortalSpawner portals)
+    {
+        if (portals == _stSpawnsOf) return;
+        _stSpawnsOf = portals;
+        portals.SiegeSpawned += (_, stop, wave) => _stSpawns.Add((StNow, stop, wave));
+    }
+
+    /// <summary>
+    /// The stop's warning came with its first siege (said within 3 s of wave 1's first creature, opened after <paramref name="since"/>) and once
+    /// only; null when it did, else why not.
+    /// </summary>
+    private string? StopTrapWarnedAtWave1(int stop, double since)
+    {
+        var first = _stSpawns.FirstOrDefault(x => x.Stop == stop && x.Wave == 1 && x.At >= since);
+        if (first.Wave == 0) return $"no creature of stop {stop}'s wave 1";
+        var warned = _stWarnings.Where(x => x.Stop == stop).ToList();
+        if (warned.Count != 1) return $"stop {stop}'s warning was said {warned.Count} time(s), not once";
+        var after = warned[0].At - first.At;
+        GD.Print($"[stoptrap] stop {stop}'s warning: {warned[0].Speaker} {after:0.00} s after wave 1's first creature");
+        return after is < -0.01 or > 3.0 ? $"stop {stop}'s warning came {after:0.00} s after wave 1's first creature, not within 3 s" : null;
     }
 
     /// <summary>Each frame: the current line's Arrived events are heard (a load or a rise builds a new one).</summary>
@@ -150,6 +183,7 @@ public partial class DebugTools
         var party = main.Party;
         void Fail(string why) => StopTrapFail(why);
         StopTrapWatchRails(rc);
+        StopTrapWatchSpawns(portals);
         foreach (var a in party.Adventurers) if (IsInstanceValid(a) && a.Control == ControlKind.Companion) a.DebugHoldFire = true; // nobody of the party fights (a load keeps the bodies; set again each frame)
         if (_stSiteFaults.Count > 0) { Fail(string.Join("; ", _stSiteFaults.Take(4))); return; }
 
@@ -213,9 +247,7 @@ public partial class DebugTools
                 if (Math.Abs(g2 - 14.0) > StWindow) { Fail($"wave 2 at +{g2:0.00} s, not 14 +- 0.5"); return; }
                 if (Math.Abs(g3 - 28.0) > StWindow) { Fail($"wave 3 at +{g3:0.00} s, not 28 +- 0.5"); return; }
                 if (wait4.Why != "alive 6/6") { Fail($"wave 4 waits ({wait4.Why}), not (alive 6/6)"); return; }
-                var warned = _stWarnings.Where(x => x.Stop == 1).ToList(); // said when the voice channel is free (the stop's own narration goes first)
-                if (warned.Count != 1) { Fail($"stop 1's warning was said {warned.Count} time(s) by wave 4's wait, not once"); return; }
-                GD.Print($"[stoptrap] (a) the warning: {warned[0].Speaker} {warned[0].At - _stMark:0.0} s after the restore");
+                if (StopTrapWarnedAtWave1(1, w1.At) is { } unwarned) { Fail($"(a) {unwarned}"); return; }
                 _stStep++; _stClock = 0f; _stSub = 0;
                 break;
             }
@@ -246,7 +278,13 @@ public partial class DebugTools
                     var end = _stEnds.LastOrDefault();
                     portals.DebugHoldSiegeCreatures(true);
                     _stRooted = portals.DebugSiegeCounts().Stragglers;
-                    foreach (var e in Enemies.Enemy.Live) if (IsInstanceValid(e) && e.IsAlive && portals.IsSiegeCreature(e)) _stRootedNames.Add(e.Name);
+                    foreach (var e in Enemies.Enemy.Live)
+                        if (IsInstanceValid(e) && e.IsAlive && portals.IsSiegeCreature(e))
+                        {
+                            _stRootedNames.Add(e.Name);
+                            e.DebugHoldHp = true; // Ruling 24: they live through the ride (no blow, no cart, no slag cart kills them) to be freed
+                            e.DebugHazardProof = true;
+                        }
                     _stMarkWaves = _stWaves.Count;
                     GD.Print($"[stoptrap] (d) departed stop 1: siege end heard \"{end.Why}\" at stop {end.Stop} after {end.Waves} wave(s); {_stRooted} straggler(s) rooted where they stand");
                     if (end.Stop != 1 || end.Why != "the train left" || portals.SiegeStop != -1) { Fail($"the departure did not end stop 1's siege with \"the train left\" (last end: stop {end.Stop} \"{end.Why}\"; siege stop {portals.SiegeStop})"); return; }
@@ -255,14 +293,15 @@ public partial class DebugTools
                 if (_stDeparted && _stWaves.Count > _stMarkWaves && rc.State.Mode == CartMode.Rolling) { Fail($"a wave opened on ride 2 (stop {_stWaves[^1].Stop} wave {_stWaves[^1].Wave})"); return; }
                 if (!RideOnTo(main, rc, 2, "stoptrap", Fail)) break;
                 if (!_stArrivedAt.TryGetValue(2, out var arrived)) { Fail("held at stop 2 with no Arrived heard"); return; }
-                // one freed line per rooted creature still alive to be freed: one a cart ran over on the way is dead, not a straggler
-                var freedNames = _stFreed.Where(f => f.At >= _stMark && f.At <= arrived).Select(f => f.Name).ToHashSet();
-                var unaccounted = _stRootedNames.Where(n => !freedNames.Contains(n) && !_stRootedDied.Contains(n)).ToList();
-                GD.Print($"[stoptrap] (d) arrived at stop 2 {arrived - _stMark:0.0} s after the departure: of {_stRooted} rooted, {freedNames.Count} freed as stragglers [{string.Join(",", freedNames)}], {_stRootedDied.Count} killed on the way (run over) [{string.Join(",", _stRootedDied)}]; {portals.DebugSiegeCounts().Stragglers} left");
+                // Ruling 24: one freed line per rooted creature (they are kept alive through the ride: none dies on the way)
+                var freedLines = _stFreed.Where(f => f.At >= _stMark && f.At <= arrived).Select(f => f.Name).ToList();
+                var freedNames = freedLines.ToHashSet();
+                var notFreed = _stRootedNames.Where(n => !freedNames.Contains(n)).ToList();
+                _stFreedOnRide = freedLines.Count;
+                GD.Print($"[stoptrap] (d) arrived at stop 2 {arrived - _stMark:0.0} s after the departure: of {_stRooted} rooted, {freedLines.Count} freed as stragglers [{string.Join(",", freedLines)}], died on the way [{string.Join(",", _stRootedDied)}]; {portals.DebugSiegeCounts().Stragglers} left");
                 if (_stRootedNames.Count != _stRooted) { Fail($"{_stRootedNames.Count} rooted creatures named, {_stRooted} counted"); return; }
-                if (unaccounted.Count > 0) { Fail($"rooted creatures [{string.Join(",", unaccounted)}] were neither freed as stragglers nor dead by the arrival at stop 2"); return; }
-                _stFreedOnRide = freedNames.Count;
-                if (freedNames.Count == 0 || freedNames.Any(n => !_stRootedNames.Contains(n))) { Fail($"the stragglers freed [{string.Join(",", freedNames)}] are not some of the rooted [{string.Join(",", _stRootedNames)}]"); return; }
+                if (_stRootedDied.Count > 0) { Fail($"rooted creatures [{string.Join(",", _stRootedDied)}] died on the way instead of straggling"); return; }
+                if (notFreed.Count > 0 || freedLines.Count != _stRooted || freedNames.Any(n => !_stRootedNames.Contains(n))) { Fail($"{freedLines.Count} straggler line(s) [{string.Join(",", freedLines)}] before the arrival at stop 2, not one for each of the {_stRooted} rooted [{string.Join(",", _stRootedNames)}]"); return; }
                 _stMark = arrived;
                 _stStep++; _stClock = 0f; _stSub = 0;
                 break;
@@ -277,6 +316,7 @@ public partial class DebugTools
                 if (w1.Sites.Count != 2 || !w1.Counts.SequenceEqual(new[] { 2, 2 })) { Fail($"stop 2's wave 1: {w1.Sites.Count} portal(s) x [{string.Join(",", w1.Counts)}], not 2 x 2"); return; }
                 if (StopTrapMetres(w1.Sites[0], w1.Sites[1]) < StopSiegeRules.Spread) { Fail("stop 2's wave 1's portals are under 8 m apart"); return; }
                 if (Math.Abs(w2.At - w1.At - 12.0) > StWindow) { Fail($"stop 2's wave 2 came {w2.At - w1.At:0.00} s after wave 1, not 12 +- 0.5"); return; }
+                if (StopTrapWarnedAtWave1(2, w1.At) is { } unwarned) { Fail($"(e) {unwarned}"); return; }
                 _stMark = w2.At;
                 _stStep++; _stClock = 0f; _stSub = 0;
                 break;
@@ -338,7 +378,7 @@ public partial class DebugTools
                     case 4 when _stClock >= 2f: // (g) the save and the load
                     {
                         if (portals.Alive != 8) { Fail($"{portals.Alive}/8 after the hard cap's wave"); return; }
-                        Settings.Reinforcements = _stReinforcementsWas;
+                        Settings.Reinforcements = _stReinforcementsWas ?? 1f;
                         main.SaveGame(StSlot);
                         _stMark = StNow;
                         var starts = _stStarts.Count;
@@ -414,7 +454,7 @@ public partial class DebugTools
                 var perStop = _stWarnings.GroupBy(x => x.Stop).ToDictionary(g => g.Key, g => g.Count());
                 GD.Print($"[stoptrap] warnings: [{string.Join(", ", _stWarnings.Select(x => $"stop {x.Stop} {x.Speaker}"))}]; heroes stood up by the top-up {_stRevived}");
                 if (perStop.GetValueOrDefault(1) != 1 || perStop.GetValueOrDefault(2) != 1 || perStop.Keys.Any(k => k is not (1 or 2))) { Fail($"the warnings per stop: [{string.Join(", ", perStop.Select(kv => $"{kv.Key}: {kv.Value}"))}], not once at stops 1 and 2"); return; }
-                StopTrapOk($"stop 1's restart, gaps and cap; the gate; the departure with {_stFreedOnRide} of {_stRooted} rooted freed as stragglers ({_stRootedDied.Count} run over); stop 2's arrival, heavy, the hard cap, the load, the rise and the silence");
+                StopTrapOk($"stop 1's restart, gaps and cap; the gate; the departure and {_stFreedOnRide} of {_stRooted} rooted freed as stragglers; stop 2's arrival, heavy, the hard cap, the load, the rise and the silence");
                 break;
             }
         }

@@ -25,7 +25,11 @@ public partial class StopTrapController : Node
     private RailController _rails = null!;
     /// <summary>The stop whose first-siege warning is still to be said, or −1.</summary>
     private int _warnStop = -1;
+    /// <summary>Its siege's first wave has let its first creature through: the warning is due now.</summary>
+    private bool _warnArmed;
     private float _warnClock;
+    /// <summary>The spawner whose <see cref="PortalSpawner.SiegeSpawned"/> this listens to.</summary>
+    private PortalSpawner? _heard;
 
     public void Setup(DungeonBuilder builder, FloorLayout layout, RailController rails)
     {
@@ -38,6 +42,8 @@ public partial class StopTrapController : Node
     public override void _ExitTree()
     {
         if (IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
+        if (_heard != null && IsInstanceValid(_heard)) _heard.SiegeSpawned -= OnSiegeSpawned;
+        _heard = null;
         if (Instance == this) Instance = null;
     }
 
@@ -67,9 +73,22 @@ public partial class StopTrapController : Node
     {
         if (NetSession.Instance?.TestRide == true) { GD.Print($"[stoptrap] no siege at stop {stop}: the RIDE pass's server (Ruling 2)"); return; }
         if (Portals is not { } portals) return;
+        if (_heard != portals)
+        {
+            if (_heard != null && IsInstanceValid(_heard)) _heard.SiegeSpawned -= OnSiegeSpawned;
+            _heard = portals;
+            portals.SiegeSpawned += OnSiegeSpawned;
+        }
         portals.StartSiege(stop, firstDelay, Humans());
-        if (portals.SiegeStop != stop) return; // silenced
-        _warnStop = stop;
+        _warnStop = portals.SiegeStop == stop ? stop : -1; // silenced: no siege, no warning
+        _warnArmed = false;
+    }
+
+    /// <summary>The siege's first wave lets its first creature through: the warning is said now (it belongs to that wave).</summary>
+    private void OnSiegeSpawned(Enemies.Enemy e, int stop, int wave)
+    {
+        if (wave != 1 || stop != _warnStop || _warnArmed) return;
+        _warnArmed = true;
         _warnClock = 0f;
         TryWarn();
     }
@@ -86,7 +105,7 @@ public partial class StopTrapController : Node
 
     public override void _PhysicsProcess(double delta)
     {
-        if (NetSession.IsClient || _warnStop < 1) return;
+        if (NetSession.IsClient || _warnStop < 1 || !_warnArmed) return;
         _warnClock += (float)delta;
         if (_warnClock < 1f) return;
         _warnClock = 0f;
@@ -94,8 +113,9 @@ public partial class StopTrapController : Node
     }
 
     /// <summary>
-    /// The stop's first-siege warning (once a run per stop: the call's key <c>siege:{stop}</c>), while its siege runs: Grisel's, or when
-    /// she is absent, dead or downed, the nearest up freed crew member's. Nobody to say it: tried again each second of the siege.
+    /// The stop's first-siege warning (once a run per stop: the call's key <c>siege:{stop}</c>), at its first wave's first creature:
+    /// Grisel's, or when she is absent, dead or downed, the nearest up freed crew member's. It is urgent (said a beat later whatever the
+    /// channel holds: it is a subtitle with no voice) and only while that siege runs. Nobody to say it: tried again each second of the siege.
     /// </summary>
     private void TryWarn()
     {
@@ -121,7 +141,8 @@ public partial class StopTrapController : Node
         if (speaker == null || text == null) return;
         var stop = _warnStop;
         _warnStop = -1;
-        var queued = AdventureDirector.Instance?.SayAs(speaker, StopTrapLines.Say(text), $"siege:{stop}") == true;
+        var queued = AdventureDirector.Instance?.SayAs(speaker, StopTrapLines.Say(text), $"siege:{stop}",
+            () => IsInstanceValid(portals) && portals.SiegeStop == stop, urgent: true) == true;
         GD.Print($"[stoptrap] stop {stop}'s first siege: {speaker.NpcName} warns ({(queued ? "queued" : "said before, or not now")})");
     }
 }

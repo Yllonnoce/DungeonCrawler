@@ -78,12 +78,20 @@ public partial class PortalSpawner : Node
     public void RefreshSilence()
     {
         Intensity = Settings.Reinforcements;
+        (Silenced, SilencedWhy) = Silence(rosterCounts: true);
+    }
+
+    /// <summary>
+    /// Every silence, in order: the setting, --no-portals, an empty roster (when <paramref name="rosterCounts"/>: the stop siege has its
+    /// own roster, plan 16 Ruling 5), a dead tier boss, an active ritual. One list for both modes, so a silence added here reaches both.
+    /// </summary>
+    private (bool Silent, string Why) Silence(bool rosterCounts)
+    {
         var bossFloor = PortalRules.BossFloorFor(_floor);
         var bossDead = (Game.Instance?.Floors.TryGetValue(bossFloor, out var s) == true && s.BossDefeated) || (bossFloor == _floor && Main.Instance?.BossDefeatedThisFloor == true);
-        (Silenced, SilencedWhy) =
-            !PortalRules.Enabled(Intensity) ? (true, "reinforcements are off in Settings")
+        return !PortalRules.Enabled(Intensity) ? (true, "reinforcements are off in Settings")
             : DebugTools.Instance?.NoPortals == true ? (true, "--no-portals")
-            : _enemyIds.Count == 0 ? (true, "no creatures in the roster")
+            : rosterCounts && _enemyIds.Count == 0 ? (true, "no creatures in the roster")
             : bossDead ? (true, $"the boss of floor {bossFloor} is dead")
             : Objectives.ObjectiveController.Instance is Objectives.RitualController { Active: true } ? (true, "the ritual's breaches are enough")
             : (false, "");

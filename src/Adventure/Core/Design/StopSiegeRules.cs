@@ -103,7 +103,8 @@ public static class StopSiegeRules
     /// <summary>
     /// Up to <paramref name="count"/> portal sites for a wave at <paramref name="stop"/>, in pick order; fewer, or none, when fewer qualify.
     /// A candidate is a walkable <see cref="Cell.Floor"/> cell in <paramref name="room"/> or within <see cref="Around"/> cells of it (its
-    /// corridor mouths) that is not reserved (<see cref="FloorLayout.IsReserved"/>: the line, its pockets), not the platform, not water,
+    /// corridor mouths), reachable on foot from the platform inside that box (<see cref="Reachable"/>: never in a vault or the boss
+    /// arena, never across the line, a bridge or a drop), that is not reserved (<see cref="FloorLayout.IsReserved"/>: the line, its pockets), not the platform, not water,
     /// a bridge, a ledge or a ledge's ramp end, nor barred by <paramref name="blocked"/> (a prop on it); and that stands at least
     /// <see cref="HeroClear"/> m from every hero, <see cref="CageClear"/> m from the cage and <see cref="PlatformClear"/> m from every
     /// platform cell (cell centre to cell centre, 4 m a cell). Each scores 0 when it is behind every hero (dot(site − hero, facing) &lt; 0),
@@ -113,12 +114,13 @@ public static class StopSiegeRules
     {
         var picked = new List<GridPos>();
         if (count <= 0) return picked;
+        var reach = Reachable(layout, room, stop, blocked);
         var scored = new List<(GridPos Cell, double Score)>();
         for (var y = room.Y - Around; y <= room.Bottom + Around; y++)
             for (var x = room.X - Around; x <= room.Right + Around; x++)
             {
                 var c = new GridPos(x, y);
-                if (!Candidate(layout, c, stop, blocked)) continue;
+                if (!reach.Contains(c) || !Candidate(layout, c, stop, blocked)) continue;
                 if (!Clear(c, stop, cage, heroes)) continue;
                 var behind = true;
                 foreach (var h in heroes)
@@ -134,6 +136,31 @@ public static class StopSiegeRules
             if (spread) picked.Add(c);
         }
         return picked;
+    }
+
+    /// <summary>
+    /// The cells a creature can walk to from the platform without leaving the room's widened box: a flood from the platform's
+    /// neighbours over walkable cells (<see cref="FloorLayout.CanStep(GridPos, GridPos, bool)"/>: heights, ramps, blocked edges),
+    /// never onto a line cell, a bridge, a chasm, a prop (<paramref name="blocked"/>), a vault or the boss arena. A portal behind a
+    /// wall, across the line or a drop, or in a sealed room would hold creatures against the cap that never reach the party.
+    /// </summary>
+    private static HashSet<GridPos> Reachable(FloorLayout layout, Room room, RailStop stop, Func<GridPos, bool>? blocked)
+    {
+        bool InBox(GridPos c) => c.X >= room.X - Around && c.X <= room.Right + Around && c.Y >= room.Y - Around && c.Y <= room.Bottom + Around;
+        bool Passable(GridPos c) => InBox(c) && layout.IsWalkable(c) && !layout.IsRail(c) && !layout.IsBridge(c) && !layout.IsChasm(c)
+            && !layout.IsInVault(c) && layout.BossArena?.Contains(c) != true && blocked?.Invoke(c) != true;
+        var reach = new HashSet<GridPos>();
+        var open = new Queue<GridPos>();
+        foreach (var p in stop.Platform)
+            foreach (var n in p.Neighbours4())
+                if (Passable(n) && reach.Add(n)) open.Enqueue(n);
+        while (open.Count > 0)
+        {
+            var c = open.Dequeue();
+            foreach (var n in c.Neighbours4())
+                if (!reach.Contains(n) && Passable(n) && layout.CanStep(c, n) && reach.Add(n)) open.Enqueue(n);
+        }
+        return reach;
     }
 
     private static bool Candidate(FloorLayout layout, GridPos c, RailStop stop, Func<GridPos, bool>? blocked)
