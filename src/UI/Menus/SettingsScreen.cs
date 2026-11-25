@@ -70,7 +70,7 @@ public partial class SettingsScreen : PanelContainer
             if (r == Settings.Resolution) res.Selected = i;
         }
         res.ItemSelected += i => { Settings.Resolution = Settings.Resolutions[(int)i]; Settings.Apply(); };
-        Row(v, "Resolution", res);
+        Row(v, "Resolution (fullscreen: the 3D view drawn at this size)", res);
         Check(v, "Fullscreen", Settings.Fullscreen, x => { Settings.Fullscreen = x; Settings.Apply(); });
         Check(v, "VSync", Settings.VSync, x => { Settings.VSync = x; Settings.Apply(); });
         Check(v, "Damage numbers over enemies", Settings.DamageNumbers, x => Settings.DamageNumbers = x);

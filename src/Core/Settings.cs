@@ -85,7 +85,7 @@ public static class Settings
     /// <summary>The fallback TTS list for the selected voice provider.</summary>
     public static string ActiveVoiceFallbackModels => VoiceViaRunware ? RunwareVoiceFallbackModels : VoiceFallbackModels;
 
-    public static readonly Vector2I[] Resolutions = { new(1280, 720), new(1600, 900), new(1920, 1080), new(2560, 1440), new(3840, 2160) };
+    public static readonly Vector2I[] Resolutions = { new(960, 540), new(1280, 720), new(1366, 768), new(1600, 900), new(1920, 1080), new(2560, 1440), new(3840, 2160) };
 
     /// <summary>Actions the player may rebind, in menu order.</summary>
     public static readonly (string action, string label)[] Rebindable =
@@ -256,13 +256,20 @@ public static class Settings
     }
 
     /// <summary>
-    /// The render scale on the root viewport (<see cref="GraphicsRules.ViewportScale"/>): the saved step, FSR below full; full and bilinear in a
-    /// headset. Settings.Load applies it before the headset starts, so <see cref="Vr.Start"/> calls it again once the headset is the display.
+    /// The render scale on the root viewport (<see cref="GraphicsRules.ViewportScale"/>): the saved step, FSR below full; in fullscreen also
+    /// the chosen resolution's height over the screen's; full and bilinear in a headset. Settings.Load applies it before the headset starts,
+    /// so <see cref="Vr.Start"/> calls it again once the headset is the display.
     /// </summary>
     public static void ApplyRenderScale(Viewport viewport)
     {
-        var (scale, fsr) = GraphicsRules.ViewportScale(RenderScale, Vr.Active);
-        viewport.Scaling3DMode = fsr ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
+        // fullscreen fills the screen whatever the resolution, so the chosen one sets the 3D view's drawn height instead
+        var full = Fullscreen && !DisplayServer.GetName().Equals("headless", StringComparison.OrdinalIgnoreCase);
+        var screenH = full ? DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen()).Y : 0;
+        var (scale, fsr) = GraphicsRules.ViewportScale(RenderScale, Vr.Active, full ? Resolution.Y : 0, screenH);
+        var mode = fsr ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
+        if (viewport.Scaling3DMode != mode || !Mathf.IsEqualApprox(viewport.Scaling3DScale, scale))
+            GD.Print(FormattableString.Invariant($"[display] the 3D view drawn at {scale * 100f:0} %{(fsr ? " (FSR)" : "")}: {(full ? $"fullscreen, {Resolution.X}x{Resolution.Y} chosen on a {screenH}-line screen" : "windowed")}, render scale {GraphicsRules.SnapScale(RenderScale) * 100f:0} %{(Vr.Active ? ", the headset's own" : "")}"));
+        viewport.Scaling3DMode = mode;
         viewport.Scaling3DScale = scale;
     }
 

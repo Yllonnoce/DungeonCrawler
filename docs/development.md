@@ -497,6 +497,17 @@ includes this frame and every slow frame since the last slow-frame line (those i
   (`GraphicsRules.SnapScale`; the higher on a tie, 100 % for a missing or non-numeric value). It does nothing in a headset,
   which drives its own scale (`GraphicsRules.ViewportScale`). Settings load and apply before the headset starts, so
   `Vr.Start` puts the viewport back to full scale and bilinear once the headset is the display.
+- "Resolution" (`display/resolution`): 960x540, 1280x720, 1366x768, 1600x900, 1920x1080, 2560x1440, 3840x2160. Windowed it is
+  the window's size. Fullscreen fills the screen whatever is chosen, so a choice under the screen's height draws the 3D view at
+  that height and upscales it with FSR: the render scale times the chosen height over the screen's, never under 25 %
+  (`GraphicsRules.ViewportScale`, `MinScale`), with a `[display]` log line. Menus and HUD stay at the screen's size, sharp, and
+  fit (stretching the whole frame instead measured the same and cut off the settings panel at 960x540, which overflows small
+  windows already). Measured 2026-11-25 on the dev laptop (`--test-chase`, VSync off, an LLM server sharing the GPU, so read the
+  ratios, not the numbers): fullscreen 2560x1600 median 10 fps; fullscreen at 1920x1080 14, 1280x720 20, 960x540 25; a 1280x720
+  window 56. The rest of fullscreen's cost is outside the game: on that laptop the X screen runs on the AMD Radeon 610M iGPU
+  (`xrandr --listproviders`: provider 0, Source Output) and the RTX 5070 renders by PRIME offload, so every presented frame is a
+  full-screen copy and composite on the iGPU, the HDMI output too (fullscreen there at 1920x1080 also measured 19). A window is
+  the cheap path there; the laptop's discrete-GPU (MUX) mode or `prime-select nvidia` takes the iGPU out of it.
 - "Shadows" (`display/shadows`, on by default): the local hero's torch casts shadows. It is the only shadowed light in the game.
 - The Haze slider at 0 already turns the volumetric fog off.
 

@@ -24,14 +24,23 @@ public static class GraphicsRules
         return best;
     }
 
+    /// <summary>The smallest 3D scale fullscreen draws at, however low the resolution and render scale go (a quarter of the screen's lines).</summary>
+    public const float MinScale = 0.25f;
+
     /// <summary>
     /// What the root viewport is given for the saved <paramref name="setting"/>: its snapped step and whether FSR draws it. In a headset the
     /// setting does nothing (the headset drives its own scale): full scale, no FSR, whatever was saved.
+    /// Fullscreen fills the screen whatever resolution is chosen, so a chosen one under the screen's is honoured by drawing the 3D view at
+    /// its height (<paramref name="fullscreenHeight"/> of the screen's <paramref name="screenHeight"/> lines) and upscaling with FSR, times
+    /// the render scale, never under <see cref="MinScale"/>; menus and HUD stay at the screen's size, so they stay sharp and fit. A
+    /// resolution at or above the screen's, windowed (0) or an unknown screen (0) draws at the render scale alone.
     /// </summary>
-    public static (float Scale, bool Fsr) ViewportScale(float setting, bool vr)
+    public static (float Scale, bool Fsr) ViewportScale(float setting, bool vr, int fullscreenHeight = 0, int screenHeight = 0)
     {
         if (vr) return (1f, false);
         var scale = SnapScale(setting);
+        if (fullscreenHeight > 0 && screenHeight > 0 && fullscreenHeight < screenHeight)
+            scale = Math.Max(MinScale, scale * fullscreenHeight / screenHeight);
         return (scale, UsesFsr(scale));
     }
 
