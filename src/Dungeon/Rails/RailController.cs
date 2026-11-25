@@ -1556,9 +1556,9 @@ public partial class RailController : Node
         var chaserLeft = -1f;
         var relief = false;
         var inChaser = me != null && ChaserHud(me, out chaserMode, out chaserLeft, out relief);
-        var show = inChaser || me != null && (me.Cart == Cart || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange); // cart-only (W4's place is within HudRange)
+        var show = inChaser || me != null && (me.Cart == Cart || RailHud.ShowsAnywhere(Hijack) || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange); // cart-only (W4's place is within HudRange); a hijack's line anywhere (plan 16)
         HudText = show ? RailHud.Text(HudState(inChaser, chaserMode, chaserLeft, relief)) : null;
-        Main.Instance?.Hud?.SetCart(HudText != null && !inChaser ? State.Plating / CartRules.MaxPlating : null, HudText);
+        Main.Instance?.Hud?.SetCart(HudText != null && !inChaser && RailHud.ShowsPlating(Hijack) ? State.Plating / CartRules.MaxPlating : null, HudText);
     }
 
     /// <summary>The HUD's view of the cart: from the cart's own state on the server or solo, from the server's flags and countdown on a client.</summary>
@@ -1566,7 +1566,7 @@ public partial class RailController : Node
     {
         var left = NetSession.IsClient ? NetBoardingLeft() : Boarding.Running ? Mathf.Max(0f, Boarding.Left) : -1f;
         return new RailHudState(State.Mode, Hidden: !Cart.Visible, Halted, LineBlocked, GateClear, Boarding: left >= 0f, BoardingLeft: left,
-            Plating01: State.Plating / CartRules.MaxPlating, StopIndex, StopS.Length, inChaser, chaserMode, chaserLeft, CageHeld: CageHeld, ChaserRelief: relief);
+            Plating01: State.Plating / CartRules.MaxPlating, StopIndex, StopS.Length, inChaser, chaserMode, chaserLeft, CageHeld: CageHeld, ChaserRelief: relief, Hijack: Hijack); // a client's Hijack is its CartStateDto's
     }
 
     /// <summary>
