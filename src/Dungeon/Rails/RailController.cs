@@ -422,10 +422,12 @@ public partial class RailController : Node
     {
         Party.PoseAt(State.S);
         AddSoundscape();
+        EventBus.Instance.EnemyHurt += OnDriverHurt; // the hijack's driver's grip (server and solo: plan 16 Task 6)
     }
 
     public override void _ExitTree()
     {
+        if (EventBus.Instance is { } bus) bus.EnemyHurt -= OnDriverHurt;
         if (Instance != this) return;
         Instance = null;
         Main.Instance?.Hud?.SetCart(null, null);
@@ -542,6 +544,7 @@ public partial class RailController : Node
         _restoredRiders.Clear();
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
         ResetHijack("the cart is restored"); // not saved: the train stands whole and forward at its stop
+        StartRiseGrace(); // a wipe's rise at the cart: no hijack for its grace (plan 16 Task 6)
         if (StopS.Length == 0) return;
         StopIndex = Math.Clamp(stopIndex, 0, StopS.Length - 1);
         Party.Reset(new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating));
@@ -733,8 +736,14 @@ public partial class RailController : Node
         if (HoldFor(hero)) return CageHoldRules.SeatedPrompt; // a tap still gets out; a held press leaves the prisoners behind
         var seatedHere = hero.Cart == Cart; // cart-only
         var inReach = seatedHere || RideInputRules.InBoardReach(Cart.TubDistance(hero)); // the server's intent check measures the same
-        return RideInputRules.BoardPrompt(seatedHere, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach, holdOn: HoldsRiders);
+        return RideInputRules.BoardPrompt(seatedHere, MayBoardOnFoot, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach, holdOn: HoldsRiders);
     }
+
+    /// <summary>
+    /// The cart takes a hero on foot as its mode stands (every peer: a client's from the wire): held, or rolling back, braking or returning at a
+    /// walking speed under a hijack (plan 16, Ruling 12: <see cref="HijackRules.MayBoard"/>).
+    /// </summary>
+    private bool MayBoardOnFoot => State.Mode == CartMode.Held || State.Mode == CartMode.Rolling && HijackRules.MayBoard(Hijack, State.V);
 
     /// <summary>Ride 4's leap offers <paramref name="hero"/> this cart back from a slag cart's deck (plan 13), on every role.</summary>
     private bool LeapOffered(Adventurer hero) => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.LeapOfferFor(hero) == Cart;
@@ -808,8 +817,10 @@ public partial class RailController : Node
 
     /// <summary>
     /// A hero uses the cart (server or solo; a remote player's through its InteractIntent, reach checked there): seated, it gets out;
-    /// on foot, it boards a Held cart short of the end of the line with a hero seat free. A player who boards brings their own
-    /// companions within <see cref="CompanionBoardRange"/> and the escorts onto the bench; the gate is judged only to start the countdown.
+    /// on foot, it boards a Held cart short of the end of the line with a hero seat free, or one a hijack rolls back, brakes or returns at a
+    /// walking speed (<see cref="MayBoardOnFoot"/>, plan 16 Ruling 12). A player who boards brings their own companions within
+    /// <see cref="CompanionBoardRange"/> and the escorts onto the bench; the gate is judged only to start the countdown, which never starts
+    /// while a hijack is live (its return's hold starts it).
     /// </summary>
     private void UseCart(Adventurer actor)
     {
@@ -819,7 +830,7 @@ public partial class RailController : Node
             if (RideInputRules.MayGetOut(seatedHere: true, actor.Downed, holdOn: HoldsRiders)) GetOutWithParty(actor); // a downed rider stays slumped in the seat; nobody gets out on the collapsing bridge while it rolls (solo and a remote seat's press alike)
             return;
         }
-        if (actor.Seated || actor.Downed || actor.Parked || State.Mode != CartMode.Held) return;
+        if (actor.Seated || actor.Downed || actor.Parked || !MayBoardOnFoot) return;
         if (StopIndex >= StopS.Length - 1) return; // the end of the line: nowhere left to ride (the prompt offers nothing either)
         var player = IsPlayer(actor);
         if (!player && !PlayerAboard()) return; // a companion rides only with a player
@@ -832,7 +843,8 @@ public partial class RailController : Node
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
             SeatBench(actor.GlobalPosition);
         }
-        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateClear) StartBoarding(call: true);
+        if (!HijackLive && !Boarding.Running && StopIndex < StopS.Length - 1 && GateClear) StartBoarding(call: true);
+        if (HijackLive) GD.Print($"[rails] hijack: {actor.State.Name} boards the cart in its {Hijack} at {State.V:0.00} m/s (seat {actor.Seat})");
         RefreshHud();
     }
 
@@ -1132,6 +1144,7 @@ public partial class RailController : Node
         var party = Main.Instance.Party;
         if (State.Mode != CartMode.Rolling) Party.Settle(); // a cart that does not roll is posed where it stands
         _gates.Tick(dt);
+        TickRiseGrace(dt);
 
         if (HijackLive) TickHijack(party, dt); // the reverse roll (plan 16): its own tick, never the held one's boarding or the ride's judges
         else if (State.Mode == CartMode.Held)
@@ -1519,6 +1532,7 @@ public partial class RailController : Node
         _train.Pose(s);
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
+        if (Cart.Driver is { } driver && IsInstanceValid(driver) && driver.Carrier == Cart) driver.FollowCarrier(); // the hijack's driver at its spot (plan 16)
         _train.Follow();
         FeedPartySound(s);
         PoseChaser();

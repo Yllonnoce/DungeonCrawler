@@ -16,7 +16,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// stop mode with the row's first-wave delay; its departure, a wreck or the rest on foot ends it; a restore (a load, a wipe's rise)
 /// ends it and, with the train held at a cage stop, starts it again from wave 1 after the restart's grace (Ruling 3). On a stop's
 /// first siege Grisel, or else the nearest up freed crew member, calls a warning. The RIDE pass's server runs no siege (Ruling 2).
-/// Later tasks add their parts (T4 the wall ambushers, StopTrapController.Ambush.cs; T6 the hijack) as further files of this partial class.
+/// Later tasks add their parts (T4 the wall ambushers, StopTrapController.Ambush.cs; T6 the hijackers, StopTrapController.Hijack.cs) as
+/// further files of this partial class.
 /// </summary>
 public partial class StopTrapController : Node
 {
@@ -45,6 +46,7 @@ public partial class StopTrapController : Node
         if (IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
         if (_heard != null && IsInstanceValid(_heard)) _heard.SiegeSpawned -= OnSiegeSpawned;
         _heard = null;
+        UnhookHijackHurt();
         if (Instance == this) Instance = null;
     }
 
@@ -55,6 +57,7 @@ public partial class StopTrapController : Node
     {
         if (NetSession.IsClient) return;
         OnAmbushCartEvent(e);
+        OnHijackCartEvent(e);
         switch (e.Kind)
         {
             case CartEventKind.Arrived:
@@ -89,6 +92,7 @@ public partial class StopTrapController : Node
     /// <summary>The siege's first wave lets its first creature through: the warning is said now (it belongs to that wave).</summary>
     private void OnSiegeSpawned(Enemies.Enemy e, int stop, int wave)
     {
+        OnHijackSpawned(e, stop, wave); // the hijackers are tagged from these (T6)
         if (wave != 1 || stop != _warnStop || _warnArmed) return;
         _warnArmed = true;
         _warnClock = 0f;
@@ -109,6 +113,7 @@ public partial class StopTrapController : Node
     {
         if (NetSession.IsClient) return;
         TickAmbush((float)delta);
+        TickRunners((float)delta);
         if (_warnStop < 1 || !_warnArmed) return;
         _warnClock += (float)delta;
         if (_warnClock < 1f) return;

@@ -19,7 +19,8 @@ namespace DungeonCrawler.Core;
 // the departure to the arrival at stop 1. =siege (plan 16 Task 3; portals on, the one phase that runs them): rc.Restore(4) starts stop 4's
 // real siege, the party steps out beside the cart onto the platform, and each wave is hurried (PortalSpawner.DebugSiegeNow: the next
 // in 0.5 s) until one fills the siege's cap; every enemy is held at full HP as in =crowd, so the load stays at the cap; measured for 20 s
-// from the wave that fills it, once its creatures are all through. Prints the phase's [perf] line and [perf] RESULT ok.
+// from the wave that fills it, once its creatures are all through. No phase tags a hijacker (NoHijack, plan 16 Ruling 22): the lead on
+// stop 4's platform with nobody seated would otherwise lose the train mid-measure. Prints the phase's [perf] line and [perf] RESULT ok.
 public partial class DebugTools
 {
     private bool _testPerf;

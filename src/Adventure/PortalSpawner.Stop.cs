@@ -205,7 +205,7 @@ public partial class PortalSpawner
     }
 
     /// <summary>
-    /// Once a second: each straggler (a creature of an ended siege, never one carried or leaping: Ruling 32) looks for the nearest hero
+    /// Once a second: each straggler (a creature of an ended siege, never one carried or leaping, nor a hijacker: Ruling 32) looks for the nearest hero
     /// with one sight ray; farther than <see cref="StopSiegeRules.StragglerFar"/> from every hero and unseen for
     /// <see cref="StopSiegeRules.StragglerUnseen"/>, it is freed quietly.
     /// </summary>
@@ -222,7 +222,7 @@ public partial class PortalSpawner
             var s = _stragglers[i];
             var e = s.Enemy;
             if (!IsInstanceValid(e) || !e.IsAlive || e.IsQueuedForDeletion()) { _stragglers.RemoveAt(i); continue; }
-            if (e.Carried || e.Leaping) continue;
+            if (e.Carried || e.Leaping || IsHijacker(e)) continue; // a runner, the cart's driver or a wagon's hijacker is the hijack's (Ruling 32)
             Adventurer? nearest = null;
             var d = float.MaxValue;
             foreach (var a in main.Party.Adventurers)
@@ -240,6 +240,10 @@ public partial class PortalSpawner
             Free(e);
         }
     }
+
+    /// <summary>The stop trap's hijack holds <paramref name="e"/> (tagged, driving or a wagon's spared boarder): the cull never frees it.</summary>
+    private bool IsHijacker(Enemy e)
+        => Dungeon.Rails.StopTrapController.Instance is { } trap && IsInstanceValid(trap) && trap.GetParent() == GetParent() && trap.IsHijacker(e);
 
     private bool Sees(Enemy e, Vector3 hero)
     {

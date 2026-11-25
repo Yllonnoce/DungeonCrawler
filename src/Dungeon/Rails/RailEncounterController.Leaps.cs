@@ -49,6 +49,11 @@ public partial class RailEncounterController
         public double SentAt;
         /// <summary>A wagon boarder's grip taken so far (<see cref="BoarderRules.GripTaken"/> of each party hit) and the hits that took it.</summary>
         public int GripTaken, GripHits;
+        /// <summary>
+        /// A hijacker that climbed onto a wagon at a stop (plan 16 Task 6, <see cref="BoardWagonAtStop"/>): it is no ride's, so the ride's end
+        /// (a departure, an arrival) keeps it aboard; a wreck, a restore or the rest on foot let it go as any boarder (<see cref="ClearLeaps"/>).
+        /// </summary>
+        public bool Spared;
     }
 
     private readonly List<Leap> _leaps = new();
@@ -401,7 +406,7 @@ public partial class RailEncounterController
         h.ForceAggro();
         ReleaseLeap(l);
         KnockOffs++;
-        EventBus.Instance.Log($"{by} knocks the hound off wagon {wagon.Number}!");
+        EventBus.Instance.Log($"{by} knocks the {(h.Profile.Id == HoundId ? "hound" : Adventure.Voice.StopTrapLines.Lower(h.DisplayName))} off wagon {wagon.Number}!"); // a hijacker may be a cinder imp (plan 16)
         GD.Print($"[rails] t={_now:0.00} {h.Name} knocked off wagon {wagon.Number} by {by} after {l.GripHits} hit(s)");
     }
 
@@ -413,22 +418,49 @@ public partial class RailEncounterController
     internal bool IsDebugBoarder(Enemy e) => _debugBoarders.Contains(e);
 
     /// <summary>
+    /// A creature on foot climbs onto <paramref name="w"/>'s boarder spot (server and solo; plan 16 Task 6: a hijacker the stop trap sends to a
+    /// wagon of the held or rolling-back train): it is carried there as a leap lands a hound (aggro on, biting the nearest crew inside, its death
+    /// dropping it beside the lane) and has the wagon boarder's grip. <paramref name="spared"/> (a hijacker's: the default) keeps it aboard
+    /// through a departure or an arrival (<see cref="Leap.Spared"/>). False when the wagon is not a coupled wagon of the train, its spot is held,
+    /// or the creature is not on its feet.
+    /// </summary>
+    internal bool BoardWagonAtStop(Enemy e, TrainWagon w, bool spared = true)
+    {
+        if (NetSession.IsClient || !Current || !IsInstanceValid(e) || !e.IsAlive || e.IsQueuedForDeletion() || e.Carried || e.Leaping) return false;
+        if (!IsInstanceValid(w) || !w.Coupled || _rails.WagonAt(w.Number) != w) return false;
+        if (w.ReserveBoarderSpot(e) < 0) return false;
+        e.Carry(w, () => w.BoarderSpotTransform(0));
+        e.ForceAggro();
+        e.DeathDrop = () => Beside(e.GlobalPosition);
+        e.BoardTarget = NearestCrew(w, e.GlobalPosition);
+        _leaps.Add(new Leap { Hound = e, Phase = LeapPhase.Aboard, Dest = w, Spot = 0, ToCart = WireId(w), SentAt = NetSession.Instance?.Now ?? 0, Spared = spared });
+        if (spared) GD.Print($"[rails] {e.Name} climbs onto wagon {w.Number} at S={_rails.State.S:0.0} ({_rails.Hijack}, V {_rails.State.V:0.00})");
+        return true;
+    }
+
+    /// <summary>A hijacker aboard a wagon of the train (<see cref="BoardWagonAtStop"/>'s spared boarder), still on its spot.</summary>
+    internal bool IsSparedBoarder(Enemy e)
+    {
+        for (var i = 0; i < _leaps.Count; i++)
+        {
+            var l = _leaps[i];
+            if (l.Spared && l.Hound == e && l.Phase == LeapPhase.Aboard && l.Dest != null && e.Carrier == l.Dest) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Test hook (server and solo): an ember hound landed on wagon <paramref name="wagon"/>'s rim spot, as a leap lands one (carried, aggro on,
-    /// biting the nearest crew inside, its death dropping it beside the lane). With <paramref name="holdHp"/> its HP never drops below 1, so
-    /// only the grip ends it. Null when the wagon is not coupled or its spot is held.
+    /// biting the nearest crew inside, its death dropping it beside the lane): <see cref="BoardWagonAtStop"/>'s steps, not spared (the ride's end
+    /// takes it). With <paramref name="holdHp"/> its HP never drops below 1, so only the grip ends it. Null when the wagon is not coupled or its spot is held.
     /// </summary>
     internal Enemy? DebugBoard(int wagon, bool holdHp = false)
     {
         if (NetSession.IsClient || !Current || _rails.WagonAt(wagon) is not { Coupled: true } w) return null;
         if (_builder.SpawnEnemy(HoundId, w.BoarderSpotTransform().Origin, _builder.CurrentFloor) is not { } h) return null;
-        if (w.ReserveBoarderSpot(h) < 0) { h.QueueFree(); return null; }
         h.IsReinforcement = true; // no loot farm
         h.DebugHoldHp = holdHp;
-        h.Carry(w, () => w.BoarderSpotTransform(0));
-        h.ForceAggro();
-        h.DeathDrop = () => Beside(h.GlobalPosition);
-        h.BoardTarget = NearestCrew(w, h.GlobalPosition);
-        _leaps.Add(new Leap { Hound = h, Phase = LeapPhase.Aboard, Dest = w, Spot = 0, ToCart = WireId(w), SentAt = NetSession.Instance?.Now ?? 0 });
+        if (!BoardWagonAtStop(h, w, spared: false)) { h.QueueFree(); return null; }
         _debugBoarders.RemoveWhere(e => !IsInstanceValid(e)); // the hounds freed since (Task 4 review M7)
         _debugBoarders.Add(h);
         GD.Print($"[rails] test: a hound boards wagon {wagon}");
@@ -449,14 +481,17 @@ public partial class RailEncounterController
     /// wrecked (<see cref="RailController.WreckedAt"/>: a spare may have moved the cart, and its boarders with it, before the
     /// Wrecked event is told) and fight on foot. A wreck that was a fall (<see cref="RailController.LastWreckFell"/>) took the boarders
     /// with the train: one still aboard and alive here goes into the crevasse too; a leaper in the air lands beside the lip.
+    /// A spared boarder (a hijacker on a wagon, plan 16) is kept aboard unless <paramref name="all"/> (a wreck, a restore, the rest on foot).
     /// </summary>
-    private void ClearLeaps(bool wrecked)
+    private void ClearLeaps(bool wrecked, bool all)
     {
         var wreck = _rails.WreckedAt;
         for (var i = _leaps.Count - 1; i >= 0; i--)
         {
             var l = _leaps[i];
             var h = l.Hound;
+            if (l.Spared && !all && IsInstanceValid(h) && !h.IsQueuedForDeletion()) continue; // the hijacker on its wagon rides on
+            _leaps.RemoveAt(i);
             ReleaseLeap(l);
             if (!IsInstanceValid(h) || h.IsQueuedForDeletion()) continue;
             h.BoardTarget = null;
@@ -474,6 +509,5 @@ public partial class RailEncounterController
             }
             else h.QueueFree();
         }
-        _leaps.Clear();
     }
 }

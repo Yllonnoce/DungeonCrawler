@@ -70,6 +70,7 @@ public partial class RailController
         var live = ReliefRules.LineLive(StopS.Length, StopIndex, State.Mode, Halted, !Cart.Visible);
         LeftBehindNow = ReliefRules.LeftBehind(new ReliefView(true, live, !me.Downed && !me.Parked, me.Seated, State.Mode != CartMode.Rolling, _met, behind));
         var counting = _chase is null or { Ended: true } or { Relief: true, Phase: ReliefPhase.Leaving };
+        if (HijackLive) counting = false; // no relief while the train is hijacked (plan 16 Ruling 30): the clock waits for the hijack's end
         if (_reliefClock.Tick(dt, LeftBehindNow, counting)) SendRelief(me, PlayerLineS, _playerOnRails);
     }
 

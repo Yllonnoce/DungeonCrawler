@@ -146,7 +146,7 @@ public partial class RailEncounterController : Node
                 break;
             case CartEventKind.Wrecked:
                 FreeRideRunaway("the train is wrecked"); // a fall too
-                ClearRide(wrecked: true);
+                ClearRide(wrecked: true, all: true);
                 ClearAnswers();
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
@@ -155,7 +155,7 @@ public partial class RailEncounterController : Node
                 break;
             case CartEventKind.Restored:
                 FreeRideRunaway("the cart is restored"); // a wipe's rise or a load
-                ClearRide(loaded: true);
+                ClearRide(loaded: true, all: true);
                 ClearAnswers();
                 ClearThrowers();
                 ResetSwitchyard(undone: true);
@@ -170,7 +170,7 @@ public partial class RailEncounterController : Node
                 break;
             case CartEventKind.OnFoot:
                 FreeRideRunaway("the party is on foot");
-                ClearRide();
+                ClearRide(all: true);
                 ClearAnswers();
                 ResetSwitchyard(undone: false);
                 break;
@@ -191,14 +191,17 @@ public partial class RailEncounterController : Node
         ArmStanders(ArmedRide);
     }
 
-    /// <summary>The ride is over (or undone): its live items go, the riders without a death or a word.</summary>
-    private void ClearRide(bool wrecked = false, bool loaded = false)
+    /// <summary>
+    /// The ride is over (or undone): its live items go, the riders without a death or a word. A hijacker on a wagon (a spared boarder, plan 16)
+    /// stays aboard unless <paramref name="all"/> (a wreck, a restore, the rest on foot): a departure or an arrival is not its end.
+    /// </summary>
+    private void ClearRide(bool wrecked = false, bool loaded = false, bool all = false)
     {
         ArmedRide = -1;
         ClearStanders();
         ClearSwitchyard();
         ClearBarricades();
-        ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
+        ClearLeaps(wrecked, all); // boarders first: they are not on a slag cart's list
         ClearThrows(); // the wagons' throw clocks go with the ride
         ClearKiln(payOff: !loaded); // the golem goes like a rider (its corpse stays); a thrown spur lever sends it off the spur first
         var why = wrecked ? "the train is wrecked" : loaded ? "the cart is restored" : "the ride is over";

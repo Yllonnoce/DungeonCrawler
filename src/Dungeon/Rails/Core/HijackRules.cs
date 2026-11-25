@@ -29,8 +29,55 @@ public static class HijackRules
     public const float HoleClear = 5f;
     /// <summary>A stop whose limit leaves less roll than this allows no hijack (m).</summary>
     public const float MinRoll = 5f;
-    /// <summary>The driver's call and glow before the brake comes off (s, call): T6's.</summary>
+    /// <summary>The driver's call and glow before the brake comes off (s, call).</summary>
     public const float BrakeGlow = 3f;
+
+    // ---- Task 6: the hijack, won back -------------------------------------------------------------------------------------------
+
+    /// <summary>A runner this close to the cart's (or a wagon's) side, flat, climbs in (m, call).</summary>
+    public const float ClimbReach = 2f;
+    /// <summary>The climb takes this long (s, call): a hit cancels it.</summary>
+    public const float ClimbSeconds = 0.8f;
+    /// <summary>A hit runner fights its attacker this long before it runs for the train again (s, Ruling 9).</summary>
+    public const float FightBackSeconds = 3f;
+    /// <summary>After a hijack ends (won back, or the relief arrived) the next tag waits this long (s, spec Ruling 2).</summary>
+    public const float NextTagAfter = 20f;
+    /// <summary>The rolling-back train may be boarded on foot up to this speed (m/s, Ruling 12): the roll's 4 m/s with a margin.</summary>
+    public const float BoardMaxSpeed = 4.05f;
+    /// <summary>The creatures that may be tagged as hijackers (spec section 3: never a priest or a brute).</summary>
+    public const string Cinder = "enemy.horde_cinder", Hound = "enemy.ember_hound";
+
+    /// <summary>
+    /// A hijack may start (the climb's end hands the cart to its driver): the train Held at a sieged stop (1 to <paramref name="stopCount"/> − 2,
+    /// never the landing or the last), not halted on the line nor standing past its stop (the island), with no hero seated anywhere in the train,
+    /// up or downed (Ruling 8: one is enough), no chaser or solo relief live (Ruling 30), not in a rise's grace, no hijack live, and room to roll.
+    /// </summary>
+    public static bool MayStart(int stop, int stopCount, bool held, bool halted, bool standingPast, int heroesSeatedInTrain, bool chaseLive, bool risingGrace, bool hijackLive, bool rollRoom)
+        => InRange(stop, stopCount) && held && !halted && !standingPast && heroesSeatedInTrain == 0 && !chaseLive && !risingGrace && !hijackLive && rollRoom;
+
+    /// <summary>
+    /// A siege creature of wave <paramref name="wave"/> may be tagged as a hijacker (spec Ruling 2): never in a stop's first wave, only one hijack
+    /// live, <see cref="NextTagAfter"/> since the last ended, at most one a wave, a cinder imp or an ember hound, and only where the train has room to roll.
+    /// </summary>
+    public static bool MayTag(int wave, bool hijackLive, float sinceLastHijackEnded, bool taggedThisWave, string enemyId, bool rollRoom)
+        => wave >= 2 && !hijackLive && sinceLastHijackEnded >= NextTagAfter && !taggedThisWave && MayTagKind(enemyId) && rollRoom;
+
+    /// <summary>A creature of this kind may be a hijacker: a cinder imp or an ember hound.</summary>
+    public static bool MayTagKind(string enemyId) => enemyId is Cinder or Hound;
+
+    /// <summary>The cart may be boarded on foot in <paramref name="p"/> at <paramref name="v"/> (Ruling 12): rolling back, braking or returning, at walking speeds.</summary>
+    public static bool MayBoard(HijackPhase p, float v) => (p is HijackPhase.RollingBack or HijackPhase.Braking or HijackPhase.Returning) && v <= BoardMaxSpeed;
+
+    /// <summary>
+    /// A tagged runner runs for the train (Ruling 25): no hero seated in it, not in a rise's grace, at a sieged stop, and either the train held
+    /// there (no hijack yet, or its glow) or in the glow or the roll back. At the brake, the return or a got-away it is released.
+    /// </summary>
+    public static bool MayRun(int stop, int stopCount, HijackPhase phase, bool held, int heroesSeatedInTrain, bool risingGrace)
+        => InRange(stop, stopCount) && heroesSeatedInTrain == 0 && !risingGrace
+           && (held && (phase is HijackPhase.None or HijackPhase.Glow) || (phase is HijackPhase.Glow or HijackPhase.RollingBack));
+
+    /// <summary>A sieged stop: 1 to <paramref name="stopCount"/> − 2 (the siege's own range).</summary>
+    private static bool InRange(int stop, int stopCount) => stop >= 1 && stop <= stopCount - 2;
 
     /// <summary>The run rolls against its facing in <paramref name="p"/>: the roll back and its brake.</summary>
     public static bool Reversing(HijackPhase p) => p is HijackPhase.RollingBack or HijackPhase.Braking;
