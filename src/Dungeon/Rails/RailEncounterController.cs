@@ -141,6 +141,7 @@ public partial class RailEncounterController : Node
             case CartEventKind.Departed:
                 FreeRideRunaway("the train departs"); // one lingering behind the stop goes before the next ride arms
                 ClearRide();
+                UnspareLeaps(); // a hijacker still on a wagon rides on as the ride's boarder (plan 16)
                 if (!float.IsNaN(_rails.DepartedPastS)) ArmFrom(e.Stop + 1, _rails.DepartedPastS); // the lift's takeover left from its own place (plan 15 Ruling 27)
                 else Arm(e.Stop + 1);
                 break;

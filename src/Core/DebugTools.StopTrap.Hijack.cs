@@ -13,14 +13,15 @@ namespace DungeonCrawler.Core;
 
 // ---- --test-stop-trap=wonback (plan 16 Task 6) -------------------------------------------------------------------------------------
 // The hijack, won back, at stop 2 with the real siege (portals on, NoHijack off). In order (any step out of its window fails):
-//  setup: rc.Restore(2) and rc.DebugKillHolders(2) (the gate up, the guards out of the way); the lead stands by stop 2's cage (locked), the
+//  setup: BeginRollBack asked straight (DebugBeginRollBack) at the landing and the last stop rolls nothing (its own guard); then rc.Restore(2) and rc.DebugKillHolders(2) (the gate up, the guards out of the way); the lead stands by stop 2's cage (locked), the
 //      companions set down by it holding fire (DebugHoldFire, Hold); every hijacker is held above 1 HP (DebugHoldHp) so only the grip ends it.
 //      The flow's sweep kills every siege creature that is not a hijacker 1 s after it came through (the cap never stops a wave), and calls
 //      DebugSiegeNow between waves. The siege restarts after the load's 10 s grace.
 //  (a) tagging: wave 1 tags nobody; wave 2 tags exactly one, a cinder imp or an ember hound.
 //  (b) the run: its distance to the cart falls over 3 s (or it climbs first); it climbs within 2 m, and 0.8 +- 0.1 s later it is Cart.Driver;
 //      the BoarderThrow telegraph is told for it, and CrewCartTaken is said (or logged) once.
-//  (c) the roll: Hijacked 3 +- 0.1 s after it became the driver, with BrakeOffLog ("A cinder imp lets the brake off! ...").
+//  (c) the roll: Hijacked 3 +- 0.1 s after it became the driver, with BrakeOffLog ("A cinder imp lets the brake off! ..."); the glow's telegraph
+//      told at 0 and 1.5 s (a client's glow lasts 1.5 s: the 3 s covered on every peer).
 //  (d) won back on foot: the lead, teleported beside the cart's side, strikes the driver (the lead's own light swing) until it is off: the grip
 //      reads 1, 2, then off on three hits; the driver stands beside the lane alive, not carried, aggro on; V is 0 within 0.8 s of the knock-off
 //      and the train is Held at StopS[2] +- 0.05 with HijackOver at stop 2.
@@ -32,9 +33,11 @@ namespace DungeonCrawler.Core;
 //  (h) a Restore under way: a test-tagged runner (DebugTagNext) climbs the cart; rc.Restore(2) mid-climb leaves Cart.Driver null, Hijack
 //      None and the runner in ChaseState, no longer a runner and untagged.
 //  (i) a wagon boarder (Ruling 25): a test-tagged driver rolls the train back; at the Hijacked a second test-tagged runner catches the train
-//      and climbs a wagon's boarder spot (a spared leap) while it rolls; a third is tagged and, while it is still on foot, the lead knocks the
-//      driver off from foot: at the Braking every runner is released to ChaseState (still a hijacker); the wagon's boarder is still aboard after
-//      HijackOver; the lead boards, the cage is waived and the train departs: the boarder still aboard after the Departed.
+//      and climbs a wagon's boarder spot (a spared leap, on the attack, no crew target) while it rolls; a third is tagged and, while it is still
+//      on foot, the lead knocks the driver off from foot: at the Braking every runner is released to ChaseState (still a hijacker); the wagon's
+//      boarder is still aboard after HijackOver; with stop 1's crew seated in its wagon and the lead beside it, for 4 s it attacks and never
+//      targets or hurts the crew; the lead boards, the cage is waived and the train departs: 1 s after the Departed the boarder is aboard as the
+//      ride's ordinary boarder (not spared, its grip) going for its wagon's crew.
 //  Throughout (Ruling 32): no "straggler ... freed" line names a runner, the driver or a wagon's hijacker.
 public partial class DebugTools
 {
@@ -58,6 +61,9 @@ public partial class DebugTools
     private float _hjRunD0;
     private bool _hjRunFell;
     private int _hjSwings;
+    private bool _hjDriverDown, _hjZeroSeen, _hjAttackSeen;
+    private List<Npc> _hjCrew = new();
+    private List<float> _hjCrewHp = new();
     private double _hjBlowAt;
     private float _hjWaveAt;
     private string _hjGateWas = "";
@@ -128,15 +134,17 @@ public partial class DebugTools
     }
 
     /// <summary>A point on foot beside the cart's front quarter, on its walkable side (where the driver is struck from).</summary>
-    private static Vector3 HjBesideCart(RailController rc)
+    private static Vector3 HjBesideCart(RailController rc) => HjBeside(rc, rc.Cart, MineCart.TubLength / 2f - 0.5f);
+
+    /// <summary>A point on foot beside <paramref name="body"/>'s tub, <paramref name="forward"/> m toward its front, on its walkable side.</summary>
+    private static Vector3 HjBeside(RailController rc, Node3D body, float forward)
     {
-        var cart = rc.Cart;
-        var right = cart.GlobalTransform.Basis.X with { Y = 0f };
+        var right = body.GlobalTransform.Basis.X with { Y = 0f };
         right = right.Normalized();
-        var beside = rc.StandBesideLane(cart.GlobalPosition) - cart.GlobalPosition;
+        var beside = rc.StandBesideLane(body.GlobalPosition) - body.GlobalPosition;
         var side = beside.Dot(right) >= 0f ? 1f : -1f;
-        var front = -cart.GlobalTransform.Basis.Z with { Y = 0f };
-        return cart.GlobalPosition + right * side * (MineCart.TubWidth / 2f + 0.6f) + front.Normalized() * (MineCart.TubLength / 2f - 0.5f) + Vector3.Up * 0.3f;
+        var front = -body.GlobalTransform.Basis.Z with { Y = 0f };
+        return body.GlobalPosition + right * side * (MineCart.TubWidth / 2f + 0.6f) + front.Normalized() * forward + Vector3.Up * 0.3f;
     }
 
     /// <summary>The lead's light swing at <paramref name="at"/> (the knock flow's: its basic ability, aimed).</summary>
@@ -200,6 +208,14 @@ public partial class DebugTools
                 if (rc.StopS.Length != Floor12Stops) { Fail($"floor 12's line has {rc.StopS.Length} stops, not {Floor12Stops}"); return; }
                 if (me == null || enc == null) { Fail("no lead or no encounter controller"); return; }
                 HijackListen(main);
+                // BeginRollBack's own guard (the T5 review's M3): asked straight at the landing and at the last stop, it rolls nothing
+                foreach (var k in new[] { 0, rc.StopS.Length - 1 })
+                {
+                    rc.Restore(k);
+                    var rolled = rc.DebugBeginRollBack();
+                    GD.Print($"[stoptrap] wonback: BeginRollBack at stop {k} {(rolled ? "ROLLED" : "refused")} (hijack {rc.Hijack}, {rc.State.Mode})");
+                    if (rolled || rc.HijackLive || rc.State.Mode != CartMode.Held) { Fail($"BeginRollBack rolled the train back from stop {k}"); return; }
+                }
                 rc.Restore(HjStop);
                 var killed = rc.DebugKillHolders(HjStop);
                 var cage = ctrl.Cages.FirstOrDefault(c => c.Stop == HjStop);
@@ -268,13 +284,15 @@ public partial class DebugTools
                 if (rolled < 0) { if (StNow - _hjDriverAt > 4.0) Fail($"no roll 4 s after {r.Name} took the cart ({rc.Hijack})"); break; }
                 if (StNow - rolled < 0.2) break; // its log line is heard in the same tick
                 _hjRollAt = rolled;
-                var glowTold = _hjTelegraphs.Count(t => t.E == r && t.State == TelegraphRules.BoarderThrow && t.At >= _hjDriverAt - 0.02 && t.At <= _hjDriverAt + 0.1);
+                var tells = _hjTelegraphs.Where(t => t.E == r && t.State == TelegraphRules.BoarderThrow && t.At >= _hjDriverAt - 0.02 && t.At <= rolled).Select(t => t.At - _hjDriverAt).ToList();
+                var glowTold = tells.Count;
                 var barks = _hjSaidOrLogged.Where(x => x.At >= _hjDriverAt - 0.02 && x.At <= _hjDriverAt + 1.0 && x.Text.EndsWith(StopTrapLines.CrewCartTaken)).ToList();
                 var brake = string.Format(StopTrapLines.BrakeOffLog, StopTrapLines.AName(r.DisplayName));
                 var braked = _hjSaidOrLogged.Count(x => x.Text == brake && Math.Abs(x.At - rolled) < 0.1);
                 var after = rolled - _hjDriverAt;
-                GD.Print($"[stoptrap] wonback: (c) the roll {after:0.00} s after the driver; the glow told {glowTold}x; the bark [{string.Join(" | ", barks.Select(b => b.Text))}]; \"{brake}\" {braked}x");
-                if (glowTold != 1) { Fail($"the glow's telegraph was told {glowTold} time(s) for the driver"); return; }
+                GD.Print($"[stoptrap] wonback: (c) the roll {after:0.00} s after the driver; the glow told at [{string.Join(", ", tells.Select(x => x.ToString("0.00")))}] s; the bark [{string.Join(" | ", barks.Select(b => b.Text))}]; \"{brake}\" {braked}x");
+                // a client glows 1.5 s a telling: told at 0 and 1.5 s, the 3 s are covered on every peer
+                if (glowTold != HijackRules.GlowTells || tells.Where((x, i) => Math.Abs(x - i * HijackRules.GlowRetell) > 0.05).Any()) { Fail($"the glow's telegraph was told at [{string.Join(", ", tells.Select(x => x.ToString("0.00")))}] s, not every {HijackRules.GlowRetell} s from 0 ({HijackRules.GlowTells} tellings)"); return; }
                 if (barks.Count != 1) { Fail($"\"{StopTrapLines.CrewCartTaken}\" said or logged {barks.Count} time(s), not once"); return; }
                 if (Math.Abs(after - HijackRules.BrakeGlow) > 0.1) { Fail($"the roll started {after:0.00} s after the driver took the cart, not 3 +- 0.1"); return; }
                 if (braked != 1) { Fail($"\"{brake}\" was logged {braked} time(s)"); return; }
@@ -307,18 +325,22 @@ public partial class DebugTools
             case 6: // (d) the driver beside the lane; the brake, the return, Held
             {
                 var r = _hjRunner!;
-                if (_hjSub == 0 && StNow - _hjKnockAt >= 0.2)
+                // the driver set down (checked 0.2 s on, whatever the train does meanwhile: the I2 fix) and the stop at V 0 (the Returning), each once
+                if (!_hjDriverDown && StNow - _hjKnockAt >= 0.2)
                 {
                     var cell = DungeonBuilder.WorldToCell(r.GlobalPosition);
-                    GD.Print($"[stoptrap] wonback: (d) {r.Name} knocked off stands at {cell} (rail {layout.IsRail(cell)}), alive {r.IsAlive}, carried {r.Carried}, {r.State.Name}");
-                    if (!r.IsAlive || r.Carried || r.State.Unaware || layout.IsRail(cell)) { Fail("the knocked-off driver is not standing beside the lane alive with its aggro on"); return; }
-                    if (!_hjSaidOrLogged.Any(x => x.At >= _hjKnockAt - 0.05 && x.Text == string.Format(StopTrapLines.KnockedOffCartLog, me!.State.Name, StopTrapLines.Lower(r.DisplayName)))) { Fail("no knock-off log line"); return; }
-                    _hjSub = 1;
+                    var log = string.Format(StopTrapLines.KnockedOffCartLog, me!.State.Name, StopTrapLines.Lower(r.DisplayName));
+                    var logged = _hjSaidOrLogged.Count(x => x.At >= _hjKnockAt - 0.05 && x.Text == log);
+                    GD.Print($"[stoptrap] wonback: (d) {r.Name} knocked off stands at {cell} (rail {layout.IsRail(cell)}, {HjFlat(rc.Cart, r.GlobalPosition):0.0} m from the tub), alive {r.IsAlive}, carried {r.Carried}, {r.State.Name}, unaware {r.State.Unaware}; \"{log}\" {logged}x");
+                    if (!r.IsAlive || r.Carried || r.State.Unaware || r.State is RunForCartState || layout.IsRail(cell)) { Fail("the knocked-off driver is not standing beside the lane alive with its aggro on"); return; }
+                    if (logged != 1) { Fail($"the knock-off log line was logged {logged} time(s), not once"); return; }
+                    _hjDriverDown = true;
                 }
+                if (rc.Hijack == HijackPhase.Returning && !_hjZeroSeen) { _hjZeroSeen = true; var t = StNow - _hjKnockAt; GD.Print($"[stoptrap] wonback: (d) V 0 {t:0.00} s after the knock-off"); if (t > 0.8) { Fail($"V reached 0 {t:0.00} s after the knock-off, not within 0.8"); return; } }
                 var stopped = HjEventAt(CartEventKind.HijackOver, _hjKnockAt);
-                if (rc.Hijack == HijackPhase.Returning && _hjSub < 2) { _hjSub = 2; var t = StNow - _hjKnockAt; GD.Print($"[stoptrap] wonback: (d) V 0 {t:0.00} s after the knock-off"); if (t > 0.8) { Fail($"V reached 0 {t:0.00} s after the knock-off, not within 0.8"); return; } }
                 if (stopped < 0) { if (StNow - _hjKnockAt > 30) Fail($"the train never came back to stop {HjStop} ({rc.Hijack}, S={rc.State.S:0.00})"); break; }
-                if (_hjSub < 2) { Fail("the return came without a stop at V 0 first"); return; }
+                if (!_hjZeroSeen) { Fail("the return came without a stop at V 0 first"); return; }
+                if (!_hjDriverDown) { Fail("the train was back before the knocked-off driver was checked"); return; }
                 _hjOverAt = stopped;
                 var over = _hjEvents.First(x => x.Kind == CartEventKind.HijackOver && x.At >= _hjKnockAt);
                 GD.Print($"[stoptrap] wonback: (d) held again at S={rc.State.S:0.000} (stop {rc.StopIndex} at {rc.StopS[HjStop]:0.000}), HijackOver at stop {over.Stop}; the return log {_hjSaidOrLogged.Count(x => x.Text == StopTrapLines.ReturnLog && x.At >= _hjKnockAt)}x");
@@ -485,6 +507,7 @@ public partial class DebugTools
                 var w = _hjBoarder.Carrier as TrainWagon;
                 GD.Print($"[stoptrap] wonback: (i) {_hjBoarder.Name} boards {boarded[0].What[7..]} {boarded[0].At - _hjRollAt:0.00} s into the roll at V={rc.State.V:0.00}; spared {enc!.IsSparedBoarder(_hjBoarder)}, grip {enc.GripOf(_hjBoarder)}");
                 if (w == null || !enc.IsSparedBoarder(_hjBoarder) || enc.GripOf(_hjBoarder) != 0) { Fail("the wagon's hijacker is not a spared boarder with its grip"); return; }
+                if (_hjBoarder.State is RunForCartState || _hjBoarder.State.Unaware || _hjBoarder.BoardTarget != null) { Fail($"the wagon's hijacker is {_hjBoarder.State.Name} (board target {_hjBoarder.BoardTarget?.NpcName ?? "none"}), not on the attack against the heroes (the I1 fix)"); return; }
                 _hjMark = StNow;
                 trap.DebugTagNext();
                 _hjSwings = 0;
@@ -530,11 +553,31 @@ public partial class DebugTools
                     if (!foot.IsAlive || foot.Carried || !HjReleased(trap, foot, _hjMark) || !trap.IsHijacker(foot)) { Fail($"the runner on foot was not released to the chase, still tagged ({foot.State.Name}, carried {foot.Carried})"); return; }
                     _hjSub = 1;
                 }
-                var over = HjEventAt(CartEventKind.HijackOver, _hjKnockAt);
-                if (over < 0) { if (_stClock > 30f) Fail($"the third hijack never came back ({rc.Hijack})"); break; }
                 var b = _hjBoarder!;
-                GD.Print($"[stoptrap] wonback: (i) after HijackOver {b.Name} on {(b.Carrier as Node)?.Name ?? "foot"}, spared {enc!.IsSparedBoarder(b)}");
-                if (!b.IsAlive || b.Carrier is not TrainWagon || !enc.IsSparedBoarder(b)) { Fail("the wagon's hijacker is not aboard after HijackOver"); return; }
+                if (_hjSub == 1)
+                {
+                    var over = HjEventAt(CartEventKind.HijackOver, _hjKnockAt);
+                    if (over < 0) { if (_stClock > 30f) Fail($"the third hijack never came back ({rc.Hijack})"); break; }
+                    GD.Print($"[stoptrap] wonback: (i) after HijackOver {b.Name} on {(b.Carrier as Node)?.Name ?? "foot"}, spared {enc!.IsSparedBoarder(b)}");
+                    if (!b.IsAlive || b.Carrier is not TrainWagon bw || !enc.IsSparedBoarder(b)) { Fail("the wagon's hijacker is not aboard after HijackOver"); return; }
+                    // at the stop it goes for the heroes, never the crew: stop 1's crew seated in its wagon, the lead beside it
+                    _hjCrew = ctrl.DebugSeatCrew(1, bw.Number)?.Select(c => c.Npc).ToList() ?? new();
+                    if (_hjCrew.Count == 0) { Fail($"stop 1's crew could not be seated in wagon {bw.Number}"); return; }
+                    _hjCrewHp = _hjCrew.Select(n => n.Hp).ToList();
+                    me!.Teleport(HjBeside(rc, bw, 0f), bw.GlobalPosition);
+                    _hjAttackSeen = false;
+                    _hjMark = StNow;
+                    _hjSub = 2;
+                    break;
+                }
+                if (b.BoardTarget != null) { Fail($"at the stop the wagon's hijacker went for {b.BoardTarget.NpcName}, a crew member"); return; }
+                if (b.State is RunForCartState || b.State.Unaware) { Fail($"at the stop the wagon's hijacker is {b.State.Name}, not on the attack (the I1 fix)"); return; }
+                if (b.State is AttackState) _hjAttackSeen = true;
+                if (StNow - _hjMark < 4.0) break;
+                var hurt = _hjCrew.Where((n, i) => !IsInstanceValid(n) || n.Dead || n.Downed || n.Hp < _hjCrewHp[i]).Select(n => IsInstanceValid(n) ? n.NpcName : "?").ToList();
+                GD.Print($"[stoptrap] wonback: (i) 4 s at the stop with [{string.Join(", ", _hjCrew.Select(n => n.NpcName))}] in its wagon and the lead beside it: {b.Name} on the attack all through (now {b.State.Name}, {(_hjAttackSeen ? "it swung" : "nobody in its reach")}), its target {(b.HasTarget ? b.Target!.State.Name : "none")}, board target none, crew hurt [{string.Join(", ", hurt)}]");
+                if (!b.HasTarget) { Fail("the wagon's hijacker has no hero for its target at the stop"); return; }
+                if (hurt.Count > 0) { Fail($"the wagon's hijacker hurt crew at the stop: {string.Join(", ", hurt)}"); return; }
                 HjKill(_hjRunner);
                 _hjKeep.Remove(foot);
                 HjKill(foot);
@@ -550,9 +593,12 @@ public partial class DebugTools
                 if (departed < 0) { if (_stClock > 25f) Fail($"no departure from stop {HjStop} in 25 s (boarding {rc.Boarding.Running}, cage held {rc.CageHeld}, lead seated {me?.Seated})"); break; }
                 if (StNow - departed < 1.0) break;
                 var b = _hjBoarder!;
-                GD.Print($"[stoptrap] wonback: (i) 1 s after the Departed {b.Name} on {(b.Carrier as Node)?.Name ?? "foot"}, spared {enc!.IsSparedBoarder(b)}, alive {b.IsAlive}");
-                if (!b.IsAlive || b.Carrier is not TrainWagon || !enc.IsSparedBoarder(b)) { Fail("the wagon's hijacker was cleared with the departure"); return; }
-                _hjSummary.Add($"a wagon's hijacker rode through HijackOver and the departure");
+                GD.Print($"[stoptrap] wonback: (i) 1 s after the Departed {b.Name} on {(b.Carrier as Node)?.Name ?? "foot"}, spared {enc!.IsSparedBoarder(b)}, grip {enc.GripOf(b)}, alive {b.IsAlive}, board target {b.BoardTarget?.NpcName ?? "none"}");
+                if (!b.IsAlive || b.Carrier is not TrainWagon dw) { Fail("the wagon's hijacker was cleared with the departure"); return; }
+                // once the train departs normally it is the ride's ordinary boarder: crew first, the grip
+                if (enc.IsSparedBoarder(b) || enc.GripOf(b) < 0) { Fail("after the departure the wagon's hijacker is not an ordinary wagon boarder"); return; }
+                if (b.BoardTarget is not { } bitten || !_hjCrew.Contains(bitten) || bitten.Cart != dw) { Fail($"after the departure the wagon's hijacker goes for {b.BoardTarget?.NpcName ?? "nobody"}, not the crew in its wagon"); return; }
+                _hjSummary.Add("a wagon's hijacker fought the heroes, never the crew, at the stop, rode through HijackOver and the departure, and then went for its wagon's crew");
                 StopTrapOk($"{string.Join("; ", _hjSummary)}; no hijacker freed by the cull");
                 break;
             }

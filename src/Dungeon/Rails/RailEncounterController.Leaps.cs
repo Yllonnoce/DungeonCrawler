@@ -50,8 +50,10 @@ public partial class RailEncounterController
         /// <summary>A wagon boarder's grip taken so far (<see cref="BoarderRules.GripTaken"/> of each party hit) and the hits that took it.</summary>
         public int GripTaken, GripHits;
         /// <summary>
-        /// A hijacker that climbed onto a wagon at a stop (plan 16 Task 6, <see cref="BoardWagonAtStop"/>): it is no ride's, so the ride's end
-        /// (a departure, an arrival) keeps it aboard; a wreck, a restore or the rest on foot let it go as any boarder (<see cref="ClearLeaps"/>).
+        /// A hijacker that climbed onto a wagon at a stop (plan 16 Task 6, <see cref="BoardWagonAtStop"/>): it is no ride's, so the departure keeps
+        /// it aboard (<see cref="ClearLeaps"/>); a wreck, a restore or the rest on foot let it go as any boarder. While spared (the train at its
+        /// stop or hijacked) it goes for the heroes, never the crew (a hijack never kills crew); the departure makes it an ordinary boarder
+        /// (<see cref="UnspareLeaps"/>: crew first, the grip, the throws), which the next arrival clears with the ride.
         /// </summary>
         public bool Spared;
     }
@@ -338,6 +340,7 @@ public partial class RailEncounterController
         h.FollowCarrier();
         if (l.Dest is TrainWagon wagon)
         {
+            if (l.Spared) { h.BoardTarget = null; return true; } // a hijacker at the stop or on the hijacked train: the heroes, never the crew (plan 16)
             if (h.BoardTarget is not { IsAlive: true } || !IsInstanceValid(h.BoardTarget)) h.BoardTarget = NearestCrew(wagon, h.GlobalPosition); // the one it bit went down: the next
             return true;
         }
@@ -430,12 +433,30 @@ public partial class RailEncounterController
         if (!IsInstanceValid(w) || !w.Coupled || _rails.WagonAt(w.Number) != w) return false;
         if (w.ReserveBoarderSpot(e) < 0) return false;
         e.Carry(w, () => w.BoarderSpotTransform(0));
-        e.ForceAggro();
+        if (e.State is not Enemies.Ai.ChaseState) e.ChangeState(new Enemies.Ai.ChaseState()); // on the attack whatever it was doing (a runner's state does nothing carried); ForceAggro acts only on an unaware one
         e.DeathDrop = () => Beside(e.GlobalPosition);
-        e.BoardTarget = NearestCrew(w, e.GlobalPosition);
+        e.BoardTarget = spared ? null : NearestCrew(w, e.GlobalPosition); // a hijacker goes for the heroes while the train is at its stop or hijacked
         _leaps.Add(new Leap { Hound = e, Phase = LeapPhase.Aboard, Dest = w, Spot = 0, ToCart = WireId(w), SentAt = NetSession.Instance?.Now ?? 0, Spared = spared });
         if (spared) GD.Print($"[rails] {e.Name} climbs onto wagon {w.Number} at S={_rails.State.S:0.0} ({_rails.Hijack}, V {_rails.State.V:0.00})");
         return true;
+    }
+
+    /// <summary>
+    /// The train departed normally (server and solo): every spared boarder still aboard becomes an ordinary wagon boarder of the ride (crew first,
+    /// the grip, the throws; the next arrival clears it with the ride).
+    /// </summary>
+    private void UnspareLeaps()
+    {
+        foreach (var l in _leaps)
+        {
+            if (!l.Spared) continue;
+            l.Spared = false;
+            if (IsInstanceValid(l.Hound) && l.Dest is TrainWagon w && IsInstanceValid(w))
+            {
+                l.Hound.BoardTarget = NearestCrew(w, l.Hound.GlobalPosition);
+                GD.Print($"[rails] {l.Hound.Name} rides on wagon {w.Number} as the ride's boarder (it goes for {(l.Hound.BoardTarget is { } npc ? npc.NpcName : "nobody in particular")})");
+            }
+        }
     }
 
     /// <summary>A hijacker aboard a wagon of the train (<see cref="BoardWagonAtStop"/>'s spared boarder), still on its spot.</summary>

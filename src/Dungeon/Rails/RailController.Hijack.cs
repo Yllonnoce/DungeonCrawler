@@ -49,6 +49,8 @@ public partial class RailController
     private bool _driverHeld;
     /// <summary>The driver's grip taken so far (<see cref="BoarderRules.GripTaken"/> of each counted, striking hit) and the hits that took it.</summary>
     private int _driverGrip, _driverHits;
+    /// <summary>Seconds to the glow's next BoarderThrow telegraph (a client's glow lasts 1.5 s: <see cref="HijackRules.GlowRetell"/>).</summary>
+    private float _glowTellLeft;
     /// <summary>Hijacks handed a driver on this floor build (each crew bark's key is its own).</summary>
     private int _hijacksTaken;
     /// <summary>Seconds left of a wipe's rise's grace (the restore after a rise at the cart): no hijack starts meanwhile.</summary>
@@ -102,11 +104,16 @@ public partial class RailController
     internal void BeginRollBack(Enemy? driver)
     {
         if (NetSession.IsClient || !Current || StopS.Length == 0) return;
-        if (State.Mode != CartMode.Held || Halted || StandingPast || Hijack is not (HijackPhase.None or HijackPhase.Glow)) return;
+        if (Hijack is not (HijackPhase.None or HijackPhase.Glow)) return;
         var k = StopIndex;
-        if (k < 1 || k > StopS.Length - 2) { GD.Print($"[rails] hijack: no roll back from stop {k} (the landing or the last stop)"); return; } // the T5 review's M3: never off a stop's range
-        var limit = RollBackLimitAt(k, out var cut);
-        if (!HijackRules.RollRoom(StopS[k], limit)) { GD.Print($"[rails] hijack: no roll back from stop {k} (only {StopS[k] - limit:0.0} m of room)"); return; }
+        string? cut = null;
+        var limit = k >= 0 && k < StopS.Length ? RollBackLimitAt(k, out cut) : float.NaN;
+        var room = k >= 0 && k < StopS.Length && HijackRules.RollRoom(StopS[k], limit);
+        if (!HijackRules.MayRollBack(k, StopS.Length, State.Mode == CartMode.Held, Halted, StandingPast, room)) // the T5 review's M3: never off a stop's range, a halt, the island or a stop with no room
+        {
+            GD.Print($"[rails] hijack: no roll back from stop {k} ({State.Mode}, halted {Halted}, standing past {StandingPast}, room {room})");
+            return;
+        }
         Boarding.Cancel();
         Cart.Driver = driver;
         Hijack = HijackPhase.RollingBack;
@@ -268,6 +275,7 @@ public partial class RailController
         HijackLimitS = float.NaN;
         _hijackWhy = "";
         _glowLeft = HijackRules.BrakeGlow;
+        _glowTellLeft = HijackRules.GlowRetell;
         _driverHeld = true;
         _driverGrip = 0;
         _driverHits = 0;
@@ -305,7 +313,16 @@ public partial class RailController
     private void TickGlow(float dt)
     {
         _glowLeft -= dt;
-        if (_glowLeft > 0f) return;
+        _glowTellLeft -= dt;
+        if (_glowLeft > 0f)
+        {
+            if (_glowTellLeft <= 0f && Cart.Driver is { } glowing && IsInstanceValid(glowing))
+            {
+                _glowTellLeft += HijackRules.GlowRetell;
+                EventBus.Instance.RaiseEnemyTelegraph(glowing, TelegraphRules.BoarderThrow); // told again: a client's glow (1.5 s) runs the whole 3 s
+            }
+            return;
+        }
         var driver = Cart.Driver;
         var k = HijackStop;
         BeginRollBack(driver);
@@ -385,6 +402,17 @@ public partial class RailController
         if (HijackLive || State.Mode != CartMode.Held || Halted || StopIndex < 1 || StopIndex > StopS.Length - 2) return false;
         if (!HijackRules.RollRoom(StopS[StopIndex], RollBackLimitAt(StopIndex, out _))) return false;
         GD.Print($"[rails] test: a driverless roll back from stop {StopIndex}");
+        BeginRollBack(null);
+        return Hijack == HijackPhase.RollingBack;
+    }
+
+    /// <summary>
+    /// Test hook (--test-stop-trap=wonback): <see cref="BeginRollBack"/> asked straight, with no driver and none of <see cref="DebugRollBack"/>'s own
+    /// checks, so a flow sees its guard refuse (the landing, the last stop). True when a roll started.
+    /// </summary>
+    internal bool DebugBeginRollBack()
+    {
+        if (NetSession.IsClient || HijackLive) return false;
         BeginRollBack(null);
         return Hijack == HijackPhase.RollingBack;
     }

@@ -76,6 +76,23 @@ public static class HijackRules
         => InRange(stop, stopCount) && heroesSeatedInTrain == 0 && !risingGrace
            && (held && (phase is HijackPhase.None or HijackPhase.Glow) || (phase is HijackPhase.Glow or HijackPhase.RollingBack));
 
+    /// <summary>
+    /// The brake may come off (<c>RailController.BeginRollBack</c>'s own guard, whatever called it): the train held at a sieged stop, not halted
+    /// on the line nor standing past its stop, with room to roll. The seats, a chase and a rise's grace are <see cref="MayStart"/>'s, judged when
+    /// the driver takes the cart (a hero who sits during the glow does not stop the roll: Ruling 8).
+    /// </summary>
+    public static bool MayRollBack(int stop, int stopCount, bool held, bool halted, bool standingPast, bool rollRoom)
+        => InRange(stop, stopCount) && held && !halted && !standingPast && rollRoom;
+
+    /// <summary>
+    /// A client glows the driver from the BoarderThrow telegraph for <see cref="BoarderRules.ThrowGlow"/> (1.5 s), so the server tells it again
+    /// every this many seconds of the <see cref="BrakeGlow"/>: a co-op player sees the whole 3 s warning.
+    /// </summary>
+    public const float GlowRetell = BoarderRules.ThrowGlow;
+
+    /// <summary>The telegraph's tellings over a glow: the first at its start, then one every <see cref="GlowRetell"/> while the glow lasts.</summary>
+    public static int GlowTells => (int)MathF.Ceiling(BrakeGlow / GlowRetell - 1e-4f);
+
     /// <summary>A sieged stop: 1 to <paramref name="stopCount"/> − 2 (the siege's own range).</summary>
     private static bool InRange(int stop, int stopCount) => stop >= 1 && stop <= stopCount - 2;
 
