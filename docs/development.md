@@ -357,6 +357,8 @@ godot --headless --path . -- --test-crevasse[=trestle|survivor]   # floor 12 sol
 godot --headless --path . -- --test-barricade       # floor 12 solo, lethality 3: the lanterns in sight from the seat; A a spell cuts ride 1's barricade on foot; B on ride 1 the call 30-35 m out, the human brakes and the seated lead's blade cuts it in three hits (no smash, no dent); E r2_slag1 smashes the slag-line barricade while the party passes on its own lane; C the cart smashes ride 2's (plating -25, 15% of max HP to each seated hero, never below 1 HP, Grisel on the bench unhurt, V x0.8); D a restore stands both of ride 2's again at its next arming; prints [barricade] RESULT
 godot --headless --path . -- --test-switch-back[=wrong|stall|lone]   # floor 12 solo, lethality 3: the broken bridge as built, traffic dropping through it quietly and starting past it; ride 3 across: the live switch back called early, untouched by companions, its bridge lamp in sight, thrown from the seat, home to stop 3 (=wrong: nobody throws it, both calls, the train falls at the gap, the wipe rises at stop 2; =stall: the watchdog sets a stuck train at the window's start, the last call's mark and the back's points, then grinds it into the gap; =lone: the only human downed in the seat, the cart takes the safe line home); prints [switchback] RESULT ok (thrown|wrong|stall|lone)
 godot --headless --path . -- --test-pit[=thrown|wrong|lone|stall|late]   # floor 12 solo, lethality 3: ride 5's lava pit and its deadly switch (thrown from the seat and round the pit; left straight and into the lava; R-lone's safe line; the watchdog's four steps; the server's late check); see Rails, "The five rides"; prints [pit] RESULT
+godot --headless --path . -- --test-stop-trap[=siege|ambush|roll|wonback|gotaway|limits|pockets|alcove]   # floor 12 solo, lethality 1 (plan 16's stop trap; see Rails, "The stop trap" and "The alcove shooters"): the siege (the default), the wall ambushers, the driverless reverse, the hijack won back and got away, the pinned roll limits, the pocket measurement, the alcove shooters; budgets 330/200/200/260/300/200/30/360 s; prints [stoptrap] RESULT ok (variant)
+godot --path . --print-fps --resolution 1280x720 -- --test-perf[=crowd|ride|siege]   # windowed only, never in flows.sh: floor 12 at fixed settings, one phase measured (see "Frame rate"); prints [perf] RESULT ok
 godot --headless --path . -- --test-island[=cavein|bridge|wreck|parked|lift|takeover|onfoot|stranded|grisel|chest]   # floor 12 solo, lethality 3, gathering on: the exit island (the cave-ins and the lava, the exit bridge's hold, a wreck inside, the parked train, the lift and its takeover, home and lost, Grisel brought in, the reward chest); see Rails, "The five rides" and "Stops, cages and the crew"; prints [island] RESULT
 RIDE=1 scripts/net_test.sh                           # floor 12 in co-op: a server, a client and a joiner ride the whole line (see Rails, "Riding together"); run it alone, about 5 minutes
 godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
@@ -498,10 +500,11 @@ includes this frame and every slow frame since the last slow-frame line (those i
 - "Shadows" (`display/shadows`, on by default): the local hero's torch casts shadows. It is the only shadowed light in the game.
 - The Haze slider at 0 already turns the volumetric fog off.
 
-**The perf flow.** `--test-perf[=crowd|ride]` runs windowed only (headless it fails at once). It is never run in `flows.sh`.
+**The perf flow.** `--test-perf[=crowd|ride|siege]` runs windowed only (headless it fails at once). It is never run in `flows.sh`.
 Each run measures one phase on the built-in campaign's floor 12. Every phase uses the same settings, kept in memory and never
 saved: VSync off, windowed 1280x720, Haze 0.5, render scale 100 %, shadows on, Show FPS off. It also sets lethality 1, tops
-every hero up to full HP each second, and turns off gathering and portals. Nothing is culled. The mouse is never captured: an
+every hero up to full HP each second, and turns off gathering and portals (all but `siege`'s own). No siege creature is ever
+tagged as a hijacker (`NoHijack`, plan 16 Ruling 22), so the train stays at its stop. Nothing is culled. The mouse is never captured: an
 unfocused window cannot grab it, and X11 logs `ERROR: NO GRAB` when it tries. A run passes with exit 0, its `[perf] RESULT ok`
 line and no `ERROR` line.
 
@@ -512,9 +515,12 @@ line and no `ERROR` line.
   forge priest under 30 % HP flees, which changed the load mid-measure), so the load stays the same through the measure. The flow prints the alive and aware count
   at its start and end, and fails if the alive count changed. It discards 5 s and measures 20 s of wall time. This phase is the enemy tick diet's before-and-after row. It also stands in for the stop siege's "before",
   since the siege does not exist yet when the baseline is taken.
-- `ride` (ambushers on, so the alcove shooters appear in it once they exist). The cart is restored at stop 0, the party sits
-  down, departs and rides ride 1 with every set piece and enemy alive. It measures from 5 s after the departure to the arrival
-  at stop 1.
+- `ride` (ambushers on, so ride 1's four alcove shooters are in it: `AlcoveRules.ShippedCounts`, plan 16 Task 8). The cart is
+  restored at stop 0, the party sits down, departs and rides ride 1 with every set piece and enemy alive. It measures from 5 s
+  after the departure to the arrival at stop 1 (about 48 s).
+- `siege` (plan 16 Task 3; ambushers off). `rc.Restore(4)` starts stop 4's real siege, and the party stands beside the cart on the
+  platform. The waves are hurried (`DebugSiegeNow` after each) until the wave that fills the cap (12) opens; the 20 s measure
+  starts once that wave's creatures are all through. Every enemy's HP is held as in `crowd`. This is the 120 fps target's row.
 
 Each phase prints `[perf] {phase}: {frames} frames over {s} s: median … fps, 1% low …, worst second …, worst frame … ms; process
 … ms, physics … ms, draws …, alloc_kb …; enemies n (k aware) asleep=m`, then `[perf] RESULT ok (…)`. The 1% low is the fps of the
@@ -523,7 +529,7 @@ slowest 1 % of frames (their mean frame time). `alloc_kb` is the managed memory 
 
 ```bash
 dotnet build DungeonCrawler.csproj
-for P in crowd ride; do XDG_DATA_HOME=$(mktemp -d) timeout 300 godot --path . --print-fps --resolution 1280x720 -- --test-perf=$P 2>&1 | tee /tmp/perf-$P.txt | grep -E "^\[perf\]|^ERROR"; done
+for P in crowd ride siege; do XDG_DATA_HOME=$(mktemp -d) timeout 300 godot --path . --print-fps --resolution 1280x720 -- --test-perf=$P 2>&1 | tee /tmp/perf-$P.txt | grep -E "^\[perf\]|^ERROR"; done
 ```
 
 **Baseline (plan 16 Task 1, 2026-11-24, after its fix round: wall-time frames, the crowd held).** Dev laptop: RTX 5070
@@ -587,8 +593,39 @@ The change, after against before (the ride's before is T1's two rows above):
 - With the HP topped up every frame, the second 10 s line of two of the three "before" runs (and of after run 1) was still
   about 5 % slower than the first, so that drift was not only the priests' flight.
 
+**The final measurement (plan 16 Task 9, 2026-11-25, same machine and settings, platform profile `performance`, the machine
+otherwise idle).** Every run had exit 0, `RESULT ok` and no `ERROR` line. `siege` and `crowd` were run again to see their spread.
+
+| Phase | Frames / s | Median fps | 1% low | Worst second | Worst frame | Process ms | Physics ms | Draws | alloc_kb | Enemies (aware) | Asleep |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| siege (run 1) | 5534 / 20.0 | 328 | 65 | 219 | 89.4 ms | 12.38 | 14.00 | 869 | 51138 | 29 (14) | 13 |
+| siege (run 2) | 4947 / 20.0 | 292 | 49 | 158 | 63.6 ms | 13.40 | 15.66 | 1029 | 47452 | 29 (14) | 13 |
+| siege (run 3) | 5508 / 20.0 | 325 | 71 | 234 | 92.0 ms | 11.36 | 14.35 | 870 | 50871 | 29 (14) | 13 |
+| ride, with ride 1's 4 shooters | 15142 / 48.1 | 331 | 105 | 220 | 59.5 ms | 8.63 | 6.77 | 948 | 87411 | 18 (1) | 14 |
+| crowd (run 1) | 5003 / 20.0 | 291 | 84 | 234 | 29.8 ms | 8.28 | 9.97 | 867 | 47567 | 29 (14) | 13 |
+| crowd (run 2) | 5805 / 20.0 | 339 | 100 | 263 | 34.4 ms | 8.80 | 8.06 | 869 | 53136 | 29 (13) | 13 |
+
+- **The target (spec Ruling 5, plan Ruling 29).** The siege's median must hold 120 fps at 1280x720, VSync off, Haze 0.5 and render
+  scale 100 % on this laptop. It holds 292-328, so the target is met and the fallback (stop 4's alive cap 12 → 9,
+  `StopSiegeRules`) was **not** applied. The 1% low and the worst second are recorded with it. The worst second cannot be the
+  target: one spawn hitch sets it (Ruling 29 cites a baseline worst second of 35 at a spawn hitch). One run in three had a 1% low under 60 (49), so it is in Known gaps below.
+- **The siege's load.** 29 enemies alive through the measure: 12 of them the siege's at its cap and the floor's own 17, 14 aware,
+  12-13 asleep (the floor's far ones). Every siege run has one or two 63-92 ms frames as the cap-filling wave's creatures come through, just
+  before or at the start of the measure. Physics runs about 14-16 ms against the crowd's 8-10: the siege's creatures are all aware and
+  pathing. Run 2 drew about 1030 calls against about 870 in the others: a different view of the platform.
+- **The ride with the shooters** (median 331, 1% low 105) sits between T2's after-diet rows (362, 103-108) and T1's baseline (342-347,
+  83-85). Its one 85-130 ms hitch of T1/T2 is down to 59.5 ms.
+- **The crowd** (`NoPortals`, `NoAmbush`: Ruling 22's comparison row) reads 291-339 median, 84-100 1% low: within T2's after-diet
+  spread for the 1% low (77-96) and below it for the median (348-379). Run 1's 291 is the low end of every crowd run so far (T1: 312-315).
+  The stop trap's controllers run there too (no siege and no ambush, but their ticks and the alcove arm checks), and runs vary about ±10 %.
+
 ### Known gaps
 
+- **The siege's 1% low (plan 16 Task 9, Ruling 29).** The siege's median holds the 120 fps target (292-328), but one of three runs had a
+  1% low of 49 (the others 65 and 71), under 60. Its worst second was 158 and its worst frame 63.6 ms, with physics at 15.7 ms and draws
+  at 1029. It is a few slow frames as the cap-filling wave comes through, not a steady low, and it is recorded rather than tuned: the
+  fallback (stop 4's cap 12 → 9) is for a median that misses. The perf line in a real session (`[perf] ... enemies= aware= asleep=`) will show
+  whether the owner's "constant low" is the enemies, the GPU (draws) or something else.
 - **Godot's exit count.** Godot's "resources still in use at exit" (and its leaked ObjectDB instances) were audio streams and their
   playbacks: whatever was playing when the engine shut down was still in the audio server, so the count moved from run to run. Main's
   exit now stops every player and gives the audio thread 100 ms to free them (`AudioManager.StopAllAtExit`; a dedicated server
@@ -1771,6 +1808,126 @@ landing (plan 14).
 The run ends with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
 as it appears. A run with no RESULT line 10 s before its quit timeout fails with "timed out at step N" and exit code 1.
 `--test-ride` and `--test-ride-edges` share this watchdog.
+
+#### The stop trap (plan 16)
+
+While the train waits at a cage stop, the stop fights back. Three things do: a siege of portals around the platform, ambushers that burst
+from the stop room's walls, and a hijacker that can take the train itself. Every number below is a named `const` in its rules class,
+pinned by a unit test (`tests/Adventure/StopSiegeRulesTests.cs`, `StopAmbushRulesTests.cs`, `tests/Dungeon/Rails/HijackRulesTests.cs`).
+Everything that spawns, judges or moves runs on the server or in solo. Clients follow `EnemySpawned`, `PortalOpenedEvt`,
+`AmbushSprungEvt` and `CartStateDto`. `StopTrapController` (a node `PlaceStopTrap` adds on every role, on a line of 3 stops or more)
+owns the parts, with `PortalSpawner.Stop.cs` for the siege.
+
+**The siege** (`StopSiegeRules`, `PortalSpawner.Stop.cs`; plan 16 Task 3, spec section 1). It runs at stops 1 to N−2 (`Sieges`: on
+floor 12, stops 1-4, never the landing or the end of the line). It starts at the `Arrived` and ends at the `Departed` ("the train
+left"), at `Wrecked`, at `OnFoot` and at `Restored`. After a `Restored` it starts again if the train is held at a sieged stop.
+
+| Stop | First wave after | Gap | Portals × creatures | Alive cap |
+|---|---|---|---|---|
+| 1 | 4 s | 14 s | 1 × 2 | 6 |
+| 2 | 4 s | 12 s | 2 × 2 | 8 |
+| 3 | 3 s | 10 s | 2 × 3 | 10 |
+| 4 | 3 s | 8 s | 3 × 2-3 | 12 |
+
+A stop past 4 reads row 4 (`For`).
+- **Co-op:** +1 creature a portal and +2 to the cap for each human past the first (LocalHuman or Remote heroes, at least 1).
+- **Heavy:** at `Settings.Reinforcements` 1.5 or more, the gaps are a third shorter (`HeavyGapScale` 2/3). The gap is read every tick,
+  so a change applies to the gap already under way.
+- **The cap is hard** (Ruling 36): a wave sends `Room = cap − alive − still to come through`, so a stopped wave never overshoots.
+- **Sites** (`Sites`): `Cell.Floor` cells in the stop's room widened by 3 cells (its corridor mouths). Each must be:
+  - walkable, and reachable on foot from the platform (a flood that never crosses the line, a bridge, a chasm or a drop, and never
+    enters a vault or the boss arena: the T3 review's ruling);
+  - not reserved, not water, not a ledge cell or ramp end, not a bridge, and not blocked for enemies (a prop, the cage siding);
+  - at least 6 m from every up hero, 4 m from the cage and 4 m from every platform cell.
+  Cells behind every hero score first. A wave's portals stand at least 8 m apart. A wave that cannot open (no room, no site) tries
+  again 2 s later.
+- **The roster** (`Pick`, Ruling 6): a cinder imp under 0.35, an ember hound under 0.70, a forge priest under 0.95, and above that a
+  cinder brute from stop 3 (one a wave), else a cinder imp. Never a forge golem. Each creature comes through as a floor-wide one does:
+  1.1 s after the portal, then one every 0.45 s, `IsReinforcement` (no loot), `RunBoost` 1.15, aggro on.
+- **The floor-wide pause.** While a siege runs, the floor-wide portals' pressure clock and timer stand still. The floor-wide cap
+  counts the siege's alive and pending creatures too (Ruling 4). Siege waves do not count in the saved floor-wide `Waves`.
+- **Silence.** A siege follows the floor-wide portals' silences (Settings.Reinforcements 0, `--no-portals`, the safe rooms and the rest
+  of `RefreshSilence`, through one shared helper), except the empty roster. A silenced siege does not start, and one that falls silent
+  ends. It does not start again when the silence lifts (T3-M4, deferred).
+- **The restart graces** (Ruling 3): a siege restarted by a `Restored` has its first wave 10 s after a load (`LoadGrace`) and 15 s after
+  a wipe's rise at the cart (`RiseGrace`, read from `Main.RoseAtCart`), in place of the row's first delay.
+- **Stragglers.** At the siege's end its live creatures become stragglers. Once a second, one more than 60 m from every hero that no
+  hero has seen for 10 s is freed quietly (`QueueFree`; a co-op client drops it within its 4 s enemy check). Carried or leaping ones are skipped.
+- **Lines** (`StopTrapLines`, subtitles only, `VoiceId` null): wave 1 logs "The air tears open around the platform!", later waves "A portal
+  tears open behind you.". The warning on a siege's first wave is said at once (urgent, keyed `siege:{stop}`). Grisel says "They're tearing
+  through the air! Hold the platform!" when she is there and up; otherwise the nearest up freed crew member says "Something's coming
+  through! Watch the platform!". With nobody to say it, it is tried each second while that siege runs.
+- **The RIDE pass's server** starts no siege (`[stoptrap] no siege at stop k: the RIDE pass's server (Ruling 2)`).
+
+**The wall ambushers** (`StopAmbushRules`, `StopTrapController.Ambush.cs`; plan 16 Task 4, spec section 2).
+- **Counts:** 2 / 3 / 3 / 4 at stops 1-4 (`Counts`), only with `Settings.Ambushes` on and `--no-ambush` off, never on the RIDE server.
+- **Placement** (`Place`, seeded `seed ^ 0x5709A`, identical on every peer). A trigger is a walkable `Cell.Floor` cell in the stop's
+  room, reachable on foot from the platform (as the siege's sites), not reserved, not water, not under a ledge and not a platform cell.
+  It has a cover (`AmbushRules.CoverFor`: rubble first, else a wall at its level or lower), stands at least 4 m from the cage, and
+  stands 3 cells (Manhattan) from every point placed before it. Rubble candidates go first. The creature is the siege roster's (one brute
+  a stop at most). On the shipped floor 12: 2, 3, 3 and 4, 12 in all, after its 7 corridor points.
+- **The spring:** 1.5 s after the first hero steps off at the stop (`SpringAfterStepOff`), or 6 s after the arrival when nobody does
+  (`SpringAfterArrival`). Once a hero has stepped off, only the 1.5 s rule decides, so a step-off at 5.5 s springs at 7.0 s.
+  An `Arrived` arms it; `Departed`, `Wrecked`, `OnFoot` and `Restored` disarm it, so a restore never arms.
+  `[ambush] stop k: n burst from the walls t s after {the first step-off|the arrival}`.
+- **Once ever.** The points are appended after the corridor ones (`AmbushSpawner.AddStopPoints`), so their indices in the saved
+  `FloorStateDto.SprungAmbushes` follow the corridor points' (floor 12: 7 onward). A sprung one never springs again, through a save and
+  load or a wipe's rise. An armed point not yet sprung is not saved (T4-M4, deferred).
+
+**The hijack** (`HijackRules`, `RailController.Hijack.cs`, `StopTrapController.Hijack.cs`; plan 16 Tasks 5-7, spec section 3).
+- **Conditions** (`MayStart`): the train held at a sieged stop (1 to N−2), not halted on the line and not standing past its stop;
+  **no hero seated anywhere in the train, up or downed** (Ruling 8: one is enough to guard it); no chaser or solo relief live; not in a
+  rise's grace; no hijack live; and room to roll (`RollRoom`: at least 5 m of roll behind the stop).
+- **Pacing** (`MayTag`, spec Ruling 2): a siege creature of wave 2 or later is tagged as it comes through, at most one a wave. It must
+  be a cinder imp or an ember hound, with no hijack live and 20 s since the last one ended (`NextTagAfter`). `[hijack] stop k wave w:
+  {name} tagged`. `NoHijack` (every test flow but `=wonback` and `=gotaway`, and every perf phase) tags nobody.
+- **Runners** (`RunForCartState`): a tagged creature runs, at 10 Hz decisions, for a point 0.7 m out from the cart's side while the cart is
+  free. Otherwise it runs for the nearest coupled wagon with a free spot (not wanted by another runner, then crewed, then nearest).
+  Within 2 m (`ClimbReach`) it climbs for 0.8 s (`ClimbSeconds`). A party hit cuts the climb, and the runner fights its attacker for
+  3 s (`FightBackSeconds`, Ruling 9) before it runs again. A runner is released at the brake, the return or a got-away (`MayRun`).
+- **The driver** (`TakeDriver`): the cart carries it at its driver spot (`MineCart.DriverSpotTransform`: mid-tub at the front rim, facing
+  in). The countdown is cancelled, and the nearest up freed crew member shouts "They've got the cart!" (once a hijack; logged with
+  nobody to say it). A wagon's hijacker climbs that wagon's rim. While the train is at its stop or hijacked it targets heroes, never
+  the crew. After a normal departure it is the ride's ordinary boarder (the T6 crew-safety ruling).
+- **The glow:** 3 s (`BrakeGlow`) with the train still held, its hands glowing (`TelegraphFx.HandGlow`) and the BoarderThrow telegraph
+  told at 0 and 1.5 s (`GlowRetell`: a client's glow lasts 1.5 s). Then "A cinder imp lets the brake off! The train rolls back!".
+- **The reverse:** the run's `Dir` −1 with `Reversing` set. `Facing` stays +1, so the cart is unturned and the wagons stay on the lower-S
+  side, leading at S − 2.6k. It ramps at 0.5 m/s² (`RollBackAccel`) to 4 m/s (`RollBackMaxSpeed`) toward its limit. It judges run-overs
+  and warns from its leading face (the last wagon's back, `HijackLead`). It raises `Hijacked`, never a departure or an arrival: no
+  ride arms, no snapshot, no stop counted, no watchdog.
+- **Boarding** (`MayBoard`, Ruling 12): a hero on foot may board while it rolls back, brakes or returns at 4.05 m/s or less.
+- **The grip:** the driver has a wagon boarder's grip (`BoarderRules.Grip` 3). Each counted party hit from foot or from the cart takes 1
+  (a spell all of it); never a hit from a wagon. At 3 it is knocked off alive beside the lane, aggro on: "{hero} knocks the {kind} off
+  the cart!". A killing blow is its death instead. Either way the brake goes on (6 m/s², the cart's own).
+- **The return:** stopped on the brake, the train rolls forward to its stop at 2 m/s (`ReturnSpeed`), warning as a party-lane chaser
+  does: "The train rolls back to the platform.". Held again, `HijackOver` is raised and the gate, the cage hold and the countdown work as
+  before. A driver knocked off in the glow ends the hijack at once.
+- **The limit** (`LimitS`): 40 m back (`RollBackReach`), or less, so that the leading face stops 5 m (`HoleClear`) short of a hole or a
+  live hazard of the line behind. Pinned per stop on the shipped floor (`HijackRules.ShippedLimits`, measured 2026-11-25 by
+  `--test-stop-trap=limits`, which fails if one moves by more than 0.1):
+  - stop 1 (S 283.187): 243.187, the 40 m cap;
+  - stop 2 (S 488.841): 448.841, the cap;
+  - stop 3 (S 770.109): 730.109, the cap (ride 3's broken bridge is on the slag line, not the party lane behind it: the T7 ruling);
+  - stop 4 (S 1022.470): 1007.556, 14.9 m of roll, cut by ride 4's bridge span 903.056..991.056, standing or gone.
+- **The throws** (Ruling 13): while it rolls back with its driver, a prisoner is put off alive every 3 s (`ThrowEvery`; the first at 3 s),
+  the last coupled wagon first, its seat 5 then 4. It is set down beside its wagon (`CrewRescueController.PutOffAlive`, never the
+  lethal throw), follows the party, and is never counted lost.
+- **Gone** (`GoneAtLimit`, Ruling 14): at its limit with its driver still aboard the train got away. "The train rolls on into the dark.".
+  The crew still aboard are set down alive, a hero in it beside the lane, and the driver and every boarder leap off into the fight.
+  The cart is hidden and every wagon uncoupled. No spare is spent.
+- **The relief:** 12 s later (`ReliefAfter`) the cart shows again at the limit with full plating and W1..W4 coupled fresh and empty,
+  and rolls in at 4 m/s, warning as a party-lane chaser. "A relief train rolls up to the platform.", and a crew member's "Another
+  train! Get us aboard!". Held at its stop, it raises `HijackOver`. It is not an arrival, and the solo relief cart's count is untouched.
+  While the train is gone, the parked train on ride 5 stays in the way: a train gone into the dark is still a live cart, not a lost one
+  (`ParkedLiftDue`; found by the RIDE pass, plan 16 Task 9).
+- **The thrown crew's wait** (spec Ruling 3): a crew member a hijack put off books a seat from 60 m (`ThrownBoardReach`; everyone else
+  25 m). The departure waits while any is still on the way, up to 30 s (`ThrownWaitMax`) after the train is held again. At that cap a
+  thrown walker within 60 m sits in at once; farther ones stay on foot as ordinary freed crew. The thrown status ends at the cap, at
+  the departure (`HijackRules.StillThrown`), or on a seat or a death.
+- **Saves:** a hijack is never saved. A load or a wreck stands the train whole and forward (`ResetHijack`: a carried driver set down
+  beside the lane), and the thrown crew become ordinary freed crew (`Restored`).
+
+The flows: `--test-stop-trap=siege`, `=ambush`, `=roll` (the driverless reverse), `=wonback`, `=gotaway`, `=limits` (see "Build, test, run").
 
 ### The relief cart (single player)
 
@@ -2987,6 +3144,43 @@ Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check
 `IslandSolvabilityTests.cs` (the island's carving, its 116-row sweep and its proof), `tests/Adventure/CrewRulesTests.cs` (home and lost) and
 `tests/Adventure/RailEncounterPlanTests.cs` (the ride plans and their validation). `tests/` is local and not in git.
 
+#### The alcove shooters (plan 16 Task 8, spec section 4)
+
+Enemies hidden in the track's refuge pockets shoot the seated riders as the train goes by (`AlcoveRules`,
+`RailEncounterController.Alcoves.cs`, `Enemies/Ai/AlcoveState.cs`). Code places them, not the floor data. They appear on any railed
+floor with 5 rides (6 stops) when `Settings.Ambushes` is on and `--no-ambush` is off, and never on the RIDE server (Ruling 2).
+- **The table** (`For`; the counts are **maximums**, Ruling 17). Each ride's preferred stretch is a fraction of the ride:
+  ride 1: 4, 0.50-0.75; ride 2: 5, 0.55-0.65; ride 3: 5, 0.40-0.70; ride 4: 3, the whole ride; ride 5: 4, 0.05-0.18.
+- **The clearances** (`Clear`), each in metres of party S:
+  - **Hard**, 30 m (`HardClear`): the ride's stops, the dark, the bridge and the cavern, the switch windows, and ride 5's pit, pour,
+    trestle, hammers, parked train and exit bridge.
+  - **Soft**, 12 m (`SoftClear`): every other piece or encounter (barricades, slag carts, lone boarders, beams, heaps, the thrower).
+  - A pocket a refuge seeker has claimed is skipped, and `SeekRefuge` skips a pocket with a live shooter.
+- **The tiers** (`Place`): enemy lane inside the stretch, enemy lane outside it, party lane inside, party lane outside. Within a tier the
+  unlit pockets go first (lit is an even index in the pocket list, as `DungeonBuilder` lights them). Each group is shuffled by
+  `seed ^ 0xA1C0 ^ ride`, and the picks stand at least 8 m apart (`Spacing`).
+- **The measuring flow:** `--test-stop-trap=pockets` prints every pocket's ride, lane, S, lamp and its distances to the nearest stop, hard
+  and soft span, and each ride's clear and placed counts. It fails unless those equal `AlcoveRules.ShippedCounts`, the floor places 12 or
+  more (`MinTotal`) and some ride places 4 (`MinBestRide`).
+- **Placed on the shipped floor 12** (measured 2026-11-25, plan 16 Task 8, pinned as `ShippedCounts`): ride 1: 4 (16 clear pockets),
+  ride 2: 5 (10), ride 3: 5 (9), ride 4: 0, ride 5: 0. 14 in all. On rides 4 and 5 the dark, the cavern, the split's and the switches'
+  windows and ride 5's pieces leave no pocket 30 m clear (an owner feel call: one table to retune).
+- **The shooters:** forge priests or bandit archers, 50/50 seeded (`Kind`). They are `IsReinforcement` (re-sent on each re-arm of the ride:
+  no loot farm) and `Pinned` in their state (only death takes them out of it). They are armed with the ride (after its standers), and
+  cleared with it (`ClearRide`: at the arrival, a wreck, a restore or on foot).
+- **The state** (`AlcovePhase`, `Next`):
+  - **Hidden:** untargetable (the server refuses every hit; no wire), posed at the pocket's back (1.2 m from its centre, away from the
+    lane), checking the distance every 0.25 s.
+  - **StepOut:** with the train's front 35 m or less before its post (`WakeAt`) it steps to the mouth (0.8 m toward the lane) over 0.5 s,
+    targetable from then on.
+  - **Shooting:** a wind-up every 1.6 s (`ShootEvery`) at the nearest seated hero within 25 m (`ShootRange`) and in its own sight. A co-op
+    client winds up on the `Alcove` telegraph too (`TelegraphRules.WindsUp`). A stagger drops the bolt.
+  - **Done:** freed once the train's back is 30 m past its post (`GoneBehind`), for good: none wakes again on a reverse roll, a return or
+    a relief.
+- **Lead aim** (`Enemies/Core/LeadAim.cs`): each bolt is aimed at the target's earliest positive intercept, given its cart's velocity and
+  the bolt's speed (the target itself when there is none), 1.2 m above its feet.
+- The flow `--test-stop-trap=alcove` rides rides 1-3 with them, and reads rides 4 and 5 from their arming lines (see "Build, test, run").
+
 ### Crevasses
 
 A railed floor with `FloorSpec.Crevasses` on has drops cut into its rock (plan 10; floor 12 in the built-in campaign).
@@ -3724,6 +3918,33 @@ mover's move on the same tick the first does. A peer's rows go when it leaves or
 full snapshot (`EnemySnapshotMemory.Keep`: the full snapshot's roster is kept, so a long floor 12 of portal waves, hounds and slag riders
 never grows it), and all go with a floor change. No message changed shape; Protocol stays 17.
 
+#### The stop trap on the wire (plan 16)
+
+**Protocol 18** (`Protocol.Version`, from plan 16 Task 5; `MessageKindCount` stays 114: no new message kind).
+- `CartStateDto.Hijack` is the party cart's `HijackPhase` as a byte. A client sets its `RailController.Hijack` from it, and
+  `Party.Reversing = HijackRules.Reversing(phase)` (RollingBack and Braking). The run's `Facing` (`Reversing ? −Dir : Dir`) poses the
+  cart unturned, its wagons on the lower-S side, and signs the curvature. `MineCart` and `TrainWagon` give their riders a negative speed
+  while reversing (`Velocity`); `Speed` stays a magnitude for the lean, the field of view and the sound.
+- `CartInput.DriveAccel`: the roll back drives on 0.5 m/s² (`HijackRules.DriveAccelFor`, −1 for the cart's own). The follower takes it
+  from the DTO's phase (`CartFollower.Apply`), so its prediction ramps as the server's does.
+- `TargetOverride` is now sent for the party cart while it rolls (Ruling 27: the roll's 4 m/s, the return's 2, the relief's 4), and −1
+  while it stands. Every ride still sends −1, as before.
+- The driver rides as `Boarders[2]`: the cart's boarder list is `[rim 0, rim 1, driver]` whenever it is sent. A client carries the
+  enemy at `DriverSpotTransform` (`RailNet.ReconcileDriver`) and drops it where it stands when the server's list loses it.
+- The glow is told as `EnemyStateMsg` BoarderThrow at 0 and 1.5 s, so a client's 1.5 s glow covers the server's 3 s.
+- The cart's `Hidden` flag carries the got-away. A client hides every wagon its state's `Train` no longer lists, and shows them
+  again when the relief's state couples W1..W4.
+- The siege's portals and creatures, the wall ambushers' bursts and the alcove shooters use the wire as it was: `PortalOpenedEvt`,
+  `EnemySpawned`, `AmbushSprungEvt`, the enemy snapshots. A shooter's untargetable phase is the server's alone.
+
+**The RIDE pass's hijack steps** (plan 16 Task 9, Ruling 21; "The RIDE net test" below, between its steps 6 and 7). The RIDE server has no siege, wall ambush or shooters
+(Ruling 2), so its test hook is the only hijack: `RailController.DebugHijack()` spawns an `enemy.horde_cinder` and makes it the driver at
+once, its hp held above 1. `DebugStrikeDriver(member)` deals one sure melee blow as that party member's. Both are gated as `DebugWreck` is.
+Each peer prints a line every 0.5 s of the server's clock while a hijack is live:
+- the server: `[net-server] ride: hijack {phase} S= V= t= wagons=W1:S,… facing=+1`;
+- a client: `[net] ride: hijack {phase} here S= V= t= wagons=… facing=…`.
+Each wagon's S is measured where its body stands on the line (`HijackWagonsTrace`), not reckoned from the cart's.
+
 #### The watchdog
 
 `CartWatchdog` (engine-free) frees a cart that should move but has made no 0.5 m of progress in the last 10 s. It has:
@@ -3874,10 +4095,11 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 - The remedy is to switch to `balanced` or `performance` (Fn+Q on the Legion, or `echo balanced | sudo tee /sys/firmware/acpi/platform_profile`) and run it alone. The script warns before a RIDE run when the profile reads `low-power`. A run with three godots at about 600 MHz (`grep MHz /proc/cpuinfo`) is invalid.
 
 **Timeouts.**
-- The server runs with `--quit-after=660` (600 before plan 14 Task 7; a test server quits after 120 s unless told) and ends anyway once
-  empty. Its own RESULT fails at 560 s.
-- The first client and the joiner run with `--quit-after=540` (480 before plan 14 Task 7, which raised all three for the long train's
-  slower rides and its new steps; 390 for the joiner before plan 13 Task 7). The script's header puts the first client's own run at
+- The server runs with `--quit-after=760` (660 before plan 16 Task 9's hijack steps, 600 before plan 14 Task 7; a test server quits
+  after 120 s unless told) and ends anyway once empty. Its own RESULT fails at 660 s (560 before plan 16 Task 9).
+- The first client and the joiner run with `--quit-after=640` (540 before plan 16 Task 9; 480 before plan 14 Task 7, which raised all
+  three for the long train's slower rides and its new steps; 390 for the joiner before plan 13 Task 7). The hijack steps at stop 3 add
+  about 50 s (the controller's runs: the first hook at server t 194.6, the departure from stop 3 at t 244.5). The script's header puts the first client's own run at
   about 330 s.
 
 **The script, in order:**
@@ -3913,7 +4135,27 @@ first offer beyond the plain reach plus the seated lag allowance; the server log
 both sides. As the throw shows on the joiner's screen, the joiner presses "Set the switch back" from its seat, and the server
 refuses it within 1 s of the first client's toggle (`seated window: set back … ignored`); the joiner's get-out waits for that press. Across, the live switch back is offered in the client's seated window only now (plan 11): the client presses it on the window's first frame through the intent (`[net] ride: ride 3's switch_back offers "Throw the switch" in the seated window … thrown through the intent from the seat`), the server traces `prop:switch:{back}:thrown` and takes it (`[rails] switch r3_switch_back taken at S=…: back from …`), and the cart comes home. Each client (the joiner, thrown and resynced, from its own screen) prints the first time its cart state's `CrossBack` turns from NaN to a number on ride 3, with the lane blend read `SwitchStretch` + 2 m on: `[net] ride: crossed back here: CrossBack {cb} told at front S={f} (the back's points {p}), blend {b} at S={s}`; the script wants `|cb − p|` ≤ 0.5 and the blend ≤ 0.01 on both, and no `[rails] the cart runs off the broken bridge` anywhere in the server's log. Home with the back taken (its `CrossBack` here), the client presses it once more from the seat, the intent a mashed second press would send (`[net] ride: ride 3's switch_back pressed once more from the seat after the cart took it (a mashed press, switch:{back}) …`, plan 12 Ruling 21): after the server's `back from` it must print `[net-server] interact switch:{back} from Rider: the deadly lever was thrown (taken …): ignored quietly`, and `Too late to throw it.` must never appear in the client's log. Ride 3's buckets pour on the server's schedule.
 6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`), with one of stop 1's crew left in W1 and the thrown one gone, no corpse (`[net] ride: after the rebuild the thrown … gone here: no corpse (ok)`).
-7. **Ride 4, both aboard.** At stop 3 the server puts the thrown joiner beside the cart; it boards again through its intent, and only then do stop 3's holders die, so the cart leaves for real with both clients aboard (`the cart departs stop 3 with 2 player(s) aboard`). On a longer line every stop up to the one before the kiln's goes the same way. **The double press** (plan 14): 6 m out of stop 3 both clients turn back and press "Climb back to wagon 1" on their first offered frame (a client whose screen already shows W1 taken sends it in flight); the next two server lines for `wagon:1` must be one `move accepted` and one `move refused (the place is booked)`, from different names, and the winner climbs forward into the cart again a second later. Each client prints the train as it rolls out of the cavern's stop: four wagons, the rear the front less `TrainRules.Length` (`[net] ride: cavern: the train rolls out of stop 3 here with 4 wagon(s) coupled (Train [1, 2, 3, 4]), its rear at S=758.6, 12.6 m behind its front`); every rear in the cavern, runaway and take code reads `Party.FrontS − TrainRules.Length(Train.Count)`. Ride 4's dark, runaway and split (plan 12) are real in the pass (no hold), and the script checks them before the clock checks:
+   **Between steps 6 and 7: the hijack at stop 3** (plan 16 Task 9, Ruling 21), before the joiner boards again there. The first client, its prisoners left
+   behind, gets out through its intent (cart:0); the joiner, put beside the cart after its throw, stays on foot.
+   - **Won back.** `DebugHijack` makes a cinder the driver; it glows 3 s and the train rolls back. The joiner presses "Board the cart"
+     through its intent on the first frame the rolling-back cart offers it, and must be seated with V ≤ 4.05 (`[net-server] ride: Joiner
+     boarded the rolling-back cart through the intent (V=…)`, `[net] ride: boarded the rolling-back cart here`). The server's three blows
+     for it, 0.5 s apart, must read grip 1, 2, then off (`[net-server] ride: hijack: blow k on the driver N for Joiner …: grip k|off`,
+     with `[rails] … knocked off the cart by Joiner after 3 hit(s)`). The joiner must see the driver at the driver spot within 0.5 m
+     (`[net] ride: the driver N aboard the cart here …`) and off it within 1 s of the server's knock-off. Then the brake and the return, and
+     both clients print `held again at stop 3 here … (the return)`. The knocked-off driver is killed by the test's hand 1 s on.
+   - **Got away.** The joiner gets out. With both on foot and nobody a hijack put off still on the way, a second `DebugHijack` (no 20 s
+     wait) rolls the train to its limit (730.109) and it is gone: the cart is hidden on both clients within 1 s of the server's Gone. The
+     relief train comes 12 s later and is held at StopS[3] (770.109) on both within 1 s of the server and within 0.05 m. The server
+     puts both beside it. The first client boards, then the joiner (the old step's "boarded again at stop 3"), and stop 3's holders die.
+     The departure waits for the crew it put off, who must be booked as thrown (`[CrewRescue] … books … put off by the hijack`) and seated
+     at the departure (`the thrown crew [...] seated in the train at the departure from stop 3 … (ok)`). The crew a hijack put off are kept
+     above half their hp on foot, as the train's own crew are.
+   - **Agreement.** An awk pairs each client's half-second hijack lines with the server's nearest by t (within 0.25 s). Each client needs
+     at least 8 pairs, every one with |ΔS| ≤ 1.5 m and |ΔV| ≤ 0.3 m/s, every wagon behind (below) the cart on both sides, and the
+     client facing +1 while it rolls back or brakes (`--- hijack pairs: N pair(s), worst D m`).
+   - Every failure prints its own `NET TEST: FAIL (…)`.
+7. **Ride 4, both aboard.** At stop 3 the server puts the thrown joiner beside the cart; after the hijack steps above it boards (the relief train) again through its intent, and only then do stop 3's holders die, so the cart leaves for real with both clients aboard (`the cart departs stop 3 with 2 player(s) aboard`). On a longer line every stop up to the one before the kiln's goes the same way. **The double press** (plan 14): 6 m out of stop 3 both clients turn back and press "Climb back to wagon 1" on their first offered frame (a client whose screen already shows W1 taken sends it in flight); the next two server lines for `wagon:1` must be one `move accepted` and one `move refused (the place is booked)`, from different names, and the winner climbs forward into the cart again a second later. Each client prints the train as it rolls out of the cavern's stop: four wagons, the rear the front less `TrainRules.Length` (`[net] ride: cavern: the train rolls out of stop 3 here with 4 wagon(s) coupled (Train [1, 2, 3, 4]), its rear at S=758.6, 12.6 m behind its front`); every rear in the cavern, runaway and take code reads `Party.FrontS − TrainRules.Length(Train.Count)`. Ride 4's dark, runaway and split (plan 12) are real in the pass (no hold), and the script checks them before the clock checks:
    - **The dark.** Each client prints `[net] ride: dark stretch here from S={from} lamps out {n} ({k} pocket light(s) hidden here)` from its own build, and its start and count must be the server's `[rails] dark r4_dark from party S={from} to …: {n} pocket lamp(s) out` (n > 0). Its own scene must have k = n of those lamps' lights hidden.
    - **The runaway.** The server prints `[rails] t=… runaway r4_runaway breaks loose …`, and each client, from the server's cart corrections, `[net] ride: the runaway runs behind the train here (cart {id}, r4_runaway; its S=…, our train's rear S=…, … m between)`. The ride's runaway carries its set piece's id as its `CartStateDto.EncounterId` (`RailNet.ClientRideRunaway`), so a traffic runaway, which goes unnamed, is never taken for it. On the grid (`ride cart={id} kind=Runaway`, the server's at `armed=4`), that cart needs at least 8 pairs on the party line on each client (S ≥ 100: the spur's own S is short), each within 2 m.
    - **The split from the remote seats.** The joiner sends its seat's press (the lever's `InteractIntent`) with its front 2.5 m short of the window's start, as a cart running ahead of the server's would on its first window frame (`[net] ride: the joiner presses ride 4's split from the seat … m short of the points here, short of its window …`). The server must take it (`seated window yes`), hold it with its own front in its early lead, short of its window and within 5 m before it (`[net-server] ride: ride 4's split held to the points for Joiner with the server's front {d} m short of them …`, read within a tick of the press; the window from the split's build line), pass the points straight (`[rails] split r4_split: the train passes straight`) and then throw it behind the train (`[rails] split r4_split: {name}'s throw held to the points (… m short): thrown behind the train`, or `(pressed … m past them, the branch not yet decided)`; `{name}` is the last presser's, the Joiner's or the first client's when its press re-held the throw). The first client presses it on its own first frame with its front past the points, through `VrUse` (`[net] ride: ride 4's split offers "Throw the split behind us" | "Set the split back" in the seated window, … through the intent from the seat ({past} m past the points here) as switch:{split}`: which it offers depends on whether the held throw shows there yet). The server must take that press too and keep the lever thrown. A throw that lands while the server is still short of the points (the client's cart ahead) is held again, and the server echoes it as `Rider used switch:{split}: now straight`, since a held lever stands straight. A set-back is refused by plan 8's guard or the held throw's 1 s guard. So the script fails only on a `Rider used switch:{split}: now straight` after the held throw went in, which would be a set-back that went through. The party must never take the spur (no `the train takes the spur` or `The cart takes the spur`). Then the runaway takes the spur and goes into the crevasse (`[rails] split r4_split: the runaway takes the spur at S=…`, then `[rails] t=… runaway r4_runaway goes off the split's spur into the crevasse …`, in that order after the throw).
@@ -4010,7 +4252,14 @@ way if one comes (the line says `by the golem burst N` or `none in this pass`); 
 first, so none came in the runs.
 
 **The books.** An awk (`TRAINS`) compares the grid's book points: every compared point must read `train=1,2,3,4` on both sides, the
-first client's all along and the joiner's from 1 s after each Ready, with at least 20 client points and 10 joiner points.
+first client's all along and the joiner's from 1 s after each Ready, with at least 20 client points and 10 joiner points. The points
+from the got-away's Gone − 0.5 s to its relief's roll-in + 1 s are left out (plan 16 Task 9: no train is coupled then, `train=-` on every
+peer; 27 points in the controller's runs).
+
+**The throw's glow** (plan 16 Task 9, the T6 carry). A hijack's driver is told as BoarderThrow too, so each client keeps every enemy's last
+BoarderThrow telegraph by its net id. The throw takes its wagon's boarder's own telegraph, or, with no boarder on that rim, the latest of
+an enemy never seen driving the cart. The script requires the glow's hound to be the server's test hound (200006 in both of the
+controller's runs).
 
 **Measured** (plan 14 Task 7, the controller's runs 2 and 3, `performance` profile, load about 1.2; both `NET TEST: ok`):
 - the move: "Climb back to wagon 1" offered 0.02 s after the turn (S 91.2) and pressed on that frame; the server's landing 0.60 s after
@@ -4029,6 +4278,19 @@ first client's all along and the joiner's from 1 s after each Ready, with at lea
 - the cavern: the train out of stop 3 with four wagons, its rear at S 758.6, 12.6 m behind its front; the chaser halted 1.50 m behind the
   train's last body at stop 5 (S 1231.7) with 4 wagons;
 - the staging: 3 natural hounds freed off crewed wagons by the guard (below), the crew topped up twice.
+
+**Measured** (plan 16 Task 9, the controller's two runs on 832a62c, `performance` profile, alone; both `NET TEST: ok`, the wipe-rise watch ok):
+- the joiner boarded the rolling-back cart at V 0.0 (0.02 m/s on the server's `[rails]` line), at S 770.11, about 0.05 s into the roll;
+- the knock-off: the driver (net id 200016) off at server t 199.120 after blows at 198.120, 198.620 and 199.120. The joiner showed it off
+  0.025 s later in run 1 and 0.022 s in run 2. The brake went on at S 769.5 at 0.77 m/s, 0.6 m short of the stop, and the train was held
+  again at t 200.136;
+- the got-away: Merrin Ash (W1 seat 4) put off 3.00 s into the roll; gone at the limit 730.109 at t 218.952; the cart hidden on both
+  clients within 0.004 s of the server's Gone; the relief in 12.0 s after it and held at 770.109 23.4 s after it, on both clients within
+  0.005 s; Merrin Ash booked W1 seat 4 from 2.9 m as thrown crew and was seated at the departure (t 244.5);
+- the hijack pairs: 95 for each client in both runs, worst 0.09 m (client) and 0.09 m (joiner) in run 1, 0.06 and 0.07 m in run 2, no
+  fault (V, wagons, facing); the party cart's S pairs, client against server, at most 0.097 m and 0.104 m;
+- the train books: 27 grid points of the got-away left out in both runs;
+- the throw's glow on both clients was the test hound's own (net id 200006).
 
 **The markers the script pairs.** Both sides print on a shared 0.5 s server-time grid:
 - `ride t=… S=… mode=… stop=… armed=…`;
@@ -4056,11 +4318,19 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - the shoves that put a hero within reach;
 - `DebugKillHolders`, `DebugWreck` and `TestAskFloorAgain`;
 - `RailNet.RideTraceOff` (before the wrecks, and for good from the bridge's take on);
-- the bridge's take's `rc.Restore(3)` (step 14), and the joiner's own `DismissBotIntent` of its bot before it.
+- the bridge's take's `rc.Restore(3)` (step 14), and the joiner's own `DismissBotIntent` of its bot before it;
+- plan 16 Task 9: `DebugHijack` and `DebugStrikeDriver` (the hijack at stop 3), the test's hand killing each test driver 1 s after its knock-off or its
+  train's going, the thrown crew's top-up on foot, and the shoves beside the relief train.
 
 #### Known gaps
 
 **Not exercised live** (rule or unit tests only):
+- **plan 16's stop trap over the wire.** The RIDE server has no siege, wall ambush or alcove shooters (Ruling 2), so their portals,
+  creatures, bursts and wind-ups reach a co-op client only through the solo flows' rules and the wire's existing messages
+  (`PortalOpenedEvt`, `EnemySpawned`, `AmbushSprungEvt`, the `Alcove` telegraph). The RIDE pass sees the hijack alone, made by its hook;
+- **the driver's blows are the server's hook** (`DebugStrikeDriver`, pre-flight F19). The joiner's boarding goes through its intent, and
+  the grip's count and the knock-off are checked on both peers. But a remote player's own swing reaching the driver's grip is not
+  exercised over the wire, so a bug there stays unseen until play;
 - real latency and jitter: the pass runs on localhost, and ±150 ms of jitter is tested only in `CartFollowerTests`;
 - on a client: a seat taken by another occupant, a missed leap, and the catch-up re-flying a leap in the air;
 - a bot hopping in with its owner online, and two players pumping or braking together;
@@ -4113,6 +4383,12 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
   - unmeasured: the thrown prisoner's arc on a sharp curve (it ignores the train's speed: 3.6–4.4 m out of line on the measured straight).
 
 **Known differences, accepted for now:**
+- **plan 16:** the rides place fewer alcove shooters than the table's maximums (4/5/5/3/4): `AlcoveRules.ShippedCounts` pins
+  4/5/5/0/0, 14 in all, because the 30 m hard clearances leave rides 4 and 5 no pocket (an owner feel call). A shooter cannot be
+  pre-empted while it hides: it is untargetable on the server until it steps out at 35 m, and a co-op client is not told so (it sees it as
+  Idle, like a runner: `EnemyStateCodes.Names` has neither `Alcove` nor `RunForCart`). The tick diet's sleepers run their AI one tick in
+  four, so a far guard answers a group order up to three ticks (50 ms) late. Frame rate: see "Known gaps" under "Frame rate" (the siege's
+  1% low).
 - A partly knocked heap shows whole on clients, and so does a barricade with one or two hits in it (only "cut", "smashed" and "standing" go on the wire).
 - **The RIDE pass's set-piece clocks and party pairs need an unclamped CPU.** Under the laptop's ACPI `low-power` profile the cores clamp to about 600 MHz once the third godot starts (ride 2), the server's physics falls behind its clock, and the clock and pairs checks fail. That was measured, not a code change: a890483 lags the same way, and every code section slows at once (see "The RIDE net test"). Run it on `balanced` or `performance`. The check is not loosened.
 - A thrown remote body lands still, where a solo one slides at 0.3·V.

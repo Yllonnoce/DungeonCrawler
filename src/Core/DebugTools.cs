@@ -132,7 +132,7 @@ public partial class DebugTools : Node
     public bool NoPortals { get; private set; }
     /// <summary>
     /// No siege creature is tagged as a hijacker (plan 16 Ruling 22): set for every --test-stop-trap variant but =wonback and =gotaway, and for every
-    /// --test-perf phase. The test hooks obey it as the waves do: the stop trap's <c>DebugTagNext</c> (and the RIDE hook built on it) tags nothing while it is set.
+    /// --test-perf phase. The stop trap's test hook <c>DebugTagNext</c> obeys it as the waves do. The RIDE server's <c>RailController.DebugHijack</c> tags nobody: it makes a driver directly (no siege there).
     /// </summary>
     public bool NoHijack { get; private set; }
     /// <summary>--no-gathering: the safe room's clock never sends creatures to its door.</summary>
