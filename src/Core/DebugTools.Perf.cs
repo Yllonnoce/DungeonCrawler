@@ -16,7 +16,10 @@ namespace DungeonCrawler.Core;
 // more (Enemy.DebugHoldHp) and put back to full HP every frame (Enemy.DebugFillHp: a forge priest under 30 % would flee and change the
 // load), so the load stays the same through the measure (it fails if the alive count changes); 5 s discarded, 20 s measured. It is the tick diet's before-and-after row, and stands in for the stop siege's "before". =ride
 // (ambushers on): rc.Restore(0), the party seated, departs and rides ride 1 with every set piece and enemy alive; measured from 5 s after
-// the departure to the arrival at stop 1. Prints the phase's [perf] line and [perf] RESULT ok.
+// the departure to the arrival at stop 1. =siege (plan 16 Task 3; portals on, the one phase that runs them): rc.Restore(4) starts stop 4's
+// real siege, the party steps out beside the cart onto the platform, and each wave is hurried (PortalSpawner.DebugSiegeNow: the next
+// in 0.5 s) until one fills the siege's cap; every enemy is held at full HP as in =crowd, so the load stays at the cap; measured for 20 s
+// from the wave that fills it, once its creatures are all through. Prints the phase's [perf] line and [perf] RESULT ok.
 public partial class DebugTools
 {
     private bool _testPerf;
@@ -64,6 +67,7 @@ public partial class DebugTools
         if (_pfStep > 0 && wall is { } frame) _pfWindow.Add(frame);
 
         if (_pfPhase == "crowd") RunPerfCrowd(main, layout, rc, Fail);
+        else if (_pfPhase == "siege") RunPerfSiege(main, layout, rc, Fail);
         else RunPerfRide(main, layout, rc, enc, Fail);
     }
 
@@ -78,7 +82,7 @@ public partial class DebugTools
             if (a.Downed) { a.Revive(); _pfRevived++; }
             a.State.Hp = a.State.Stats[Characters.Stat.MaxHp];
         }
-        if (_pfPhase != "crowd" || _pfStep == 0) return;
+        if (_pfPhase is not ("crowd" or "siege") || _pfStep == 0) return;
         _pfHeld.Clear();
         foreach (var n in GetTree().GetNodesInGroup("enemies")) // the crowd's load held: nobody dies of the party's blows (new arrivals too)
             if (n is Enemies.Enemy e && IsInstanceValid(e) && e.IsAlive) { e.DebugHoldHp = true; _pfHeld.Add(e); }
@@ -114,6 +118,57 @@ public partial class DebugTools
                 var end = PerfWindow.CountEnemies(GetTree());
                 GD.Print($"[perf] crowd: the measure ends with {end.Alive} enemies alive ({end.Aware} aware, {end.Asleep} asleep)");
                 if (end.Alive != _pfAtStart.Alive) { fail($"the crowd's load changed: {_pfAtStart.Alive} alive at the start, {end.Alive} at the end"); return; }
+                PerfReport();
+                break;
+            }
+        }
+    }
+
+    private const float PerfSiegeMeasure = 20f, PerfSiegeFill = 40f;
+    /// <summary>=siege: the wave that fills the siege's cap has opened (alive and its creatures together at the cap).</summary>
+    private bool _pfFilled;
+    private int _pfSiegeWaves;
+
+    private void RunPerfSiege(Main main, FloorLayout layout, RailController rc, Action<string> fail)
+    {
+        var party = main.Party;
+        if (Adventure.PortalSpawner.Instance is not { } portals) { fail("floor 12 has no portal spawner"); return; }
+        switch (_pfStep)
+        {
+            case 0 when _pfClock >= 1.5f:
+            {
+                if (rc.StopS.Length < 6) { fail($"floor 12's line has {rc.StopS.Length} stops, not 6"); return; }
+                Action<int, int, IReadOnlyList<GridPos>, IReadOnlyList<int>, int, int> opened = (stop, wave, _, counts, alive, cap) =>
+                {
+                    if (stop == 4 && alive + counts.Sum() >= cap && !_pfFilled) { _pfFilled = true; GD.Print($"[perf] siege: wave {wave} fills the cap ({alive} alive + {counts.Sum()} = {cap})"); }
+                };
+                Adventure.PortalSpawner.DebugWaveOpened += opened;
+                _staticUnhooks.Add(() => Adventure.PortalSpawner.DebugWaveOpened -= opened);
+                rc.Restore(4); // the real siege: the restore starts stop 4's with the load's grace
+                foreach (var a in party.Adventurers) if (IsInstanceValid(a) && a.Control == ControlKind.Companion) a.Stance = Characters.Stance.Hold;
+                if (PerfBeside(main, layout, rc.Cart.GlobalPosition) is not { } stand) { fail("no walkable cell beside the cart at stop 4"); return; }
+                party.Teleport(stand + Vector3.Up * 0.3f, rc.Cart.GlobalPosition);
+                if (portals.SiegeStop != 4) { fail($"rc.Restore(4) started no siege at stop 4 (siege stop {portals.SiegeStop})"); return; }
+                portals.DebugSiegeNow();
+                _pfSiegeWaves = portals.SiegeWaves;
+                GD.Print($"[perf] siege: rc.Restore(4), the party beside the cart at {DungeonBuilder.WorldToCell(stand)}, stop 4's siege hurried; lethality {TierRules.Lethality}");
+                _pfStep++; _pfClock = 0f;
+                break;
+            }
+            case 1:
+                if (portals.SiegeStop != 4) { fail($"stop 4's siege ended (siege stop {portals.SiegeStop})"); return; }
+                if (portals.SiegeWaves != _pfSiegeWaves) { _pfSiegeWaves = portals.SiegeWaves; if (!_pfFilled) portals.DebugSiegeNow(); } // wave on wave until the cap is full
+                var cap = Adventure.StopSiegeRules.AliveCap(Adventure.StopSiegeRules.For(4), 1);
+                if (!_pfFilled || portals.Alive < cap) { if (_pfClock > PerfSiegeFill) fail($"no wave filled stop 4's cap within {PerfSiegeFill:0} s ({portals.Alive} alive after {portals.SiegeWaves} waves)"); break; } // the filling wave's creatures all through
+                _pfWindow.Reset();
+                _pfAtStart = PerfWindow.CountEnemies(GetTree());
+                GD.Print($"[perf] siege: the measure starts with {_pfAtStart.Alive} enemies alive ({_pfAtStart.Aware} aware, {_pfAtStart.Asleep} asleep), {portals.Alive} of them the siege's");
+                _pfStep++; _pfClock = 0f;
+                break;
+            case 2 when _pfWindow.Frames.Elapsed >= PerfSiegeMeasure:
+            {
+                var end = PerfWindow.CountEnemies(GetTree());
+                GD.Print($"[perf] siege: the measure ends with {end.Alive} enemies alive ({end.Aware} aware, {end.Asleep} asleep), {portals.Alive} of them the siege's after {portals.SiegeWaves} waves");
                 PerfReport();
                 break;
             }

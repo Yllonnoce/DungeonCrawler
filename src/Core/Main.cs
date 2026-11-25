@@ -149,6 +149,8 @@ public partial class Main : Node
     private bool _riseAtCart;
     /// <summary>A wipe's rise at the cart waits for the floor's rebuild: the floor ticking on meanwhile wins nothing (the crew trial).</summary>
     public bool RiseAtCartPending => _riseAtCart;
+    /// <summary>The floor standing now was built by a wipe's rise at the cart (plan 16: the siege's restart waits longer, Ruling 3); false for any other build.</summary>
+    public bool RoseAtCart { get; private set; }
 
     /// <summary>
     /// Ruling 14 and 15: a wipe on a floor whose cart has an arrival snapshot (any cause) keeps its own capture of the floor with the train
@@ -655,6 +657,7 @@ public partial class Main : Node
         var game = Game.Instance;
         var riseAtCart = _riseAtCart && delta == 0; // the wipe's reload; any other build (a load, a floor change) ends the wait
         _riseAtCart = false;
+        RoseAtCart = riseAtCart;
 
         // a fighter who joined the party comes along: lifted off the old floor before it is remembered, set down by the party on the new one
         var travelling = new List<(string Id, string Name, string? Model, float HpFraction, Adventure.NpcScript Script, bool ShowMoves)>();

@@ -341,6 +341,7 @@ public partial class DungeonBuilder : Node3D
         PlaceShrine(layout, floorIndex);
         PlaceObjective(layout, contents, _floorRoot, floorIndex, seed);
         PlaceRailEncounters(layout, contents);
+        PlaceStopTrap(layout);
         if (layout.Water.Count > 0)
         {
             var tile = CurrentTheme?.MetersPerTile ?? 2f;
@@ -1109,6 +1110,16 @@ public partial class DungeonBuilder : Node3D
         var encounters = new Rails.RailEncounterController();
         encounters.Setup(this, layout, rails, EnemyTrack, contents);
         _floorRoot.AddChild(encounters);
+    }
+
+    /// <summary>The stop trap (plan 16: the siege at the cage stops; later the wall ambushers and the hijack): on every role, on a floor with the party's cart on a line of three stops or more.</summary>
+    private void PlaceStopTrap(FloorLayout layout)
+    {
+        if (_floorRoot == null || layout.Rail is not { Stops.Count: >= 3 }) return;
+        if (Rails.RailController.Instance is not { } rails || rails.GetParent() != _floorRoot) return;
+        var trap = new Rails.StopTrapController();
+        trap.Setup(this, layout, rails);
+        _floorRoot.AddChild(trap);
     }
 
     /// <summary>A puzzle gate: a lever-gate door that shows from the start, named, owned by the objective (index from <see cref="FloorContents.ExtraIndexBase"/>).</summary>

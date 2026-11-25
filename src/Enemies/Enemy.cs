@@ -894,9 +894,12 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         return push;
     }
 
+    /// <summary>Test hook (plan 16, Ruling 24): rooted where it stands, it neither steers nor walks a path (<see cref="MoveToward"/> and <see cref="MoveAlongPathToward"/> do nothing).</summary>
+    internal bool DebugRooted { get; set; }
+
     public void MoveToward(Vector3 target, float dt)
     {
-        if (Carried) return; // its carrier moves it (FollowCarrier): no steering, gravity, separation or sliding of its own
+        if (Carried || DebugRooted) return; // its carrier moves it (FollowCarrier): no steering, gravity, separation or sliding of its own; a test's rooted creature stays put
         var v = Velocity;
         v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;
         var to = target - GlobalPosition;
@@ -929,7 +932,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     public void MoveAlongPathToward(Vector3 target, float dt)
     {
-        if (Carried) return; // no path to walk while carried (and no search to pay for)
+        if (Carried || DebugRooted) return; // no path to walk while carried (and no search to pay for), nor rooted by a test
         var builder = Main.Instance?.Builder;
         var layout = builder?.Layout;
         if (layout == null) { MoveToward(target, dt); return; }
