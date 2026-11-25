@@ -920,6 +920,7 @@ public partial class DebugTools
                     if (Math.Abs(_gaMaxV - HijackRules.RollBackMaxSpeed) > 0.2f) { Fail($"the relief rolled in at {_gaMaxV:0.00} m/s at most, not 4 +- 0.2"); return; }
                     if (reliefLog != 1 || bark.Count != 1) { Fail($"the relief's log ({reliefLog}x) or the crew's bark ({bark.Count}x) was not told once"); return; }
                     if (arrived != 0 || rc.StopIndex != GaStop || rc.SparesLeft != _gaSpares) { Fail($"the relief was an arrival ({arrived}), moved the stop ({rc.StopIndex}) or spent a spare ({rc.SparesLeft} left, were {_gaSpares})"); return; }
+                    if (RailEncounterController.Instance is { } parkedEnc && IsInstanceValid(parkedEnc) && parkedEnc.Parked != null && parkedEnc.ParkedNow != ParkedState.InTheWay) { Fail($"the got-away stood ride 5's parked train as a {parkedEnc.ParkedNow} ({parkedEnc.ParkedWhy}): a train gone into the dark, its relief to come, is not a lost cart"); return; } // the T9 RIDE pass's find
                     if (!thrownIds.SetEquals(living.Select(n => n.Id))) { Fail($"ThrownIds [{string.Join(", ", thrownIds)}] are not the living put-off crew [{string.Join(", ", living.Select(n => n.Id))}]"); return; }
                     if (_gaDriver == null || !IsInstanceValid(_gaDriver) || !_gaDriver.IsAlive) { Fail("the driver did not live through the getaway (freed?)"); return; }
                     var w1 = rc.WagonAt(1)!;
