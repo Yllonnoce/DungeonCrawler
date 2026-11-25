@@ -361,9 +361,9 @@ public partial class NetTestFlow
                     HrNext(2);
                     return true;
                 }
-                return t > 5 && RideFail(net, $"hijack: the rider was not let out at stop {RideHjStop} 5 s after its press (the cart offers \"{rc.Cart.Prompt}\")");
+                return t <= 5 || RideFail(net, $"hijack: the rider was not let out at stop {RideHjStop} 5 s after its press (the cart offers \"{rc.Cart.Prompt}\")");
             case 2: // on foot through both hijacks
-                if (!_hwReliefHeld) return t > 150 && RideFail(net, $"hijack: no relief train held at stop {RideHjStop} here 150 s after the rider got out (hijack {rc.Hijack}, won back held {Yes(_hwWonHeld)})");
+                if (!_hwReliefHeld) return t <= 150 || RideFail(net, $"hijack: no relief train held at stop {RideHjStop} here 150 s after the rider got out (hijack {rc.Hijack}, won back held {Yes(_hwWonHeld)})");
                 _rideAskedAt = -1; // TryBoard's 2 s throttle reads _clock
                 HrNext(3);
                 return true;
@@ -375,7 +375,7 @@ public partial class NetTestFlow
                     return false;
                 }
                 TryBoard(net, rc, me, $"stop {RideHjStop} (the relief train)");
-                return t > 20 && RideFail(net, FormattableString.Invariant($"hijack: the rider never boarded the relief train at stop {RideHjStop} (the cart offers \"{rc.Cart.Prompt}\", {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.00} m)"));
+                return t <= 20 || RideFail(net, FormattableString.Invariant($"hijack: the rider never boarded the relief train at stop {RideHjStop} (the cart offers \"{rc.Cart.Prompt}\", {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.00} m)"));
         }
         return false;
     }
@@ -414,7 +414,7 @@ public partial class NetTestFlow
                 if (me.Seated) return RideFail(net, $"hijack: the joiner sat in a cart at stop {RideHjStop} before the roll back (hijack {rc.Hijack})");
                 var prompt = rc.Cart.Prompt;
                 if (rc.Hijack != Rails.HijackPhase.RollingBack || prompt != "Board the cart")
-                    return t > 60 && RideFail(net, FormattableString.Invariant($"hijack: no roll back offered \"Board the cart\" here 60 s on (hijack {rc.Hijack}, the cart offers \"{prompt}\", {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.00} m)"));
+                    return t <= 60 || RideFail(net, FormattableString.Invariant($"hijack: no roll back offered \"Board the cart\" here 60 s on (hijack {rc.Hijack}, the cart offers \"{prompt}\", {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.00} m)"));
                 net.Send(new InteractIntent(cartRef));
                 GD.Print(FormattableString.Invariant($"[net] ride: hijack: the cart rolls back here at t={_wireClient?.ServerNow ?? 0:0.000} (V={rc.State.V:0.00}, S={rc.State.S:0.00}, {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.00} m from us); it offers \"{prompt}\"; pressed through the intent ({cartRef})"));
                 HjcNext(2);
@@ -428,10 +428,10 @@ public partial class NetTestFlow
                     return true;
                 }
                 if (t > 1.0 && !_hjcResent && rc.Cart.Prompt == "Board the cart") { _hjcResent = true; net.Send(new InteractIntent(cartRef)); GD.Print("[net] ride: hijack: not seated 1 s after the press; pressed Board once more"); }
-                return t > 5 && RideFail(net, FormattableString.Invariant($"hijack: the joiner was not seated 5 s after pressing Board on the rolling-back cart (hijack {rc.Hijack}, V={rc.State.V:0.00}, the cart offers \"{rc.Cart.Prompt}\")"));
+                return t <= 5 || RideFail(net, FormattableString.Invariant($"hijack: the joiner was not seated 5 s after pressing Board on the rolling-back cart (hijack {rc.Hijack}, V={rc.State.V:0.00}, the cart offers \"{rc.Cart.Prompt}\")"));
             case 3: // seated through the knock-off and the return; held again: get out
                 if (me.Cart != rc.Cart) return RideFail(net, $"hijack: the joiner left the cart before it was held again (hijack {rc.Hijack})");
-                if (!_hwWonHeld) return t > 40 && RideFail(net, $"hijack: the train was not held again at stop {RideHjStop} here 40 s after the joiner boarded it (hijack {rc.Hijack}, {rc.State.Mode})");
+                if (!_hwWonHeld) return t <= 40 || RideFail(net, $"hijack: the train was not held again at stop {RideHjStop} here 40 s after the joiner boarded it (hijack {rc.Hijack}, {rc.State.Mode})");
                 net.Send(new InteractIntent(cartRef));
                 GD.Print($"[net] ride: hijack: held again at stop {RideHjStop} with us seated; the cart offers \"{rc.Cart.Prompt}\"; asked to get out through the intent for the second hijack");
                 HjcNext(4);
@@ -439,16 +439,16 @@ public partial class NetTestFlow
             case 4:
                 if (!me.Seated) { GD.Print($"[net] ride: hijack: the joiner is on foot again at stop {RideHjStop}"); HjcNext(5); return true; }
                 if (t > 1.5 && !_hjcResent) { _hjcResent = true; net.Send(new InteractIntent(cartRef)); }
-                return t > 5 && RideFail(net, $"hijack: the joiner was not let out at stop {RideHjStop} after the return (the cart offers \"{rc.Cart.Prompt}\")");
+                return t <= 5 || RideFail(net, $"hijack: the joiner was not let out at stop {RideHjStop} after the return (the cart offers \"{rc.Cart.Prompt}\")");
             case 5: // on foot through the got-away
-                if (!_hwReliefHeld) return t > 120 && RideFail(net, $"hijack: no relief train held at stop {RideHjStop} here 120 s after the joiner got out (hijack {rc.Hijack})");
+                if (!_hwReliefHeld) return t <= 120 || RideFail(net, $"hijack: no relief train held at stop {RideHjStop} here 120 s after the joiner got out (hijack {rc.Hijack})");
                 _rideAskedAt = -1;
                 HjcNext(6);
                 return true;
             case 6: // the first client boards first; then the relief train through the intent (the step's own line follows on the next pass)
                 if (me.Seated && me.Cart == rc.Cart) { _hjcStep = 9; return false; }
                 if (main.Party.Adventurers.Any(a => IsInstanceValid(a) && a != me && !a.Parked && a.Cart == rc.Cart)) TryBoard(net, rc, me, $"stop {RideHjStop} (the relief train)");
-                return t > 30 && RideFail(net, FormattableString.Invariant($"hijack: the joiner never boarded the relief train at stop {RideHjStop} (the cart offers \"{rc.Cart.Prompt}\", {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.00} m)"));
+                return t <= 30 || RideFail(net, FormattableString.Invariant($"hijack: the joiner never boarded the relief train at stop {RideHjStop} (the cart offers \"{rc.Cart.Prompt}\", {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.00} m)"));
         }
         return false;
     }
