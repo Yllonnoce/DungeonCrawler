@@ -10,8 +10,8 @@ namespace DungeonCrawler.Core;
 
 // ---- --test-stop-trap=ambush (plan 16 Task 4) ------------------------------------------------------------------------------------
 // The stop-wall ambushers, in order (any step out of its window fails):
-//  (a) placement: the controller's points equal a fresh StopAmbushRules.Place on the same layout, cages and seed (stop 1 has 2, stop 2 has 3),
-//      every one in its stop's room; AddStopPoints returned the corridor count and the spawner's first points equal a fresh
+//  (a) placement: the controller's points equal a fresh StopAmbushRules.Place on the same layout, cages and seed (stops 1..4 have 2/3/3/4),
+//      every one in its stop's room and none on a cell the builder holds blocked (IsCellBlocked: a prop's, a closed door's; the final fix wave); AddStopPoints returned the corridor count and the spawner's first points equal a fresh
 //      AmbushRules.Place (Ruling 33: the saved SprungAmbushes indices keep their points).
 //  (b) rc.Restore(1) arms nothing: the lead boards and gets out at stop 1 and no wall bursts in 7.5 s. Then rc.Restore(0), the lead boards,
 //      the train departs and rides ride 1 seated; at the Arrived at stop 1 the lead gets out: exactly 2 creatures burst 1.5 +- 0.2 s after
@@ -104,8 +104,15 @@ public partial class DebugTools
                 if (!spawner.Points.Take(_amFirst).SequenceEqual(corridor)) { Fail("the spawner's corridor points are not a fresh AmbushRules.Place's"); return; }
                 if (!mine.SequenceEqual(fresh) || !trap.AmbushPoints.SequenceEqual(fresh)) { Fail($"the stop points ({mine.Count}) are not a fresh StopAmbushRules.Place's ({fresh.Count})"); return; }
                 if (_amStop1 != 2 || _amStop2 != 3) { Fail($"stop 1 has {_amStop1} point(s) and stop 2 has {_amStop2}, not 2 and 3"); return; }
+                // the final fix wave (T4-M2): every stop's count, 2/3/3/4 for stops 1..4 (stop 4's points have never burst in a flow)
+                var perStop = Enumerable.Range(1, 4).Select(k => mine.Count(p => p.Stop == k)).ToArray();
+                if (!perStop.SequenceEqual(new[] { 2, 3, 3, 4 }) || mine.Count != 12) { Fail($"the stop points per stop 1..4 are [{string.Join("/", perStop)}] ({mine.Count} in all), not 2/3/3/4"); return; }
                 foreach (var p in mine)
                     if (p.Stop < 1 || !layout.Rooms[rail.Stops[p.Stop].Room].Contains(p.Trigger) || layout.IsRail(p.Trigger)) { Fail($"point at {p.Trigger} (stop {p.Stop}) is not in its stop's room or lies on the line"); return; }
+                // and no trigger shares a cell with a prop (a chest, a cage) or a closed door: StopAmbushRules.Place is layout-only (every peer and save agree)
+                var blocked = mine.Where(p => main.Builder.IsCellBlocked(p.Trigger)).ToList();
+                GD.Print($"[stoptrap] (a) points per stop 1..4: {string.Join("/", perStop)}; triggers on a blocked cell: {blocked.Count}{(blocked.Count > 0 ? $" [{string.Join(", ", blocked.Select(p => $"stop {p.Stop} {p.Trigger}"))}]" : "")}");
+                if (blocked.Count > 0) { Fail($"{blocked.Count} stop-wall trigger(s) on a blocked cell (IsCellBlocked): {string.Join(", ", blocked.Select(p => $"stop {p.Stop} {p.Trigger}"))}"); return; }
                 // (b) the restore arms nothing
                 rc.Restore(1);
                 if (PerfBeside(main, layout, rc.Cart.GlobalPosition) is not { } stand) { Fail("no walkable cell beside the cart at stop 1"); return; }
@@ -259,7 +266,7 @@ public partial class DebugTools
                 foreach (var s in sprung)
                     if (Math.Abs(s.At - _amMark - StopAmbushRules.SpringAfterArrival) > AmWindow) { Fail($"point {s.Index} burst {s.At - _amMark:0.00} s after the Arrived, not 6 +- 0.2"); return; }
                 if (ambushers.Count != _amStop2 || ambushers.Any(e => e.State.Unaware)) { Fail($"{ambushers.Count} stop ambusher(s) alive at stop 2 (hunting {ambushers.Count(e => !e.State.Unaware)}), not {_amStop2} hunting"); return; }
-                StopTrapOk($"the placement ({_amStop1}/{_amStop2} at stops 1/2 after {_amFirst} corridor points); the restore arms nothing; 2 burst 1.5 s after the step-off; none after the load; 3 burst 6 s after the arrival with nobody off");
+                StopTrapOk($"the placement (2/3/3/4 at stops 1..4 after {_amFirst} corridor points, no trigger on a blocked cell); the restore arms nothing; 2 burst 1.5 s after the step-off; none after the load; 3 burst 6 s after the arrival with nobody off");
                 break;
             }
         }
