@@ -76,6 +76,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// <summary>Test hook (plan 14, Task 4: <c>RailEncounterController.DebugBoard</c>'s holdHp): hits and ticks never take it below 1 HP, so only a wagon's grip ends it.</summary>
     internal bool DebugHoldHp { get; set; }
     private float HpFloor => DebugHoldHp ? 1f : 0f;
+    /// <summary>Test hook (plan 16, --test-perf=crowd): back to full HP while alive, so no wound-driven behaviour (a flee) changes the measured load.</summary>
+    internal void DebugFillHp() { if (IsAlive) Hp = MaxHp; }
     public bool IsUnaware => Net.NetSession.IsClient ? (_netFlags & Net.EntityState.FlagAware) == 0 : State.Unaware;
     /// <summary>The collective this enemy belongs to, if any (set before entering the tree).</summary>
     public Collective? Group { get; set; }
@@ -484,7 +486,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
         if (IsAlive)
         {
-            foreach (var tick in Effects.Update(dt))
+            Effects.Update(dt, _effectTicks);
+            foreach (var tick in _effectTicks)
             {
                 if (tick.IsHeal) { Hp = Math.Min(MaxHp, Hp + tick.Amount * Effects.HealingMultiplier); continue; }
                 var mitigated = DamagePipeline.Mitigate(tick.Amount, tick.Type, Stats, Effects);
@@ -516,8 +519,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         }
         if (_dying && State is not DeadState) ChangeState(new DeadState());
 
-        if (Leaping) { UpdateTint(dt); return; } // in the air between two carts: its leap owner poses it, no AI until it lands
+        if (Leaping) { Asleep = false; UpdateTint(dt); return; } // in the air between two carts: its leap owner poses it, no AI until it lands
         if (IsAlive && !State.Unaware) Retarget(dt);
+        Asleep = SleepsNow();
         if (IsAlive && (Effects.IsStunned || _staggerLeft > 0f))
         {
             _staggerLeft -= dt;
@@ -526,9 +530,12 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         else
         {
             if (_reenterAfterStagger) { _reenterAfterStagger = false; if (State is AttackState or ShootState) State.Enter(this); } // the attack cycle starts over once the reel (and any stun past it) ends
-            if (WindupLeft > 0f) WindupLeft -= dt;
-            if (TelegraphRemaining > 0f) TelegraphRemaining -= dt;
-            State.Update(this, dt);
+            if (StateStep(dt) is { } step) // a sleeper's state runs one tick in four, with the seconds it banked
+            {
+                if (WindupLeft > 0f) WindupLeft -= step;
+                if (TelegraphRemaining > 0f) TelegraphRemaining -= step;
+                State.Update(this, step);
+            }
         }
 
         UpdateTint(dt);
@@ -688,11 +695,15 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     public float DistanceToParty() => Party == null || !Party.PartyAlive ? float.MaxValue : GlobalPosition.DistanceTo(TargetPosition);
 
+    private PhysicsRayQueryParameters3D? _sightRay; // one per enemy, re-aimed per ray (sight asks up to four a tick)
+
     private bool LineOfSightTo(Vector3 point)
     {
         var space = GetWorld3D().DirectSpaceState;
-        var query = PhysicsRayQueryParameters3D.Create(GlobalPosition + Vector3.Up * 1.2f, point + Vector3.Up * 1.2f, collisionMask: 1);
-        return space.IntersectRay(query).Count == 0;
+        _sightRay ??= PhysicsRayQueryParameters3D.Create(Vector3.Zero, Vector3.Up, collisionMask: 1);
+        _sightRay.From = GlobalPosition + Vector3.Up * 1.2f;
+        _sightRay.To = point + Vector3.Up * 1.2f;
+        return space.IntersectRay(_sightRay).Count == 0;
     }
 
     public bool HasLineOfSight() => Party != null && Party.PartyAlive && LineOfSightTo(TargetPosition);
@@ -729,7 +740,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     {
         SinceHurt += dt;
         if (Party == null) return;
-        foreach (var k in _threat.Keys.ToList()) _threat[k] *= MathF.Pow(0.85f, dt);
+        _threatKeys.Clear();
+        foreach (var k in _threat.Keys) _threatKeys.Add(k);
+        var decay = MathF.Pow(0.85f, dt);
+        foreach (var k in _threatKeys) _threat[k] *= decay;
         _retargetTimer -= dt;
         if (_retargetTimer > 0) return;
         _retargetTimer = 0.5f;
@@ -867,9 +881,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     private Vector3 Separation()
     {
         var push = Vector3.Zero;
-        foreach (var other in GetParent().GetChildren())
+        foreach (var e in LiveList) // the enemies among this one's siblings, in the order they joined: the same pushes, summed the same way
         {
-            if (other is not Enemy e || e == this || !e.IsAlive || e.Carried) continue; // one riding a cart pushes nobody
+            if (e._treeParent != _treeParent || e == this || !e.IsAlive || e.Carried) continue; // one riding a cart pushes nobody
             var d = GlobalPosition - e.GlobalPosition;
             d.Y = 0;
             var len = d.Length();
@@ -1042,7 +1056,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public static bool ShroudSeparates(Vector3 caster, Vector3 target)
         => Shrouds.Any(s => IsInstanceValid(s) && s.IsAlive && !ShroudRules.Inside(caster.X, caster.Z, s.GlobalPosition.X, s.GlobalPosition.Z, ShroudRules.Radius) && ShroudRules.Inside(target.X, target.Z, s.GlobalPosition.X, s.GlobalPosition.Z, ShroudRules.Radius));
 
-    public override void _ExitTree() => Shrouds.Remove(this);
+    public override void _ExitTree() { Shrouds.Remove(this); LeaveLive(); }
 
     private AttackKind _lastHitKind;
     /// <summary>The kind of attack its last <see cref="ReceiveAttack"/> took (a wagon boarder's grip weighs the hit by it, plan 14 Ruling 14).</summary>

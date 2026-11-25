@@ -39,20 +39,28 @@ public partial class Enemy
         _embeddedChecks = 0;
     }
 
+    /// <summary>The probe, its query (with the body's own Rid excluded) and the capsule they were sized for: made once per enemy, not per check.</summary>
+    private CapsuleShape3D? _probeFor;
+    private PhysicsShapeQueryParameters3D? _probeQuery;
+
     /// <summary>Whether a slightly smaller copy of the body, lifted off the floor, overlaps solid level geometry (layer 1).</summary>
     private bool Embedded(CapsuleShape3D capsule)
     {
-        var probe = new CapsuleShape3D { Radius = capsule.Radius * 0.7f, Height = Math.Max(capsule.Radius * 1.4f + 0.05f, capsule.Height * 0.6f) };
-        var col = GetNode<CollisionShape3D>("Collision");
-        var query = new PhysicsShapeQueryParameters3D
+        if (_probeQuery == null || _probeFor != capsule)
         {
-            Shape = probe,
-            Transform = new Transform3D(Basis.Identity, GlobalPosition + col.Position + Vector3.Up * 0.15f),
-            CollisionMask = 1,
-            CollideWithBodies = true,
-            CollideWithAreas = false,
-            Exclude = new Godot.Collections.Array<Rid> { GetRid() },
-        };
-        return GetWorld3D().DirectSpaceState.IntersectShape(query, 1).Count > 0;
+            var probe = new CapsuleShape3D { Radius = capsule.Radius * 0.7f, Height = Math.Max(capsule.Radius * 1.4f + 0.05f, capsule.Height * 0.6f) };
+            _probeQuery = new PhysicsShapeQueryParameters3D
+            {
+                Shape = probe,
+                CollisionMask = 1,
+                CollideWithBodies = true,
+                CollideWithAreas = false,
+                Exclude = new Godot.Collections.Array<Rid> { GetRid() },
+            };
+            _probeFor = capsule;
+        }
+        var col = GetNode<CollisionShape3D>("Collision");
+        _probeQuery.Transform = new Transform3D(Basis.Identity, GlobalPosition + col.Position + Vector3.Up * 0.15f);
+        return GetWorld3D().DirectSpaceState.IntersectShape(_probeQuery, 1).Count > 0;
     }
 }

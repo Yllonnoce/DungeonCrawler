@@ -465,7 +465,7 @@ fail on a loaded machine, so it needs the machine alone. `flows.sh` refuses netw
 (`PerfMonitor`, a node Main adds the first time a floor is built; `PerfRules.LineEvery`):
 
 ```
-[perf] floor=12 cart=yes fps avg=359 min=328 worst_ms=93.2 process_ms=18.28 physics_ms=7.97 draws=303 enemies=19 aware=2
+[perf] floor=12 cart=yes fps avg=359 min=328 worst_ms=93.2 process_ms=18.28 physics_ms=7.97 draws=303 enemies=19 aware=2 asleep=11
 ```
 
 - Frame times are wall time between consecutive frames (`FrameClock`, `Time.GetTicksUsec`), not the engine's process delta.
@@ -477,7 +477,8 @@ fail on a loaded machine, so it needs the machine alone. `flows.sh` refuses netw
   The engine refreshes both once a second with the **longest** step of that second, so they read as the typical worst step per
   second, not a per-frame mean (at 300 fps a `process_ms` of 11 means one frame each second took about 11 ms).
 - `draws`: the mean `RENDER_TOTAL_DRAW_CALLS_IN_FRAME` (0 headless).
-- `enemies`: alive in the `enemies` group; `aware`: those of them not unaware (a client reads the server's flag).
+- `enemies`: alive in the `enemies` group; `aware`: those of them not unaware (a client reads the server's flag); `asleep`:
+  those on the tick diet's quarter rate this tick (`Enemy.Asleep`, below; always 0 on a client, which runs no enemy AI).
 - `cart`: the local hero is seated (a dedicated server: any hero is).
 - A headless server's fps is its own loop's rate.
 - After a floor is built, 2 s of frames (`PerfRules.BuildGrace`) are left out: the load and its settling. They print no
@@ -507,7 +508,8 @@ line and no `ERROR` line.
 - `crowd` (the default; ambushers off as well). The cart is restored at stop 4 (`rc.Restore(4)`) and the party stands beside it
   on the platform. 12 creatures (5 `enemy.horde_cinder`, 4 `enemy.ember_hound`, 3 `enemy.forge_priest`) are spawned 10-20 m
   around it and sent at the party. The floor's own enemies stay alive and the companions are on Hold. Every enemy is held at
-  1 HP or more (`Enemy.DebugHoldHp`), so the load stays the same through the measure. The flow prints the alive and aware count
+  1 HP or more (`Enemy.DebugHoldHp`) and put back to full HP every frame (`Enemy.DebugFillHp`, since plan 16 Task 2: a
+  forge priest under 30 % HP flees, which changed the load mid-measure), so the load stays the same through the measure. The flow prints the alive and aware count
   at its start and end, and fails if the alive count changed. It discards 5 s and measures 20 s of wall time. This phase is the enemy tick diet's before-and-after row. It also stands in for the stop siege's "before",
   since the siege does not exist yet when the baseline is taken.
 - `ride` (ambushers on, so the alcove shooters appear in it once they exist). The cart is restored at stop 0, the party sits
@@ -515,7 +517,7 @@ line and no `ERROR` line.
   at stop 1.
 
 Each phase prints `[perf] {phase}: {frames} frames over {s} s: median … fps, 1% low …, worst second …, worst frame … ms; process
-… ms, physics … ms, draws …, alloc_kb …; enemies n (k aware)`, then `[perf] RESULT ok (…)`. The 1% low is the fps of the
+… ms, physics … ms, draws …, alloc_kb …; enemies n (k aware) asleep=m`, then `[perf] RESULT ok (…)`. The 1% low is the fps of the
 slowest 1 % of frames (their mean frame time). `alloc_kb` is the managed memory allocated over the measured window
 (`GC.GetTotalAllocatedBytes`). Run it with the machine otherwise idle:
 
@@ -540,6 +542,50 @@ and before the siege. Each run had exit 0, `RESULT ok` and no `ERROR` line.
 - Ride: both runs had one hitch of about 95-105 ms during ride 1, and a 53 ms frame later on.
 - An earlier take, with the engine's capped delta and a crowd the party thinned to 23, is superseded. Its worst frames were
   floors rather than measurements.
+
+**The tick diet (plan 16 Task 2).** What every enemy paid every physics tick at any distance, cut without moving any
+behaviour a flow pins (all 22 floor-12 and general flows pass):
+- Separation walks `Enemy.Live` (every enemy in the tree, kept by `_EnterTree`/`_ExitTree`), skipping those under another
+  parent, instead of `GetParent().GetChildren()` (every child of the floor root, per enemy per tick). Same pushes, same order.
+- No per-tick allocations on the enemy path: the effect ticks fill a buffer each enemy keeps
+  (`StatusEffectController.Update(dt, into)`; the party's tick uses it too), the threat decay walks a kept key buffer, the
+  unstick probe's shape and query are made once per enemy, the sight ray's query is made once and re-aimed,
+  `StatusEffectController.Multiplier` is a loop rather than an iterator, and `PartyController.PartyAlive`, `HasBodies` and
+  `NearestAlive` are loops rather than LINQ (every creature asks them every tick).
+- **The sleep (`TickDietRules`, Ruling 20).** An enemy sleeps while it is unaware (not on a patrol or a walk home) or holding
+  its post, moves under 0.1 m/s, is not carried or leaping, was last hurt over 1 s ago, and stands farther from every hero
+  in `Party.Adventurers` (downed included) than the larger of 40 m and its own sight, `DetectRange × Aggression × 1.3`. A
+  sleeper runs its AI state only on the ticks where `(NetId & 3) == (physics frame & 3)`, with the seconds it banked since
+  (its wind-up and telegraph timers too). Water, unstick, animation, effects, tint and dying run every tick. A sleeper
+  cannot see anyone, so no detection is late; a far guard picks up a group order up to three ticks (50 ms) late. The
+  horde kinds and the twelve kinds with `DetectRange` 40 see to about 73 m, so they sleep only beyond it.
+
+**After the diet (plan 16 Task 2, 2026-11-24, same machine and settings).** The crowd's "before" was taken again on the
+code just before the diet, with the crowd now put back to full HP every frame (above), so before and after compare like
+with like; T1's crowd rows held HP at 1 only. Every run had exit 0, `RESULT ok` and no `ERROR` line.
+
+| Phase | Frames / s | Median fps | 1% low | Worst second | Worst frame | Process ms | Physics ms | Draws | alloc_kb | Enemies (aware) | Asleep |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| crowd before (run 1) | 4700 / 20.0 | 343 | 64 | 209 | 40.6 ms | 13.67 | 13.00 | 869 | 134710 | 29 (13) | - |
+| crowd before (run 2) | 4230 / 20.0 | 309 | 55 | 187 | 43.0 ms | 11.21 | 15.25 | 867 | 110490 | 29 (14) | - |
+| crowd before (run 3) | 4250 / 20.0 | 307 | 60 | 200 | 30.5 ms | 13.72 | 11.00 | 867 | 110675 | 29 (14) | - |
+| crowd after (run 1) | 5876 / 20.0 | 348 | 77 | 269 | 67.3 ms | 11.69 | 12.38 | 867 | 52352 | 29 (14) | 13 |
+| crowd after (run 2) | 6500 / 20.0 | 379 | 96 | 304 | 28.3 ms | 10.78 | 7.20 | 869 | 56955 | 29 (13) | 13 |
+| ride after (run 1) | 16886 / 48.2 | 362 | 103 | 246 | 130.0 ms | 14.31 | 4.21 | 949 | 94165 | 18 (1) | 14 |
+| ride after (run 2) | 16893 / 48.1 | 362 | 108 | 245 | 85.0 ms | 12.06 | 4.37 | 956 | 94245 | 18 (1) | 14 |
+
+The change, after against before (the ride's before is T1's two rows above):
+- **crowd**: median 307-343 to 348-379 fps (about +15 %), 1% low 55-64 to 77-96 (about +45 %), worst second 187-209 to
+  269-304 (about +45 %), mean fps about 215 to about 310, `alloc_kb` 110-135 MB to 52-57 MB over the 20 s (about -55 %)
+  although it ran about 40 % more frames. 12 of the 29 are asleep at the start of the measure, 13 at the end: the floor's
+  own enemies far from stop 4.
+- **ride**: median 342-347 to 362 fps (about +5 %), 1% low 83-85 to 103-108 (about +25 %), worst second 217-218 to 245-246
+  (about +13 %), physics 6.3-6.8 to 4.2-4.4 ms, `alloc_kb` 185-186 MB to 94 MB (about -50 %); 14 of the 18 asleep. The one
+  85-130 ms hitch in ride 1 is still there: it is not the enemies' tick.
+- Before run 1 is the outlier of the "before" rows (one aware creature fewer by its end, more frames, more allocation);
+  runs 2 and 3 agree with T1's crowd rows (312/315, about 110 MB).
+- With the HP topped up every frame, the second 10 s line of two of the three "before" runs (and of after run 1) was still
+  about 5 % slower than the first, so that drift was not only the priests' flight.
 
 ### Known gaps
 

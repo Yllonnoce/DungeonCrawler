@@ -7,7 +7,7 @@ namespace DungeonCrawler.Core;
 /// <summary>
 /// The perf line in the game's log, on every role (solo, client, server) whenever <see cref="Main.InGame"/>: every
 /// <see cref="PerfRules.LineEvery"/> s of frames, the mean and worst-second fps, the worst frame, the mean process and physics ms, the
-/// mean draw calls, and the enemies alive and aware, with the floor and whether the party is on a cart. A frame over
+/// mean draw calls, and the enemies alive, aware and asleep (the tick diet's quarter rate), with the floor and whether the party is on a cart. A frame over
 /// <see cref="PerfRules.SlowFrameMs"/> gets its own line, at most one each <see cref="PerfRules.SlowLineGap"/> s, carrying the slow frames
 /// counted since the last one. Frame times are wall time between frames (<see cref="FrameClock"/>), not the engine's process delta, which
 /// Godot caps on a long frame. A headless server's fps is its own loop's rate. After a floor is built, <see cref="PerfRules.BuildGrace"/> s of
@@ -56,8 +56,8 @@ public partial class PerfMonitor : Node
         }
         if (_window.Frames.Elapsed < PerfRules.LineEvery) return;
         var f = _window.Frames;
-        var (alive, aware) = PerfWindow.CountEnemies(GetTree());
-        GD.Print($"[perf] floor={main.Builder.CurrentFloor} cart={YesNo(OnCart(main.Party))} fps avg={f.MeanFps:0} min={f.WorstSecondFps:0} worst_ms={f.WorstFrameMs:0.0} process_ms={_window.ProcessMs:0.00} physics_ms={_window.PhysicsMs:0.00} draws={_window.Draws} enemies={alive} aware={aware}");
+        var (alive, aware, asleep) = PerfWindow.CountEnemies(GetTree());
+        GD.Print($"[perf] floor={main.Builder.CurrentFloor} cart={YesNo(OnCart(main.Party))} fps avg={f.MeanFps:0} min={f.WorstSecondFps:0} worst_ms={f.WorstFrameMs:0.0} process_ms={_window.ProcessMs:0.00} physics_ms={_window.PhysicsMs:0.00} draws={_window.Draws} enemies={alive} aware={aware} asleep={asleep}");
         _window.Reset();
     }
 
@@ -124,16 +124,20 @@ public sealed class PerfWindow
         _allocStart = GC.GetTotalAllocatedBytes();
     }
 
-    /// <summary>The enemies alive in the "enemies" group, and how many of them are aware (a client reads the server's flag).</summary>
-    public static (int Alive, int Aware) CountEnemies(SceneTree tree)
+    /// <summary>
+    /// The enemies alive in the "enemies" group, how many of them are aware (a client reads the server's flag), and how many are on the
+    /// tick diet's quarter rate this tick (<see cref="Enemy.Asleep"/>; always 0 on a client, which runs no enemy AI).
+    /// </summary>
+    public static (int Alive, int Aware, int Asleep) CountEnemies(SceneTree tree)
     {
-        int alive = 0, aware = 0;
+        int alive = 0, aware = 0, asleep = 0;
         foreach (var n in tree.GetNodesInGroup("enemies"))
         {
             if (n is not Enemy e || !GodotObject.IsInstanceValid(e) || !e.IsAlive) continue;
             alive++;
             if (!e.IsUnaware) aware++;
+            if (e.Asleep) asleep++;
         }
-        return (alive, aware);
+        return (alive, aware, asleep);
     }
 }

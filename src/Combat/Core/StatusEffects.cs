@@ -99,6 +99,14 @@ public sealed class StatusEffectController
     public List<StatusTick> Update(float dt)
     {
         var ticks = new List<StatusTick>();
+        Update(dt, ticks);
+        return ticks;
+    }
+
+    /// <summary>Advance time, clearing <paramref name="into"/> and filling it with the ticks that came due (a buffer the owner keeps: nothing allocated per tick).</summary>
+    public void Update(float dt, List<StatusTick> into)
+    {
+        into.Clear();
         var changed = false;
         for (var i = _active.Count - 1; i >= 0; i--)
         {
@@ -112,7 +120,7 @@ public sealed class StatusEffectController
                 while (e.TickTimer >= TickInterval - 1e-4f)
                 {
                     e.TickTimer -= TickInterval;
-                    ticks.Add(MakeTick(e));
+                    into.Add(MakeTick(e));
                 }
             }
 
@@ -123,7 +131,6 @@ public sealed class StatusEffectController
             }
         }
         if (changed) Version++;
-        return ticks;
     }
 
     private static bool IsPeriodic(StatusKind k) => k is StatusKind.Bleed or StatusKind.Poison or StatusKind.Burn or StatusKind.Regen;
@@ -137,6 +144,9 @@ public sealed class StatusEffectController
         _ => throw new InvalidOperationException($"{e.Kind} is not periodic"),
     };
 
+    /// <summary>The multipliers Frost, Slow and Haste put on move and attack speed (<see cref="Modifiers"/> and <see cref="Multiplier"/> read the same ones).</summary>
+    private const float FrostMove = 0.6f, FrostAttack = 0.7f, SlowMove = 0.7f, HasteAttack = 1.35f, HasteMove = 1.2f;
+
     /// <summary>Stat changes while effects are active. Frost and Slow hamper; Haste speeds up.</summary>
     public IEnumerable<StatModifier> Modifiers()
     {
@@ -145,24 +155,35 @@ public sealed class StatusEffectController
             switch (e.Kind)
             {
                 case StatusKind.Frost:
-                    yield return new StatModifier(Stat.MoveSpeed, ModOp.Mul, 0.6f, "Frost");
-                    yield return new StatModifier(Stat.AttackSpeed, ModOp.Mul, 0.7f, "Frost");
+                    yield return new StatModifier(Stat.MoveSpeed, ModOp.Mul, FrostMove, "Frost");
+                    yield return new StatModifier(Stat.AttackSpeed, ModOp.Mul, FrostAttack, "Frost");
                     break;
                 case StatusKind.Slow:
-                    yield return new StatModifier(Stat.MoveSpeed, ModOp.Mul, 0.7f, "Slow");
+                    yield return new StatModifier(Stat.MoveSpeed, ModOp.Mul, SlowMove, "Slow");
                     break;
                 case StatusKind.Haste:
-                    yield return new StatModifier(Stat.AttackSpeed, ModOp.Mul, 1.35f, "Haste");
-                    yield return new StatModifier(Stat.MoveSpeed, ModOp.Mul, 1.2f, "Haste");
+                    yield return new StatModifier(Stat.AttackSpeed, ModOp.Mul, HasteAttack, "Haste");
+                    yield return new StatModifier(Stat.MoveSpeed, ModOp.Mul, HasteMove, "Haste");
                     break;
             }
         }
     }
 
+    /// <summary>The product of the <see cref="Modifiers"/> multipliers on <paramref name="stat"/>, in the same order, without the iterator (every creature asks every tick).</summary>
     public float Multiplier(Stat stat)
     {
         var m = 1f;
-        foreach (var mod in Modifiers()) if (mod.Stat == stat && mod.Op == ModOp.Mul) m *= mod.Value;
+        foreach (var e in _active)
+        {
+            var f = e.Kind switch
+            {
+                StatusKind.Frost => stat == Stat.MoveSpeed ? FrostMove : stat == Stat.AttackSpeed ? FrostAttack : 1f,
+                StatusKind.Slow => stat == Stat.MoveSpeed ? SlowMove : 1f,
+                StatusKind.Haste => stat == Stat.AttackSpeed ? HasteAttack : stat == Stat.MoveSpeed ? HasteMove : 1f,
+                _ => 1f,
+            };
+            if (f != 1f) m *= f; // only the kinds that change this stat multiply, as the modifiers did
+        }
         return m;
     }
 
