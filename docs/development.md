@@ -459,6 +459,75 @@ The RIDE pass (`RIDE=1 scripts/net_test.sh`) is never run through `flows.sh` or 
 fail on a loaded machine, so it needs the machine alone. `flows.sh` refuses network flows (`--test-net-*`, `--server`,
 `--join=`: they share a port) and empty specs.
 
+### Frame rate
+
+**The perf line.** Every role (solo, client, dedicated server) logs one line per 10 s of frames whenever a game is running
+(`PerfMonitor`, a node Main adds the first time a floor is built; `PerfRules.LineEvery`):
+
+```
+[perf] floor=12 cart=yes fps avg=332 min=250 worst_ms=116.7 process_ms=10.53 physics_ms=6.77 draws=765 enemies=19 aware=2
+```
+
+- `avg`: frames over the window's time; `min`: the fewest frames in any complete second of it; `worst_ms`: the longest frame.
+- `process_ms` and `physics_ms`: Godot's `TIME_PROCESS` and `TIME_PHYSICS_PROCESS` monitors, averaged over the window's frames.
+  The engine refreshes both once a second with the **longest** step of that second, so they read as the typical worst step per
+  second, not a per-frame mean (at 300 fps a `process_ms` of 11 means one frame each second took about 11 ms).
+- `draws`: the mean `RENDER_TOTAL_DRAW_CALLS_IN_FRAME` (0 headless).
+- `enemies`: alive in the `enemies` group; `aware`: those of them not unaware (a client reads the server's flag).
+- `cart`: the local hero is seated (a dedicated server: any hero is).
+- A headless server's fps is its own loop's rate. The frame a floor is built in (the load) is left out, and the window starts again.
+
+**The slow-frame line.** A frame over 50 ms (`PerfRules.SlowFrameMs`) prints
+`[perf] slow frame 124 ms (floor 12, cart yes; 2 slow since the last line)`, at most once a second (`SlowLineGap`). The count
+includes this frame and every slow frame since the last slow-frame line (those in between were not printed).
+
+**Settings (Display, after "Haze in the air"):**
+- "Show FPS" (`display/show_fps`, off by default): the frame rate top right under the minimap, refreshed four times a second.
+- "Render scale" (`display/render_scale`): 100 % / 85 % (FSR) / 70 % (FSR) / 50 % (FSR). The root viewport's `Scaling3DScale`,
+  with `Scaling3DMode` FSR below 100 % and bilinear at 100 %. A saved value is snapped to the nearest step
+  (`GraphicsRules.SnapScale`; the higher on a tie, 100 % for a missing or non-numeric value). It does nothing in a headset,
+  which drives its own scale.
+- "Shadows" (`display/shadows`, on by default): the local hero's torch casts shadows. It is the only shadowed light in the game.
+- The Haze slider at 0 already turns the volumetric fog off.
+
+**The perf flow.** `--test-perf[=crowd|ride]` runs windowed only (headless it fails at once). It is never run in `flows.sh`.
+Each run measures one phase on the built-in campaign's floor 12. Every phase uses the same settings, kept in memory and never
+saved: VSync off, windowed 1280x720, Haze 0.5, render scale 100 %, shadows on, Show FPS off. It also sets lethality 1, tops
+every hero up to full HP each second, and turns off gathering and portals. Nothing is culled.
+
+- `crowd` (the default; ambushers off as well). The cart is restored at stop 4 (`rc.Restore(4)`) and the party stands beside it
+  on the platform. 12 creatures (5 `enemy.horde_cinder`, 4 `enemy.ember_hound`, 3 `enemy.forge_priest`) are spawned 10-20 m
+  around it and sent at the party. The floor's own enemies stay alive and the companions are on Hold. It discards 5 s and
+  measures 20 s. This phase is the enemy tick diet's before-and-after row. It also stands in for the stop siege's "before",
+  since the siege does not exist yet when the baseline is taken.
+- `ride` (ambushers on, so the alcove shooters appear in it once they exist). The cart is restored at stop 0, the party sits
+  down, departs and rides ride 1 with every set piece and enemy alive. It measures from 5 s after the departure to the arrival
+  at stop 1.
+
+Each phase prints `[perf] {phase}: {frames} frames over {s} s: median … fps, 1% low …, worst second …, worst frame … ms; process
+… ms, physics … ms, draws …, alloc_kb …; enemies n (k aware)`, then `[perf] RESULT ok (…)`. The 1% low is the fps of the
+slowest 1 % of frames (their mean frame time). `alloc_kb` is the managed memory allocated over the measured window
+(`GC.GetTotalAllocatedBytes`). Run it with the machine otherwise idle:
+
+```bash
+dotnet build DungeonCrawler.csproj
+for P in crowd ride; do XDG_DATA_HOME=$(mktemp -d) timeout 300 godot --path . --print-fps --resolution 1280x720 -- --test-perf=$P 2>&1 | tee /tmp/perf-$P.txt | grep -E "^\[perf\]"; done
+```
+
+**Baseline (plan 16 Task 1, 2026-11-24).** Dev laptop: RTX 5070 Laptop GPU, 240 Hz panel, platform profile `performance`.
+The run is before the tick diet and before the siege.
+
+| Phase | Median fps | 1% low | Worst second | Worst frame | Process ms | Physics ms | alloc_kb | Enemies (aware) |
+|---|---|---|---|---|---|---|---|---|
+| crowd (run 1) | 300 | 87 | 236 | 46.8 ms | 10.93 | 16.83 | 105409 | 23 (8) |
+| crowd (run 2) | 270 | 79 | 244 | 41.2 ms | 13.24 | 16.74 | 116484 | 23 (7) |
+| ride | 330 | 90 | 201 | 124.0 ms | 15.13 | 7.03 | 190321 | 18 (1) |
+
+- Crowd: about 5.3-5.5 MB a second of managed allocation, with 23 enemies alive (the 17 of the floor plus the crowd, less
+  those the party killed).
+- Ride: 48.1 s measured. Its worst frame was a single 124 ms hitch.
+- The two crowd runs differ by 10 % in median, so compare medians across at least two runs.
+
 ### Known gaps
 
 - **Godot's exit count.** Godot's "resources still in use at exit" (and its leaked ObjectDB instances) were audio streams and their

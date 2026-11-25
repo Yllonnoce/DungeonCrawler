@@ -28,6 +28,10 @@ public partial class Hud : Control
     private PackedScene _portraitScene = null!;
     private MapView _minimap = null!;
     private MapView _fullMap = null!;
+    /// <summary>Settings' Show FPS: the frame rate top right, under the minimap, its text refreshed four times a second.</summary>
+    private Label _fps = null!;
+    private float _fpsRefresh;
+    private const float FpsRefreshEvery = 0.25f;
     public DamageNumbers DamageNumbers { get; private set; } = null!;
     public HitMarker HitMarker { get; private set; } = null!;
     public EnemyBars EnemyBars { get; private set; } = null!;
@@ -125,6 +129,13 @@ public partial class Hud : Control
         _minimap.OffsetLeft = -246; _minimap.OffsetRight = -16; _minimap.OffsetTop = 16; _minimap.OffsetBottom = 246;
         _minimap.GrowHorizontal = GrowDirection.Begin;
         AddChild(_minimap);
+
+        _fps = new Label { Name = "Fps", HorizontalAlignment = HorizontalAlignment.Right, Modulate = new Color(0.85f, 0.85f, 0.75f), MouseFilter = MouseFilterEnum.Ignore, Visible = Settings.ShowFps };
+        _fps.AddThemeFontSizeOverride("font_size", 14);
+        _fps.AnchorLeft = 1; _fps.AnchorRight = 1; _fps.AnchorTop = 0; _fps.AnchorBottom = 0;
+        _fps.OffsetLeft = -136; _fps.OffsetRight = -16; _fps.OffsetTop = 250; _fps.OffsetBottom = 270;
+        _fps.GrowHorizontal = GrowDirection.Begin;
+        AddChild(_fps);
 
         _fullMap = new MapView { Name = "FullMap", FullMap = true, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         _fullMap.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -477,6 +488,7 @@ public partial class Hud : Control
 
     public override void _Process(double delta)
     {
+        TickFps((float)delta);
         if (GetTree().Paused || !IsInstanceValid(_party) || !_party.HasBodies) return;
         var target = _party.LookingAt;
         _prompt.Text = target == null || _sheet.Visible || _inventory.Visible || _skills.Visible || _dialogue.Visible || _questLog.Visible || _shop.Visible ? "" : $"[E] {target.Prompt}";
@@ -658,6 +670,14 @@ public partial class Hud : Control
         var suffix = DungeonCrawler.Dungeon.TierRules.IsEndless(floor) ? "  (endless)" : DungeonCrawler.Dungeon.TierRules.IsBossFloor(floor) ? "  (guardian)" : "";
         _floorText = floor == 0 ? "The Tavern" : tier == "" ? $"Floor {floor}" : $"Floor {floor}  —  {place}{suffix}";
         _floorLabel.Text = _floorText;
+    }
+
+    private void TickFps(float dt)
+    {
+        if (_fps.Visible != Settings.ShowFps) { _fps.Visible = Settings.ShowFps; _fpsRefresh = 0f; }
+        if (!_fps.Visible || (_fpsRefresh -= dt) > 0f) return;
+        _fpsRefresh = FpsRefreshEvery;
+        _fps.Text = $"{Engine.GetFramesPerSecond():0} fps";
     }
 
     /// <summary>On a server: the round trip and who is online, beside the floor name.</summary>

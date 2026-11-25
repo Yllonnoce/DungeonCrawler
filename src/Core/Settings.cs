@@ -23,6 +23,12 @@ public static class Settings
     /// <summary>Volumetric haze in the air, 0 (off) to 1 (thick); torchlight shows in it.</summary>
     public static float Haze { get; set; } = 0.5f;
     public static Vector2I Resolution { get; set; } = new(1920, 1080);
+    /// <summary>The frame rate in the HUD's top-right corner.</summary>
+    public static bool ShowFps { get; set; }
+    /// <summary>The 3D view's render scale, one of <see cref="GraphicsRules.RenderScales"/>; below 1 it is upscaled with FSR. The headset drives its own.</summary>
+    public static float RenderScale { get; set; } = 1f;
+    /// <summary>The local hero's torch casts shadows (the only shadowed light).</summary>
+    public static bool Shadows { get; set; } = true;
     /// <summary>The headset's comfort vignette while a cart carries you (Off, Recommended, Strong: Strong also dims the view on a big drop). Flat play never shows it.</summary>
     public static Party.ComfortLevel VrComfort { get; set; } = Party.ComfortRules.Default;
 
@@ -122,6 +128,10 @@ public static class Settings
             DamageNumbers = cfg.GetValue("display", "damage_numbers", DamageNumbers).AsBool();
             Haze = (float)cfg.GetValue("display", "haze", Haze).AsDouble();
             Resolution = cfg.GetValue("display", "resolution", Resolution).AsVector2I();
+            ShowFps = cfg.GetValue("display", "show_fps", ShowFps).AsBool();
+            var scale = cfg.GetValue("display", "render_scale", 1f);
+            RenderScale = GraphicsRules.SnapScale(scale.VariantType is Variant.Type.Float or Variant.Type.Int ? (float)scale.AsDouble() : float.NaN);
+            Shadows = cfg.GetValue("display", "shadows", Shadows).AsBool();
             VrComfort = Party.ComfortRules.Parse(cfg.GetValue("vr", "comfort", Party.ComfortRules.Name(VrComfort)).AsString());
             Ambushes = cfg.GetValue("danger", "ambushes", Ambushes).AsBool();
             Reinforcements = (float)cfg.GetValue("danger", "reinforcements", Reinforcements).AsDouble();
@@ -178,6 +188,9 @@ public static class Settings
         cfg.SetValue("display", "damage_numbers", DamageNumbers);
         cfg.SetValue("display", "haze", Haze);
         cfg.SetValue("display", "resolution", Resolution);
+        cfg.SetValue("display", "show_fps", ShowFps);
+        cfg.SetValue("display", "render_scale", GraphicsRules.SnapScale(RenderScale));
+        cfg.SetValue("display", "shadows", Shadows);
         cfg.SetValue("vr", "comfort", Party.ComfortRules.Name(VrComfort));
         cfg.SetValue("danger", "ambushes", Ambushes);
         cfg.SetValue("danger", "reinforcements", Reinforcements);
@@ -236,6 +249,12 @@ public static class Settings
             var mode = Fullscreen ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed;
             if (DisplayServer.WindowGetMode() != mode) DisplayServer.WindowSetMode(mode);
             if (!Fullscreen && DisplayServer.WindowGetSize() != Resolution) DisplayServer.WindowSetSize(Resolution);
+            if (!Vr.Active && (Engine.GetMainLoop() as SceneTree)?.Root is { } root) // the headset drives its own render scale
+            {
+                var scale = GraphicsRules.SnapScale(RenderScale);
+                root.Scaling3DMode = GraphicsRules.UsesFsr(scale) ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
+                root.Scaling3DScale = scale;
+            }
         }
         foreach (var (action, key) in _binds) Bind(action, key);
         if (Main.Instance?.InGame == true) { Main.Instance.Party.ApplySettings(); Main.Instance.ApplyHaze(); }

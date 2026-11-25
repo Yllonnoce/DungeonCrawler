@@ -63,6 +63,7 @@ namespace DungeonCrawler.Core;
 ///   --test-boarders[=move|reach|knock|throw|lone|pause|groups]  floor 12, lethality 3, solo (plan 14): fighting along the train; =throw (the default, Task 5): from stop 1 on ride 2 a hound alone in W3 with two crew is called out at its landing, glows at 4.5 s and 8.5 s, throws seat 5's crew member off at 6.0 s and seat 4's at 10.0 s (each dead, fled, hidden 1.2 s later, lost, logged), a companion answering a wagon whose hero place holds a downed hero lands on a crew seat freed by a throw, and a save and a load keep the thrown gone; =lone: the lead climbs from the cart to W4 (passing a companion in W2) within 5.6 s and the clock resets; =pause: ride 3's seated lever window pauses a W1 clock (moves refused, none offered) and a move landing on the throw's own tick resets it; =move (Task 3): from stop 0 on ride 1 the lead climbs car to car by the seat's yaw and the grip: "Climb back to wagon 1" lands after 0.6 s within a tick and logs, a press 0.3 s later does nothing, the cooldown, W2 past a companion in W3 to W4 in one move, forward to wagon 2, 1 and the cart, W2 under r1_beam (every head clear by 0.05 m), a double press for W1 refused (the place is booked), a mid-hop down dropped, never offered held at stop 1 ("Get out"), downed or on foot; =groups (Task 6): from the landing to the last stop with nobody pumping, stops 1-3's crew in W1..W3, every enemy culled but r1_hounds', r3_hounds' and r5_hounds' hounds: each hound leaps (r1's past r1_barricade + 5 m and by r1_beam), r3's cart is freed short of r3_switch_out's points - 2 m, r5's before the golem or by its burst and 3 m clear of its runner, every throw after its call and glow; one [boarders] group line per hound; an unknown variant prints an ERROR and fails; prints [boarders] RESULT ok (variant)
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught 25 m before the last ride's pit switch lever (ride 5's on floor 12) it is set at the switch's window start still rolling, the lead throws it from the seat and the train comes home past the pit and arrives at the last stop
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
+///   --test-perf[=crowd|ride]  windowed only: floor 12 measured at fixed settings (VSync off, 1280x720 windowed, Haze 0.5, render scale 100 %, shadows on; in memory, never saved), lethality 1, heroes topped up each second, no gathering or portals, nothing culled; =crowd (the default, no ambushers): stop 4 on foot with 12 creatures sent at the party, 5 s discarded and 20 s measured; =ride: ride 1 seated with every set piece and enemy alive, from 5 s after the departure to stop 1; prints [perf] {phase}: median, 1% low, worst second, worst frame, process/physics ms, draws, alloc_kb, enemies; then [perf] RESULT ok
 /// </summary>
 public partial class DebugTools : Node
 {
@@ -387,6 +388,13 @@ public partial class DebugTools : Node
             else if (arg == "--test-barricade") { _testBarricade = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
             else if (arg == "--test-track-view") { _testTrackView = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
             else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }
+            else if (arg == "--test-perf" || arg.StartsWith("--test-perf="))
+            {
+                var v = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "crowd";
+                _testPerf = true; _pfPhase = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= Dungeon.TierRules.MinLethality; NoGathering = true; NoPortals = true; TraceAi = false; _quitAfter = 200;
+                if (v == "crowd") NoAmbush = true; // the ride keeps its ambushers (plan 16's alcove shooters appear in it)
+                PerfSettings();
+            }
             else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
@@ -509,6 +517,11 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--join=")) _netClient = true;
         }
         if (ForcedLethality is { } lethality) Dungeon.TierRules.Lethality = lethality; // Settings loaded before the flags were read
+        if (_testPerf)
+        {
+            if (_pfPhase is not ("crowd" or "ride")) { GD.Print($"[perf] ERROR unknown phase \"{_pfPhase}\" (crowd, ride)"); GD.Print($"[perf] RESULT FAIL ({_pfPhase}): unknown phase"); _done = true; GetTree().Quit(1); }
+            else Settings.Apply(); // the phase's settings, in memory: the window, VSync and render scale now
+        }
         if (_bakeDir != null && ReplayDir != null) Adventure.Ai.ClaudePlanner.StrictReplay = true; // a bake from recordings stops at the first missing one rather than filling in
         if ((_testCollectives || _testQuest || _testVoice || _testStory) && _seed == null) _seed = 4242; // scripted scenarios want a repeatable floor
         if (_testStructures && _seed == null) _seed = StructureSeed();
@@ -972,6 +985,7 @@ public partial class DebugTools : Node
         if (_testPit && !ScriptStalled("pit", _ptStep * 10 + _ptPass)) RunPitTest();
         if (_testBoarders && !ScriptStalled("boarders", _bdStep * 100 + _bdPhase)) RunBoardersTest();
         if (_testTrackView && !ScriptStalled("trackview", _tkvStep)) RunTrackViewTest();
+        if (_testPerf && !ScriptStalled("perf", _pfStep)) RunPerfTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;

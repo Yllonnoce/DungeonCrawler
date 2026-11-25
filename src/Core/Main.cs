@@ -632,6 +632,16 @@ public partial class Main : Node
     /// <summary>True while a floor is being built and its saved state applied: nothing that happens then is news to anyone.</summary>
     public bool Rebuilding { get; private set; }
 
+    private PerfMonitor? _perf;
+
+    /// <summary>The perf line's node (every role), built the first time a floor is entered and kept for the session.</summary>
+    private void EnsurePerfMonitor()
+    {
+        if (_perf != null && IsInstanceValid(_perf)) return;
+        _perf = new PerfMonitor { Name = "PerfMonitor" };
+        AddChild(_perf);
+    }
+
     private void RebuildFloor(int floor, int delta)
     {
         Rebuilding = true;
@@ -664,6 +674,7 @@ public partial class Main : Node
         BuildSnapshotFor[floor] = snapshot; // what a client must pass to Build to get the same floor
         var layout = Builder.Build(floor, game.GameSeed, PlanFor(floor), snapshot);
         NoteFloorBuilt();
+        EnsurePerfMonitor();
         Party.ShopSoldOnFloor.Clear();
         Party.LuckyDipBoughtOnFloor.Clear();
         ApplyTierLook();

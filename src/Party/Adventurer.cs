@@ -276,7 +276,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             _vr.TakeView();             // every time: making the flat camera current just above took the view from the head
         }
         else if (_vr != null) { _vr.Detach(); _vr = null; ApplyPosture(); Camera.Rotation = new Vector3(_pitch, 0, 0); } // the eye for standing, crouching or a seat
-        Torch.ShadowEnabled = local;
+        Torch.ShadowEnabled = local && Settings.Shadows; // the only shadowed light; Settings' Shadows turns it off
         Torch.LightEnergy = local ? 2.5f : 1.0f;
         Torch.OmniRange = local ? 16f : 8f;
         _body.Visible = !local && _model == null;
@@ -306,7 +306,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     public void CancelHold() => _holdStart = -1;
 
-    public void ApplySettings() => Camera.Fov = Settings.Fov + _feelFov;
+    public void ApplySettings()
+    {
+        Camera.Fov = Settings.Fov + _feelFov;
+        if (Torch != null) Torch.ShadowEnabled = IsLocal && Settings.Shadows;
+    }
 
     private float _shakeAmp, _shakeLeft, _shakeTotal;
     private readonly Random _shakeRng = new();
