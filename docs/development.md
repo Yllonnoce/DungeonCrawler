@@ -613,10 +613,16 @@ otherwise idle).** Every run had exit 0, `RESULT ok` and no `ERROR` line. `siege
   12-13 asleep (the floor's far ones). Every siege run has one or two 63-92 ms frames as the cap-filling wave's creatures come through, just
   before or at the start of the measure. Physics runs about 14-16 ms against the crowd's 8-10: the siege's creatures are all aware and
   pathing. Run 2 drew about 1030 calls against about 870 in the others: a different view of the platform.
-- **The ride with the shooters** (median 331, 1% low 105) sits between T2's after-diet rows (362, 103-108) and T1's baseline (342-347,
-  83-85). Its one 85-130 ms hitch of T1/T2 is down to 59.5 ms.
-- **The crowd** (`NoPortals`, `NoAmbush`: Ruling 22's comparison row) reads 291-339 median, 84-100 1% low: within T2's after-diet
-  spread for the 1% low (77-96) and below it for the median (348-379). Run 1's 291 is the low end of every crowd run so far (T1: 312-315).
+- **The ride with the shooters** (one run). What differs from the earlier rows is that ride 1 now carries its 4 alcove shooters (plan 16
+  Task 8). Against T1's baseline (two runs) and T2's after-diet rows (two runs):
+  - its median, 331, is below both (T1 342-347, T2 362);
+  - its 1% low, 105, is above T1's 83-85 and within T2's 103-108;
+  - its worst second, 220, has fallen back to T1's level (217-218), from T2's 245-246;
+  - its physics, 6.77 ms, is back at T1's level (6.34-6.78), from T2's 4.21-4.37;
+  - its `alloc_kb`, 87411, is below T2's 94165-94245;
+  - its worst frame is 59.5 ms. The one hitch of 85-130 ms that every T1 and T2 ride run had (94.3, 103.7, 130.0, 85.0 ms) did not come.
+- **The crowd** (`NoPortals`, `NoAmbush`: Ruling 22's comparison row) reads 291-339 median, 84-100 1% low. Against T2's after-diet
+  rows, the 1% low is at or above theirs (77-96) and the median is below theirs (348-379). Run 1's 291 is the low end of every crowd run so far (T1: 312-315).
   The stop trap's controllers run there too (no siege and no ambush, but their ticks and the alcove arm checks), and runs vary about ±10 %.
 
 ### Known gaps
