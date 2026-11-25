@@ -409,7 +409,7 @@ public partial class RailController
     private void ClearTheLiftsSpan()
     {
         if (Exit is not { Parked: not null } enc || _train.Count == 0) return;
-        var rear = RunawayRules.TrainRearS(Party.BackS, _train.Count, WagonSpacing);
+        var rear = RunawayRules.TrainRearS(Party.RearS, _train.Count, WagonSpacing);
         if (!ParkedRules.InItsSpan(Party.FrontS, rear, enc.ParkedRearS, enc.ParkedFrontS)) return;
         _train.UncoupleAll();
         GD.Print($"[rails] lift: the wrecked train (front S={Party.FrontS:0.0}, rear S={rear:0.0}) stood in the parked train's place: its wagons are uncoupled");

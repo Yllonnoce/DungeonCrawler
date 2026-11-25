@@ -59,7 +59,18 @@
 #                                     thrown onto the line behind the cart (it stands at the server's landing); it then asks for the
 #                                     floor again and, rebuilt mid-ride 3, holds the ride as the server has it within 1 s again (after
 #                                     the throw: one of stop 1's crew left in W1, the thrown one gone, no corpse); put
-#                                     beside the cart at stop 3 it boards again and rides ride 4 seated with the first client (every
+#                                     beside the cart at stop 3 it stays on foot for the hijack (plan 16 Task 9; the RIDE server has no
+#                                     siege, wall ambush or shooters, so its hook DebugHijack is the only hijack): the first client, its
+#                                     prisoners left behind, gets out through its intent (cart:0); won back: the hook makes a cinder the
+#                                     driver, it glows 3 s and the train rolls back, the joiner boards it rolling back through its intent
+#                                     (V <= 4.05), the server's three blows for the joiner (DebugStrikeDriver, 0.5 s apart) read grip 1, 2,
+#                                     then off, the joiner sees the driver at its spot and off it within 1 s of the server, and both
+#                                     clients see the train held again at stop 3; got away: the joiner gets out, a second hook rolls the
+#                                     train to its limit with its driver, gone (the cart hidden on both clients within 1 s), the relief
+#                                     train 12 s on is held at StopS[3] on both within 1 s, and the crew it put off are booked and seated
+#                                     before the departure; both sides' half-second hijack lines pair by t within 1.5 m and 0.3 m/s, the
+#                                     wagons behind the cart, the client facing +1 while it rolls back; then both board the relief train
+#                                     and it rides ride 4 seated with the first client (every
 #                                     departure a real one; 6 m out of stop 3 both press "Climb back to wagon 1" at once: one is taken,
 #                                     the other refused (the place is booked), and the winner climbs back into the cart; both roll into
 #                                     the cavern with four wagons, their rear the front less TrainRules.Length); out at stop 4, the kiln's, on foot while the train leaves on ride 5 with the
@@ -114,7 +125,8 @@ if [ "${RIDE:-}" = 1 ]; then
   # the RIDE pass: run it alone (its set-piece clocks fail on a loaded machine: a slow server's floor clock falls behind its own
   # wall clock). One server on the built-in campaign, one client; floor 12 after the client is ready. A test server quits after
   # 120 s unless told (the pass rides the five rides to the end of the line, about 330 s on the client with plan 14's slower train; plan 15
-  # Task 8 adds about 3 s before the end-of-line wreck (the joiner seated, 2 s); the server's own pass ends by 560 s, the clients' by 540 s), and ends anyway once empty. A scripted server deals no objective unless one
+  # Task 8 adds about 3 s before the end-of-line wreck (the joiner seated, 2 s); plan 16 Task 9's hijack steps at stop 3 about 70 s; the server's
+  # own pass ends by 660 s, the clients' by 640 s), and ends anyway once empty. A scripted server deals no objective unless one
   # is named: --objective=jailbreak gives floor 12 the campaign's own (the crew in their platform cages, the train's four wagons empty).
   # The pass checks the wire, not the fight: the server keeps the heroes topped up, frees a natural hound alone with crew 1 s after it
   # boards (only ride 2's scripted throw takes a prisoner) and keeps the train's crew above half their hp
@@ -125,13 +137,13 @@ if [ "${RIDE:-}" = 1 ]; then
     echo "WARNING: $PROFILE_FILE reads low-power: the RIDE timing checks (set-piece clocks, party pairs) are unreliable in low-power."
     echo "WARNING: switch to balanced or performance first (Fn+Q, or: echo balanced | sudo tee $PROFILE_FILE), and run this alone."
   fi
-  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --objective=jailbreak --seed=4242 --lethality=1 --quit-when-empty --quit-after=660 > "$TMP/server.log" 2>&1 &
+  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --objective=jailbreak --seed=4242 --lethality=1 --quit-when-empty --quit-after=760 > "$TMP/server.log" 2>&1 &
   SERVER=$!
   for i in $(seq 1 240); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; sleep 0.5; done
   # the built-in floor 1 takes a while to build (the socket is not served meanwhile): wait for the server to say it is built
   for i in $(seq 1 180); do grep -q "\[net-server\] floor 1 built" "$TMP/server.log" 2>/dev/null && break; sleep 0.5; done
   sleep 1
-  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=540 > "$TMP/client.log" 2>&1 &
+  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=640 > "$TMP/client.log" 2>&1 &
   CLIENT=$!
   # the joiner: a second client starts as the cart leaves stop 1, so its Ready falls during ride 2 (it boards at stop 2 and rides ride 3)
   JOINER=""
@@ -141,7 +153,7 @@ if [ "${RIDE:-}" = 1 ]; then
     sleep 0.5
   done
   if grep -q "\[net-server\] ride: the cart departs stop 1 with" "$TMP/server.log" 2>/dev/null; then
-    XDG_DATA_HOME="$TMP/joiner" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --net-test-ride-join --join="$URL" --name=Joiner --class=class.warrior --quit-after=540 > "$TMP/joiner.log" 2>&1 &
+    XDG_DATA_HOME="$TMP/joiner" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --net-test-ride-join --join="$URL" --name=Joiner --class=class.warrior --quit-after=640 > "$TMP/joiner.log" 2>&1 &
     JOINER=$!
   fi
   wait $CLIENT 2>/dev/null
@@ -198,6 +210,85 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net-server\] ride: last wreck: the test wrecked the cart [0-9]* time(s) until no spare was left" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never wrecked the cart until no spare was left)"; exit 1; fi
   if ! grep -q "\[net\] ride: last wreck: the cart stands wrecked and hidden here .* cart_wreck played [1-9]" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner did not hear the last wreck live)"; exit 1; fi
   if ! grep -q "\[net\] ride: last-wreck-resync ok: .* wreck=0 shown, cart_wreck played 0 time(s), 0 tumble(s)" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's catch-up of the standing wreck played a wreck: $(grep -o 'last-wreck-resync.*' "$TMP/joiner.log" | head -1))"; exit 1; fi
+  # plan 16 Task 9 (Ruling 21): the hijack at stop 3, before the joiner boards again there. The RIDE server has no siege, wall ambush or
+  # shooters (Ruling 2): its hook (DebugHijack) makes a cinder the driver at once, both heroes on foot. Won back: the joiner boards the
+  # rolling-back cart through its intent (V <= 4.05); the server's three blows for it (DebugStrikeDriver, 0.5 s apart) read grip 1, 2,
+  # then off; the joiner sees the driver at the driver spot, and off it within 1 s of the server's knock-off; both clients see the train
+  # held again at stop 3. Got away: the cart hidden on both clients within 1 s of the server's Gone; the relief train held at StopS[3]
+  # on both within 1 s of the server; the crew it put off booked (from 60 m) and seated before the departure. Both sides' half-second
+  # hijack lines pair by t (nearest within 0.25 s): |dS| <= 1.5 m, |dV| <= 0.3 m/s, every wagon behind the cart (lower S) on both, the
+  # client facing +1 while it rolls back or brakes; 8 pairs at least for each client
+  echo "--- the hijack at stop 3"; grep -h "\[net-server\] ride: \(hijack: \|Joiner boarded the rolling-back\)\|\[rails\] hijack\|\[CrewRescue\] .* \(put off wagon\|books .*put off by the hijack\|is no longer thrown\|departure waits\)\|\[net\] ride: \(hijack: \|hijack phase \|boarded the rolling-back\|the driver [0-9]\|the cart hidden here\|held again at stop\)" "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null | cut -c1-260 | head -90
+  HJ1=$(grep -m1 "\[net-server\] ride: hijack: the test's driver .* (DebugHijack 1: won back)" "$TMP/server.log")
+  HJ_ID=$(echo "$HJ1" | sed -n 's/.*(net id \([0-9]*\)) takes the cart.*/\1/p')
+  if [ -z "$HJ_ID" ]; then echo "NET TEST: FAIL (the server's hook made no driver at stop 3 for the hijack to win back: $(grep -m1 "\[net-server\] ride: hijack: .*(FAIL)" "$TMP/server.log"))"; exit 1; fi
+  HJ_BOARD=$(grep -m1 "\[net-server\] ride: Joiner boarded the rolling-back cart through the intent (V=" "$TMP/server.log")
+  HJ_V=$(echo "$HJ_BOARD" | sed -n 's/.*through the intent (V=\([0-9.]*\)).*/\1/p')
+  if [ -z "$HJ_V" ] || ! awk -v v="$HJ_V" 'BEGIN { exit !(v + 0 <= 4.05) }' || ! echo "$HJ_BOARD" | grep -q "; ok)$" || ! grep -q "\[net\] ride: boarded the rolling-back cart here" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner did not board the rolling-back cart through its intent at 4.05 m/s or less, on the server and its own screen: ${HJ_BOARD:-no server line}; $(grep -m1 "\[net\] ride: boarded the rolling-back cart here\|\[net\] RESULT FAIL" "$TMP/joiner.log" | cut -c1-300))"; exit 1; fi
+  if ! grep -q "\[net\] ride: the driver $HJ_ID aboard the cart here at t=[0-9.]*, [0-9.]* m from the driver spot .* (ok)$" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never saw the driver $HJ_ID at the cart's driver spot: $(grep -m1 "\[net\] ride: the driver $HJ_ID aboard" "$TMP/joiner.log"))"; exit 1; fi
+  for g in "1:grip 1" "2:grip 2" "3:off"; do
+    if ! grep -q "\[net-server\] ride: hijack: blow ${g%%:*} on the driver $HJ_ID for Joiner (DebugStrikeDriver, member [0-9]*, seated in car 0) at t=[0-9.]*: ${g#*:}$" "$TMP/server.log"; then echo "NET TEST: FAIL (the server's blow ${g%%:*} on the driver $HJ_ID did not read ${g#*:}: $(grep "\[net-server\] ride: hijack: blow " "$TMP/server.log" | head -4 | tr '\n' ';'))"; exit 1; fi
+  done
+  if ! grep -q "\[rails\] hijack: .* knocked off the cart by Joiner after 3 hit(s)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the grip did not count the joiner's three blows to the knock-off: $(grep -m1 "\[rails\] hijack: .* knocked off the cart\|\[rails\] hijack: .* on the cart: grip" "$TMP/server.log"))"; exit 1; fi
+  HJ_KO=$(grep -o "\[net-server\] ride: hijack: the driver $HJ_ID knocked off the cart at t=[0-9.]*" "$TMP/server.log" | head -1 | sed 's/.*at t=//')
+  HJ_KO_J=$(grep -o "\[net\] ride: the driver $HJ_ID off the cart here at t=[0-9.]*" "$TMP/joiner.log" | head -1 | sed 's/.*at t=//')
+  if [ -z "$HJ_KO" ] || [ -z "$HJ_KO_J" ] || ! awk -v s="$HJ_KO" -v c="$HJ_KO_J" 'BEGIN { d = c - s; exit !(d >= -0.1 && d <= 1.0) }'; then echo "NET TEST: FAIL (the joiner did not see the driver $HJ_ID off the cart within 1 s of the server's knock-off at t=${HJ_KO:-never}: ${HJ_KO_J:-never})"; exit 1; fi
+  echo "--- the knock-off at stop 3: the driver $HJ_ID off at t=$HJ_KO on the server, t=$HJ_KO_J on the joiner; boarded at V=$HJ_V"
+  if ! grep -q "\[rails\] hijack over at stop 3: the train held again (the driver is knocked off)" "$TMP/server.log" || ! grep -q "\[net-server\] ride: hijack: won back: held again at stop 3 at t=" "$TMP/server.log"; then echo "NET TEST: FAIL (the won-back train was not held again at stop 3 on the server: $(grep -m1 "\[rails\] hijack over at stop 3" "$TMP/server.log"))"; exit 1; fi
+  for f in client joiner; do
+    if ! grep -q "\[net\] ride: held again at stop 3 here at t=[0-9.]* (S=[0-9.]*, StopS [0-9.]*; the return;" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f never saw the won-back train held again at stop 3: $(grep -m1 "\[net\] ride: hijack phase None here" "$TMP/$f.log" 2>/dev/null))"; exit 1; fi
+  done
+  HJ_GONE=$(grep -o "\[net-server\] ride: hijack: the train is gone at its limit at t=[0-9.]*" "$TMP/server.log" | head -1 | sed 's/.*at t=//')
+  HJ_REL=$(grep -o "\[net-server\] ride: hijack: the relief train is held at stop 3 at t=[0-9.]* (S=[0-9.]*, StopS [0-9.]*" "$TMP/server.log" | head -1)
+  HJ_REL_T=$(echo "$HJ_REL" | sed -n 's/.* at t=\([0-9.]*\) (S=.*/\1/p'); HJ_STOP3=$(echo "$HJ_REL" | sed -n 's/.*StopS \([0-9.]*\)$/\1/p')
+  if [ -z "$HJ_GONE" ] || [ -z "$HJ_REL_T" ]; then echo "NET TEST: FAIL (the second hijack did not get away and bring the relief train to stop 3 on the server: gone ${HJ_GONE:-never}, relief held ${HJ_REL_T:-never}; $(grep -m1 "\[net-server\] ride: hijack: .*(FAIL)" "$TMP/server.log"))"; exit 1; fi
+  for f in client joiner; do
+    HJ_HID=$(grep -o "\[net\] ride: the cart hidden here at t=[0-9.]*" "$TMP/$f.log" 2>/dev/null | head -1 | sed 's/.*at t=//')
+    HJ_RH=$(grep -o "\[net\] ride: held again at stop 3 here at t=[0-9.]* (S=[0-9.]*, StopS [0-9.]*; the relief train" "$TMP/$f.log" 2>/dev/null | head -1)
+    HJ_RH_T=$(echo "$HJ_RH" | sed -n 's/.* at t=\([0-9.]*\) (S=.*/\1/p'); HJ_RH_S=$(echo "$HJ_RH" | sed -n 's/.*(S=\([0-9.]*\), StopS.*/\1/p')
+    if [ -z "$HJ_HID" ] || ! awk -v s="$HJ_GONE" -v c="$HJ_HID" 'BEGIN { d = c - s; exit !(d >= -0.1 && d <= 1.0) }'; then echo "NET TEST: FAIL (the $f did not hide the cart within 1 s of the server's Gone at t=$HJ_GONE: ${HJ_HID:-never})"; exit 1; fi
+    if [ -z "$HJ_RH_T" ] || ! awk -v s="$HJ_REL_T" -v c="$HJ_RH_T" -v p="$HJ_RH_S" -v k="$HJ_STOP3" 'BEGIN { d = c - s; e = p - k; if (e < 0) e = -e; exit !(d >= -0.1 && d <= 1.0 && e <= 0.05) }'; then echo "NET TEST: FAIL (the $f did not hold the relief train at StopS[3] ($HJ_STOP3) within 1 s of the server's at t=$HJ_REL_T: ${HJ_RH:-never})"; exit 1; fi
+    echo "--- the got-away on the $f: the cart hidden at t=$HJ_HID (the server's Gone at t=$HJ_GONE), the relief held at S=$HJ_RH_S at t=$HJ_RH_T (the server's at t=$HJ_REL_T)"
+  done
+  HJ_TC=$(grep -m1 "\[net-server\] ride: hijack: the thrown crew \[.*\] seated in the train at the departure from stop 3" "$TMP/server.log")
+  case "$HJ_TC" in *"(ok)") ;; *) echo "NET TEST: FAIL (the crew the got-away put off were not all seated at the departure from stop 3: ${HJ_TC:-no departure line})"; exit 1 ;; esac
+  HJ_NAMES=$(echo "$HJ_TC" | sed -n 's/.*the thrown crew \[\([^]]*\)\].*/\1/p')
+  while IFS= read -r name; do
+    [ -z "$name" ] && continue
+    if ! grep -q "\[CrewRescue\] $name books W[0-9]* seat [0-9]* at stop 3 (.*, put off by the hijack)" "$TMP/server.log"; then echo "NET TEST: FAIL ($name, put off by the got-away, never booked a seat as thrown crew at stop 3: $(grep -m1 "\[CrewRescue\] $name books" "$TMP/server.log"))"; exit 1; fi
+  done <<< "$(echo "$HJ_NAMES" | sed 's/, /\n/g')"
+  for f in client joiner; do
+    HJP=$(awk '
+      FNR == 1 { file++ }
+      function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
+      function behind(w, s,   n, p, i, x) { if (w == "-") return 1; n = split(w, p, ","); for (i = 1; i <= n; i++) { x = p[i]; sub(/^W[0-9]+:/, "", x); if (x == "NaN" || x == "" || x + 0 >= s + 0) return 0 } return 1 }
+      file == 1 && /^\[net-server\] ride: hijack [A-Za-z]+ S=/ { ns++; st[ns] = val("t") + 0; ss[ns] = val("S") + 0; sv[ns] = val("V") + 0; sw[ns] = val("wagons"); sf[ns] = val("facing"); sp[ns] = $4 }
+      file == 2 && /^\[net\] ride: hijack [A-Za-z]+ here S=/ { nc++; ct[nc] = val("t") + 0; cs[nc] = val("S") + 0; cv[nc] = val("V") + 0; cw[nc] = val("wagons"); cf[nc] = val("facing"); cp[nc] = $4 }
+      END {
+        n = 0; worst = 0; bad = 0
+        for (i = 1; i <= nc; i++) {
+          j = 0; bd = 1
+          for (k = 1; k <= ns; k++) { d = ct[i] - st[k]; if (d < 0) d = -d; if (d < bd) { bd = d; j = k } }
+          if (!j || bd > 0.25) continue
+          n++
+          ds = cs[i] - ss[j]; if (ds < 0) ds = -ds; dv = cv[i] - sv[j]; if (dv < 0) dv = -dv
+          if (ds > worst) worst = ds
+          why = ""
+          if (ds > 1.5) why = why " dS " ds
+          if (dv > 0.3) why = why " dV " dv
+          if (!behind(cw[i], cs[i])) why = why " a wagon here not behind the cart (" cw[i] ")"
+          if (!behind(sw[j], ss[j])) why = why " a wagon on the server not behind the cart (" sw[j] ")"
+          if ((cp[i] == "RollingBack" || cp[i] == "Braking") && cf[i] != "+1") why = why " facing " cf[i] " here"
+          if (sf[j] != "+1") why = why " facing " sf[j] " on the server"
+          if (why != "") { bad++; if (bad <= 5) print "  hijack pair t=" ct[i] " (" cp[i] ") vs the server t=" st[j] " (" sp[j] "):" why > "/dev/stderr" }
+        }
+        printf "%d pair(s), worst %.2f m (%d with a fault; server lines %d, these %d)\n", n, worst, bad, ns, nc
+        exit !(n >= 8 && worst <= 1.5 && bad == 0)
+      }' "$TMP/server.log" "$TMP/$f.log")
+    HJP_RC=$?
+    echo "--- hijack pairs: $HJP (the $f)"
+    if [ $HJP_RC -ne 0 ]; then echo "NET TEST: FAIL (the $f's hijack lines did not keep to the server's: $HJP)"; exit 1; fi
+  done
   # plan 9: put beside the cart at stop 3, the thrown joiner boards again and both clients ride ride 4 seated (a real departure)
   if ! grep -q "\[net-server\] ride: Joiner boarded again at stop 3 through the intent" "$TMP/server.log" || ! grep -q "\[net-server\] ride: the cart departs stop 3 with 2 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded again at stop 3, or the cart never left stop 3 with both clients aboard)"; exit 1; fi
   # the left-behind spare (task 9): the joiner, out at stop 4 (the kiln's), sees stop 4's spare offer nothing while the train is held there;
@@ -348,17 +439,22 @@ if [ "${RIDE:-}" = 1 ]; then
     FNR == 1 { file++ }
     function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
     file == 1 && /^\[net-server\] ride book / { st[val("t")] = val("train") }
+    file == 1 && /^\[net-server\] ride: hijack: the train is gone at its limit at t=/ && !gone { split($0, a, "at t="); gone = a[2] + 0 }
+    file == 1 && /^\[net-server\] ride: hijack: the relief train rolls in at t=/ && !relief { split($0, a, "at t="); relief = a[2] + 0 }
     file == 2 && /^\[net\] ride book / { ct[val("t")] = val("train") }
     file == 3 && /^\[net\] ride: joined mid-ride; ready at t=/ { split($0, a, "ready at t="); split(a[2], b, " "); ready = b[1] + 0 }
     file == 3 && /^\[net\] ride: resynced; ready at t=/ { split($0, a, "ready at t="); split(a[2], b, " "); rready = b[1] + 0 }
     file == 3 && /^\[net\] ride book / { jt[val("t")] = val("train"); jnow[val("t")] = val("now") + 0 }
     END {
+      # plan 16 Task 9: from the got-away to a second after the relief train rolls in, no train is coupled (gone into the dark)
+      if (gone && !relief) relief = gone + 60
+      skipped = 0; for (t in st) if (gone && t + 0 >= gone - 0.5 && t + 0 <= relief + 1.0) { away[t] = 1; skipped++ }
       cn = 0; cbad = 0; jn = 0; jbad = 0
-      for (t in ct) if (t in st) { cn++; if (ct[t] != "1,2,3,4" || st[t] != "1,2,3,4") { cbad++; if (cbad <= 5) print "  client train book: t=" t " server " st[t] " client " ct[t] > "/dev/stderr" } }
-      for (t in jt) if ((t in st) && ready > 0 && jnow[t] - ready >= 1.0 && !(rready > 0 && jnow[t] >= rready && jnow[t] - rready < 1.0)) {
+      for (t in ct) if ((t in st) && !(t in away)) { cn++; if (ct[t] != "1,2,3,4" || st[t] != "1,2,3,4") { cbad++; if (cbad <= 5) print "  client train book: t=" t " server " st[t] " client " ct[t] > "/dev/stderr" } }
+      for (t in jt) if ((t in st) && !(t in away) && ready > 0 && jnow[t] - ready >= 1.0 && !(rready > 0 && jnow[t] >= rready && jnow[t] - rready < 1.0)) {
         jn++; if (jt[t] != "1,2,3,4" || st[t] != "1,2,3,4") { jbad++; if (jbad <= 5) print "  joiner train book: t=" t " server " st[t] " joiner " jt[t] > "/dev/stderr" }
       }
-      printf "train books compared: client %d (%d not 1,2,3,4 on both sides), joiner %d (%d not)\n", cn, cbad, jn, jbad
+      printf "train books compared: client %d (%d not 1,2,3,4 on both sides), joiner %d (%d not); %d grid point(s) of the got-away left out\n", cn, cbad, jn, jbad, skipped
       exit !(cn >= 20 && cbad == 0 && jn >= 10 && jbad == 0)
     }' "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log")
   TRAINS_RC=$?
@@ -390,6 +486,8 @@ if [ "${RIDE:-}" = 1 ]; then
   # throws seat 5's prisoner at 6.0 s (within 0.3 s of the call); it is freed by the test's hand before 10 s. Each client heard the call,
   # saw the BoarderThrow glow before the PropEvt (within 0.5 s of the server's throw), hid the copy 1.2 s on (within 0.3 s) seated nowhere
   TW=$(grep -m1 "\[net-server\] ride: throw: the test hound alone on wagon 1 " "$TMP/server.log")
+  # the glow is the thrower's own telegraph, by its net id (plan 16 Task 9): a hijack's driver is told as BoarderThrow too
+  TW_ID=$(grep -m1 -o "\[net-server\] ride: throw: a test hound [^ ]* (net id [0-9]*) boards wagon 1" "$TMP/server.log" | sed -n 's/.*(net id \([0-9]*\)).*/\1/p')
   case "$TW" in *"(ok)") ;; *) echo "NET TEST: FAIL (the test hound alone on wagon 1 did not throw seat 5's prisoner of stop 1 6 s after its call: ${TW:-$(grep -m1 "\[net-server\] ride: throw: " "$TMP/server.log")})"; exit 1 ;; esac
   THROWN=$(echo "$TW" | sed -n 's/.* and threw \(.*\) (seat 5, one of stop 1.s crew yes).*/\1/p')
   SRV_THROW=$(grep -o "\[net-server\] ride: throw: .* thrown off wagon 1 at t=[0-9.]*" "$TMP/server.log" | head -1 | sed 's/.*at t=//')
@@ -400,8 +498,10 @@ if [ "${RIDE:-}" = 1 ]; then
     HID=$(echo "$TL" | sed -n 's/.*, hidden \([0-9.]*\) s later, .*/\1/p')
     PEVT=$(echo "$TL" | sed -n 's/.*the throw.s PropEvt at t=\([0-9.]*\),.*/\1/p')
     GLOW=$(echo "$TL" | sed -n 's/.*the glow on hound [-0-9]* at t=\([0-9.]*\),.*/\1/p')
+    GLOW_ID=$(echo "$TL" | sed -n 's/.*the glow on hound \([-0-9]*\) at t=.*/\1/p')
+    if [ -z "$TW_ID" ] || [ "$GLOW_ID" != "$TW_ID" ]; then echo "NET TEST: FAIL (the $f took the glow of hound ${GLOW_ID:-?} for the throw, not the test hound ${TW_ID:-?}'s own: $TL)"; exit 1; fi
     if ! awk -v h="$HID" -v p="$PEVT" -v g="$GLOW" -v s="$SRV_THROW" 'BEGIN { d = h - 1.2; if (d < 0) d = -d; l = p - s; exit !(h != "" && p != "" && g != "" && s != "" && d <= 0.3 && g + 0 < p + 0 && l >= -0.05 && l <= 0.5) }'; then echo "NET TEST: FAIL (the $f's throw times: hidden ${HID:-?} s after its PropEvt (want 1.2 within 0.3), the glow at t=${GLOW:-?} then the PropEvt at t=${PEVT:-?} (the server threw at t=${SRV_THROW:-?}))"; exit 1; fi
-    echo "--- the throw on the $f: the glow at t=$GLOW, the PropEvt at t=$PEVT (the server's throw at t=$SRV_THROW), hidden $HID s later"
+    echo "--- the throw on the $f: the glow of hound $GLOW_ID (the test hound's own) at t=$GLOW, the PropEvt at t=$PEVT (the server's throw at t=$SRV_THROW), hidden $HID s later"
   done
   J_OK=$(grep -n "\[net\] ride: joined-mid-ride ok" "$TMP/joiner.log" | head -1 | cut -d: -f1); J_TL=$(grep -n "\[net\] ride: .* thrown from wagon 1 here (PropEvt)" "$TMP/joiner.log" | head -1 | cut -d: -f1)
   if [ -z "$J_OK" ] || [ -z "$J_TL" ] || [ "$J_TL" -lt "$J_OK" ]; then echo "NET TEST: FAIL (the throw was not after the joiner's joined-mid-ride ok)"; exit 1; fi

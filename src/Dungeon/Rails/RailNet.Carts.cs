@@ -456,7 +456,7 @@ public partial class RailNet
     }
 
     /// <summary>Client: our own train's last body's back S, as this screen shows it (the RIDE pass reads it too).</summary>
-    internal float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
+    internal float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.RearS, _rails.Train.Count, RailController.WagonSpacing);
 
     /// <summary>Client: a runaway on the party line rings behind our train by the server's rule (<see cref="RunawayRules.Rings"/>), from its own place: positional.</summary>
     private void RingBehind(ClientCart cc, float s, float dt)
@@ -505,7 +505,28 @@ public partial class RailNet
         if (NetSession.Instance.Client is not { } client) return;
         FlyLeaps(client.ServerNow); // after every cart is posed: the arcs start on one and end on another
         FollowBoarders();
-        if (NetSession.Instance.TestRide) RideTraceClient(client.ServerNow);
+        if (NetSession.Instance.TestRide)
+        {
+            RideTraceClient(client.ServerNow);
+            RideHijackTraceClient(client.ServerNow);
+        }
+    }
+
+    private long _hijackGrid = long.MinValue;
+
+    /// <summary>
+    /// The RIDE pass, each rendered frame on a client (plan 16 Task 9): while the server's state says a hijack is live, on each half second of
+    /// the server's clock as this client has it, the phase, the follower's S and V, each coupled wagon's S where its copy stands and the run's
+    /// facing, as the server prints its own (<see cref="RailController.HijackWagonsTrace"/>); the pass pairs them by t.
+    /// </summary>
+    private void RideHijackTraceClient(double serverNow)
+    {
+        if (_rails.Hijack == HijackPhase.None || _rails.Follower is not { HasState: true } f) return;
+        var grid = (long)Math.Floor(serverNow / RailController.HijackTraceEvery);
+        if (grid == _hijackGrid) return;
+        _hijackGrid = grid;
+        var v = _rails.State.Mode == CartMode.Rolling ? f.V : 0f;
+        GD.Print(FormattableString.Invariant($"[net] ride: hijack {_rails.Hijack} here S={f.S:0.00} V={v:0.00} t={serverNow:0.000} wagons={_rails.HijackWagonsTrace()} facing={(_rails.Party.Facing >= 0 ? "+1" : "-1")}"));
     }
 
     /// <summary>

@@ -61,7 +61,7 @@ public partial class RailController
     private bool PartyAhead()
     {
         var run = JudgedRun();
-        return RailWarn.AnyoneAhead(run.Track, run.State.S, State.V, FootHeroes);
+        return RailWarn.AnyoneAhead(run.Track, run.State.S, State.V, FootHeroes, Party.Dir, HijackLead); // the way of travel, from the leading face (a roll back's last wagon: plan 16)
     }
 
     /// <summary>Server and single player, each rendered frame: the running chaser's sound from its run, posed at <paramref name="s"/>.</summary>

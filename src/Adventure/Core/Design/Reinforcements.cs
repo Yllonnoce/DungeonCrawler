@@ -7,6 +7,8 @@ namespace DungeonCrawler.Adventure;
 public sealed record AmbushPoint(GridPos Trigger, GridPos Cover, string EnemyId)
 {
     public bool FromRubble { get; init; }
+    /// <summary>The cage stop whose walls hide it (plan 16, <see cref="StopAmbushRules"/>): it springs with the stop's arrival, never by a hero's nearness. −1 for a corridor point.</summary>
+    public int Stop { get; init; } = -1;
 }
 
 /// <summary>
@@ -47,14 +49,7 @@ public static class AmbushRules
                 var p = new GridPos(x, y);
                 if (layout[p] != Cell.Floor || layout.RoomAt(p) != null || layout.IsWater(p) || layout.IsReserved(p) || layout.IsUnder(p)) continue;
                 if (Math.Abs(p.X - layout.UpStairs.X) + Math.Abs(p.Y - layout.UpStairs.Y) < ClearOfStairs) continue;
-                GridPos? wall = null, rubble = null;
-                foreach (var n in Neighbours(p))
-                {
-                    if (layout.Rubble.Contains(n)) rubble ??= n;
-                    else if (!layout.IsWalkable(n) && layout[n] != Cell.Secret && layout.LevelOf(n) <= layout.LevelOf(p)) wall ??= n;
-                }
-                if (rubble is { } r) candidates.Add((p, r, true));
-                else if (wall is { } w) candidates.Add((p, w, false));
+                if (CoverFor(layout, p) is { } cover) candidates.Add((p, cover.Cover, cover.Rubble));
             }
         // rubble first (the mound is the better hiding place), then a shuffle so the picks spread over the floor
         var ordered = candidates.OrderBy(c => c.Rubble ? 0 : 1).ThenBy(_ => rng.Next()).ToList();
@@ -65,6 +60,24 @@ public static class AmbushRules
             points.Add(new AmbushPoint(c.Trigger, c.Cover, enemyIds[rng.Next(enemyIds.Count)]) { FromRubble = c.Rubble });
         }
         return points;
+    }
+
+    /// <summary>
+    /// What an ambusher at <paramref name="trigger"/> bursts out of: a 4-neighbour rubble mound first, else a non-walkable, non-secret
+    /// wall at a level no higher than the trigger's (the first of each in east, west, south, north order); null when it has neither.
+    /// The corridor points and the stop-wall points (<see cref="StopAmbushRules"/>) share it.
+    /// </summary>
+    public static (GridPos Cover, bool Rubble)? CoverFor(FloorLayout layout, GridPos trigger)
+    {
+        GridPos? wall = null, rubble = null;
+        foreach (var n in Neighbours(trigger))
+        {
+            if (layout.Rubble.Contains(n)) rubble ??= n;
+            else if (!layout.IsWalkable(n) && layout[n] != Cell.Secret && layout.LevelOf(n) <= layout.LevelOf(trigger)) wall ??= n;
+        }
+        if (rubble is { } r) return (r, true);
+        if (wall is { } w) return (w, false);
+        return null;
     }
 
     private static IEnumerable<GridPos> Neighbours(GridPos p)

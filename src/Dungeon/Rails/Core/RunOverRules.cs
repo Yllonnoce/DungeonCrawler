@@ -24,14 +24,16 @@ public static class RunOverRules
         b.Lateral <= CartRules.HalfWidth + b.Radius && b.Height >= FeetBelow && b.Height <= CartRules.Clearance;
 
     /// <summary>
-    /// The cart's front swept the body this step. A cart running toward higher S (<paramref name="dir"/> +1) has its front
-    /// at S + HalfLength, one running toward lower S (−1) at S − HalfLength; it must be moving that way. The front's place
-    /// before the step is excluded and its place after it included, so a body is swept once.
+    /// The cart's leading face swept the body this step. A cart running toward higher S (<paramref name="dir"/> +1) has its front
+    /// at S + HalfLength, one running toward lower S (−1) at S − HalfLength; it must be moving that way. <paramref name="lead"/> moves the
+    /// face on by that much in the way of travel: a train rolling back leads with its last wagon's back (plan 16, <c>wagons × Spacing</c>).
+    /// The face's place before the step is excluded and its place after it included, so a body is swept once.
     /// </summary>
-    public static bool Hits(float sPrev, float sNow, in TrackBody b, int dir = 1)
+    public static bool Hits(float sPrev, float sNow, in TrackBody b, int dir = 1, float lead = 0f)
     {
         if (dir >= 0 ? sNow <= sPrev : sNow >= sPrev) return false;
-        float frontPrev = sPrev + dir * CartRules.HalfLength, frontNow = sNow + dir * CartRules.HalfLength;
+        float reach = CartRules.HalfLength + lead;
+        float frontPrev = sPrev + dir * reach, frontNow = sNow + dir * reach;
         bool swept = dir >= 0 ? frontPrev < b.S && b.S <= frontNow : frontNow <= b.S && b.S < frontPrev;
         return swept && OnRails(b);
     }
@@ -39,9 +41,16 @@ public static class RunOverRules
     /// <summary>A crawling cart still warns this far ahead: the look-ahead reckons with at least this speed.</summary>
     public const float WarnMinSpeed = 3f;
 
-    /// <summary>A body on the rails ahead, within the distance the cart covers in the given seconds (at <see cref="WarnMinSpeed"/> at least).</summary>
-    public static bool InWarning(float sNow, float v, in TrackBody b, float seconds = 3f) =>
-        b.S >= sNow && b.S - sNow <= Math.Max(v, WarnMinSpeed) * seconds + CartRules.HalfLength && OnRails(b);
+    /// <summary>
+    /// A body on the rails ahead in the way of travel (<paramref name="dir"/>), within the distance the cart covers in the given seconds (at
+    /// <see cref="WarnMinSpeed"/> at least) of its leading face, which <paramref name="lead"/> moves on (a train rolling back: its last wagon's
+    /// back). Measured from <paramref name="lead"/> past the cart's middle: a body under the train behind the face is not warned.
+    /// </summary>
+    public static bool InWarning(float sNow, float v, in TrackBody b, float seconds = 3f, int dir = 1, float lead = 0f)
+    {
+        var ahead = (dir >= 0 ? b.S - sNow : sNow - b.S) - lead;
+        return ahead >= 0f && ahead <= Math.Max(v, WarnMinSpeed) * seconds + CartRules.HalfLength && OnRails(b);
+    }
 
     public static bool IsBig(float profileScale, bool isBoss) => isBoss || profileScale >= BigScale;
 

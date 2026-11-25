@@ -51,13 +51,14 @@ public partial class RailController : ISlopeSource
         var line = HashCode.Combine(_crossOut, _crossBack, _gapFrom, _gapTo, _jumpV);
         var boarders = 17;
         for (var i = 0; i < Cart.Boarders.Length; i++) boarders = boarders * 31 + AboardId(Cart.Boarders[i], Cart);
+        boarders = boarders * 31 + AboardId(Cart.Driver, Cart); // the hijack's driver (plan 16)
         for (var i = 0; i < _train.Count; i++) boarders = boarders * 31 + AboardId(_train.Wagons[i].Boarders[0], _train.Wagons[i]);
         // a player's brake or pump (their RideIntent) reaches clients at once, not with the next correction; companions' pumping is left
         // out (it can flip at the 0.7·Cruise threshold, and it follows the state smoothly)
         var input = HashCode.Combine(Party.LastInput.Brake, _playersPumping);
         // the armed ride and its arm time (a client's buckets run from it): an arming in a cart event is sent with it anyway, this is the backstop
         var armed = RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? HashCode.Combine(enc.ArmedRide, enc.ArmedAt) : 0;
-        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders, input, armed, LastWreckFell));
+        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders, input, armed, LastWreckFell, (int)Hijack, Party.Dir));
     }
 
     /// <summary>Players pumping the cart this tick (<see cref="Inputs"/>; 0 under a brake).</summary>
@@ -67,15 +68,19 @@ public partial class RailController : ISlopeSource
     private static int AboardId(Enemies.Enemy? hound, Node3D body)
         => hound != null && IsInstanceValid(hound) && !hound.IsQueuedForDeletion() && hound.Carrier == body ? hound.NetId : -1;
 
-    /// <summary>The boarders aboard the cart by spot, and each coupled wagon's rim (train order), for the wire: null when none rides.</summary>
+    /// <summary>
+    /// The boarders aboard the cart by spot, and each coupled wagon's rim (train order), for the wire: null when none rides. The cart's list has a
+    /// third entry, the hijack's driver (plan 16), whenever it is sent: [rim 0, rim 1, driver].
+    /// </summary>
     private void CaptureBoarders(out List<int>? cart, out List<int>? wagons)
     {
         cart = wagons = null;
-        for (var i = 0; i < Cart.Boarders.Length; i++)
+        var slots = Cart.Boarders.Length + 1;
+        for (var i = 0; i < slots; i++)
         {
-            var id = AboardId(Cart.Boarders[i], Cart);
+            var id = AboardId(i < Cart.Boarders.Length ? Cart.Boarders[i] : Cart.Driver, Cart);
             if (id < 0) continue;
-            if (cart == null) { cart = new List<int>(Cart.Boarders.Length); for (var k = 0; k < Cart.Boarders.Length; k++) cart.Add(-1); }
+            if (cart == null) { cart = new List<int>(slots); for (var k = 0; k < slots; k++) cart.Add(-1); }
             cart[i] = id;
         }
         for (var i = 0; i < _train.Count; i++)
@@ -103,13 +108,14 @@ public partial class RailController : ISlopeSource
         {
             Cart = CartIds.Party, Kind = (byte)Cart.Kind, Track = 0, Dir = (sbyte)Party.Dir,
             S = State.S, V = State.V, Mode = (byte)State.Mode, Limit = Party.Limit,
-            Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)_train.Count, TargetOverride = -1f,
+            Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)_train.Count,
+            TargetOverride = State.Mode == CartMode.Rolling ? input.TargetOverride : -1f, // the hijack's roll and return are commanded (Ruling 27); −1 on every ride, and on a standing cart (its last input may be a reset's default)
             Plating = State.Plating, StopIndex = StopIndex, Flags = flags ?? NetFlags(),
             CrossOut = _crossOut, CrossBack = _crossBack, GapFrom = _gapFrom, GapTo = _gapTo, JumpV = _jumpV > 0f ? _jumpV : float.NaN,
             BlockedAt = LineBlocked && !OnEnemyLane(BlockedAt) ? BlockedAt : float.NaN, // as HitBlock judges it: a cart across on the enemy lane passes it
             BoardingLeft = Boarding.Running ? Boarding.Left : -1f, Train = train, Boarders = boarders, WagonBoarders = wagonBoarders, ServerTime = serverTime,
             ArmedRide = enc?.ArmedRide ?? -1, ArmedAt = enc != null && enc.ArmedRide >= 1 ? enc.ArmedAt : 0,
-            Fell = LastWreckFell,
+            Fell = LastWreckFell, Hijack = (byte)Hijack,
         };
     }
 
@@ -219,7 +225,7 @@ public partial class RailController : ISlopeSource
                 // (the taken player's own screen has its unseat pose before this state, on the same ordered stream: its hero already stands at
                 // the hold point, out of the seat and not yet told fallen; it sat there at the last state, so it rode all the same, seen from
                 // where its eye last was in the seat, BridgeRules.LocalRode)
-                if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.BackS, _train.Count, WagonSpacing) <= enc.BridgeToS)
+                if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.RearS, _train.Count, WagonSpacing) <= enc.BridgeToS)
                 {
                     // in the train: the cart or a coupled wagon, each rider seen from its own car (the final review's M2)
                     var me = Core.Main.Instance?.Party?.Local is { } local && IsInstanceValid(local) ? local : null;
@@ -238,7 +244,7 @@ public partial class RailController : ISlopeSource
         }
         _netFlags = d.Flags;
         var mode = d.Mode <= (byte)CartMode.Wrecked ? (CartMode)d.Mode : CartMode.Held;
-        if (!firstState && mode == CartMode.Rolling && _netMode == CartMode.Held && !Halted) NetDepartedAt = d.ServerTime; // left a stop (a halt's resume is not a departure; a catch-up's Rolling is not one)
+        if (!firstState && mode == CartMode.Rolling && _netMode == CartMode.Held && !Halted && d.Hijack == 0) NetDepartedAt = d.ServerTime; // left a stop (a halt's resume is not a departure; a catch-up's Rolling is not one; nor a hijack's roll back, plan 16)
         _netMode = mode;
         StopIndex = Math.Clamp(d.StopIndex, 0, Math.Max(0, StopS.Length - 1));
         Halted = d.Has(CartFlags.Halted);
@@ -246,6 +252,8 @@ public partial class RailController : ISlopeSource
         ApplyGapNet(d.GapFrom, d.GapTo, d.JumpV);
         ApplyTrain(d.Train, d.ServerTime); // a wagon it no longer lists is lost: hidden
         Party.Dir = d.Dir >= 0 ? 1 : -1;
+        Hijack = d.Hijack <= (byte)HijackPhase.ReliefIn ? (HijackPhase)d.Hijack : HijackPhase.None;
+        Party.Reversing = HijackRules.Reversing(Hijack); // the roll back: the cart faces forward, its wagons lead (plan 16)
         Party.Limit = d.Limit;
         _follow.Apply(d, serverNow);
         Party.State = new CartState(_follow.S, _follow.V, mode, d.Plating);
@@ -304,7 +312,8 @@ public partial class RailController : ISlopeSource
             var v = _netMode == CartMode.Rolling ? f.V : 0f;
             Party.State = new CartState(s, v, _netMode, State.Plating);
             Cart.Speed = v;
-            Cart.Curvature = Party.Dir * Party.Track.Curvature(s);
+            Cart.Reversing = Party.Reversing;
+            Cart.Curvature = Party.Facing * Party.Track.Curvature(s);
             _train.Sync();
         }
         else s = State.S; // parked at the first stop until the server's state arrives

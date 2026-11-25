@@ -239,23 +239,29 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
 
     /// <summary>
     /// A revive of this NPC would be taken now (<see cref="Objectives.RitualRules.ReviveTaken"/>: down, alive, no living enemy aware of the party
-    /// within the clear radius), on every peer from its copies: what <see cref="TryRevive"/> refuses by, and what a wagon's "Revive {name}" is
+    /// within the clear radius but a hijacker spared on its own wagon's rim, <see cref="NearestHostile"/>), on every peer from its copies: what <see cref="TryRevive"/> refuses by, and what a wagon's "Revive {name}" is
     /// offered by. Awareness is <see cref="Enemy.IsUnaware"/>, which a client reads from the server's snapshot, so a client judges as the server
     /// does. An NPC that is not down asks nothing more (no scan).
     /// </summary>
     public bool ReviveTaken => Downed && !Dead && Objectives.RitualRules.ReviveTaken(Downed, Dead, NearestHostile());
 
     /// <summary>
-    /// The distance to the nearest enemy counting against a revive (<see cref="Objectives.RitualRules.CountsAgainstRevive"/>: alive and aware)
-    /// among this NPC's siblings, +∞ for none. Every enemy, a client's copies included (<c>DungeonBuilder.SpawnEnemy</c>), lives under the floor
-    /// root, as the crew and the floor's NPCs do. No list is made.
+    /// The distance to the nearest enemy counting against a revive (<see cref="Objectives.RitualRules.CountsAgainstRevive(bool, bool, bool, bool)"/>:
+    /// alive and aware, but not a boarder riding this NPC's own wagon while the train is at its stop or hijacked, the spared hijacker no siege
+    /// fight clears; plan 16 final fix wave) among this NPC's siblings, +∞ for none. Every enemy, a client's copies included
+    /// (<c>DungeonBuilder.SpawnEnemy</c>), lives under the floor root, as the crew and the floor's NPCs do, and a client's copy is carried by the
+    /// wagon the server's rim list names (<c>RailNet</c>), so every peer judges alike. No list is made.
     /// </summary>
     private float NearestHostile()
     {
         var nearest = float.PositiveInfinity;
         if (GetParent() is not { } parent) return nearest;
+        var wagon = Cart as TrainWagon;
+        var atStop = wagon != null && RailController.Instance is { } rails && IsInstanceValid(rails)
+            && Objectives.RitualRules.TrainAtStop(rails.State.Mode == CartMode.Held, rails.Halted, rails.HijackLive);
         for (int i = 0, n = parent.GetChildCount(); i < n; i++)
-            if (parent.GetChild(i) is Enemy e && Objectives.RitualRules.CountsAgainstRevive(e.IsAlive, !e.IsUnaware)) nearest = MathF.Min(nearest, e.GlobalPosition.DistanceTo(GlobalPosition));
+            if (parent.GetChild(i) is Enemy e && Objectives.RitualRules.CountsAgainstRevive(e.IsAlive, !e.IsUnaware, wagon != null && e.Carrier == wagon, atStop))
+                nearest = MathF.Min(nearest, e.GlobalPosition.DistanceTo(GlobalPosition));
         return nearest;
     }
 

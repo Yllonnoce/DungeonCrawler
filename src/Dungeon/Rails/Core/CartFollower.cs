@@ -91,7 +91,7 @@ public sealed class CartFollower
         _dir = s.Dir >= 0 ? 1 : -1;
         Track = s.Track;
         _auth = new CartState(s.S, s.V, mode, s.Plating);
-        _input = new CartInput(0f, s.Brake, s.Pumpers, s.CrewWagons, s.Limit, s.TargetOverride);
+        _input = new CartInput(0f, s.Brake, s.Pumpers, s.CrewWagons, s.Limit, s.TargetOverride, HijackRules.DriveAccelFor((HijackPhase)s.Hijack)); // the hijack's roll back drives its slow ramp (plan 16)
         // an obstacle ahead (the heap's face): the server's cart crashes there, short of the Limit it brakes for, so both S stop
         // at it (the physics input keeps the Limit: braking toward the face would mispredict the run-in); one already past it is free
         var block = float.IsNaN(s.BlockedAt) ? float.NaN : s.BlockedAt - _dir * CartRules.HalfLength;

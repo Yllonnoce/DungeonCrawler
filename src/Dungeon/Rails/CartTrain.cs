@@ -62,30 +62,36 @@ public sealed class CartTrain
         _wagons.Clear();
     }
 
-    /// <summary>Each coupled wagon on the line at <paramref name="s"/> − <see cref="WagonSpacing"/>·k (k its 1-based place, clamped at the track's start), facing the lead's way.</summary>
+    /// <summary>
+    /// Each coupled wagon on the line at <paramref name="s"/> − <see cref="WagonSpacing"/>·k behind the lead's <see cref="CartRun.Facing"/> (k its
+    /// 1-based place, clamped at the track's start), facing the lead's way: a train rolling back (plan 16) keeps its wagons where they were, leading.
+    /// </summary>
     public void Pose(float s)
     {
         if (_wagons.Count == 0 || !_lead.Track.Valid) return;
+        var facing = _lead.Facing;
         for (var k = 0; k < _wagons.Count; k++)
         {
             var wagon = _wagons[k];
             if (!GodotObject.IsInstanceValid(wagon)) continue;
-            var at = Mathf.Clamp(s - _lead.Dir * WagonSpacing * (k + 1), 0f, _lead.Track.Length);
+            var at = Mathf.Clamp(s - facing * WagonSpacing * (k + 1), 0f, _lead.Track.Length);
             var frame = _lead.FrameOf(at);
-            wagon.Pose(_lead.Dir >= 0 ? frame : new Transform3D(frame.Basis * new Basis(Vector3.Up, Mathf.Pi), frame.Origin));
+            wagon.Pose(facing >= 0 ? frame : new Transform3D(frame.Basis * new Basis(Vector3.Up, Mathf.Pi), frame.Origin));
         }
     }
 
-    /// <summary>The wagons learn the lead's speed and the bend each stands in (their riders' velocity).</summary>
+    /// <summary>The wagons learn the lead's speed, the bend each stands in and whether the train rolls backwards (their riders' velocity).</summary>
     public void Sync()
     {
         var state = _lead.State;
+        var facing = _lead.Facing;
         for (var k = 0; k < _wagons.Count; k++)
         {
             var wagon = _wagons[k];
             if (!GodotObject.IsInstanceValid(wagon)) continue;
             wagon.Speed = state.Mode == CartMode.Rolling ? state.V : 0f;
-            wagon.Curvature = _lead.Dir * _lead.Track.Curvature(Mathf.Max(0f, state.S - _lead.Dir * WagonSpacing * (k + 1)));
+            wagon.Reversing = _lead.Reversing;
+            wagon.Curvature = facing * _lead.Track.Curvature(Mathf.Max(0f, state.S - facing * WagonSpacing * (k + 1)));
         }
     }
 

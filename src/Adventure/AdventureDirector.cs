@@ -271,30 +271,31 @@ public partial class AdventureDirector : Node
     /// <c>call:{floor}:{onceKey}</c> is remembered forever, and the channel is held for it. Dropped on a floor change, when
     /// the NPC is gone or dead, or once <paramref name="stillDue"/> says its moment has passed (a ride's call once the cart is
     /// past the stop it names: never said late about the wrong cage); a dropped call is not remembered, so its moment coming
-    /// round again may say it. False when it was said or queued already, or on a client.
+    /// round again may say it. False when it was said or queued already, or on a client. <paramref name="urgent"/> (a warning that
+    /// belongs to its moment, plan 16's siege call; subtitle only): said a beat later whatever is being said, never queued behind it.
     /// </summary>
-    public bool SayAs(Npc npc, Line line, string onceKey, Func<bool>? stillDue = null)
+    public bool SayAs(Npc npc, Line line, string onceKey, Func<bool>? stillDue = null, bool urgent = false)
     {
         if (!Authority || !Game.Instance.InGame) return false;
         if (string.IsNullOrWhiteSpace(line.Text)) { GD.PushWarning($"[Adventure] {npc.NpcName}'s call {onceKey} has no words: nothing said"); return false; }
         var key = $"call:{_currentFloor}:{onceKey}";
         if (Game.Instance.Adventure.BarksSaid.ContainsKey(key) || !_callsPending.Add(key)) return false;
-        QueueCall(npc, line, key, _currentFloor, stillDue);
+        QueueCall(npc, line, key, _currentFloor, stillDue, urgent);
         return true;
     }
 
     /// <summary>A beat after whatever is being said now: a held taunt queued at the channel's free moment runs first.</summary>
     private const double CallAfterSeconds = 0.05;
 
-    private void QueueCall(Npc npc, Line line, string key, int floor, Func<bool>? stillDue)
+    private void QueueCall(Npc npc, Line line, string key, int floor, Func<bool>? stillDue, bool urgent = false)
     {
-        var at = Math.Max(_speech.Until, Game.Instance.PlaySeconds) + CallAfterSeconds;
+        var at = (urgent ? Game.Instance.PlaySeconds : Math.Max(_speech.Until, Game.Instance.PlaySeconds)) + CallAfterSeconds;
         _deferred.Add((at, () =>
         {
             if (_currentFloor != floor || !GodotObject.IsInstanceValid(npc) || npc.Dead) { _callsPending.Remove(key); return; }
             if (stillDue?.Invoke() == false) { _callsPending.Remove(key); GD.Print($"[Adventure] {npc.NpcName}'s call {key} dropped: its moment has passed"); return; }
             var now = Game.Instance.PlaySeconds;
-            if (!_speech.Free(now)) { QueueCall(npc, line, key, floor, stillDue); return; } // a line came in meanwhile: wait for it
+            if (!urgent && !_speech.Free(now)) { QueueCall(npc, line, key, floor, stillDue); return; } // a line came in meanwhile: wait for it
             _callsPending.Remove(key);
             npc.Say(line);
             if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.NpcSay(npc.Id, line)); // a client's Npc shows her name on the subtitle

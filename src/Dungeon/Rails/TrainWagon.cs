@@ -36,7 +36,10 @@ public partial class TrainWagon : AnimatableBody3D, IInteractable, ICartBody
     public float Curvature { get; set; }
     /// <summary>When (the rail controller's clock, on this machine) this wagon last offered a revive; −∞ for never (plan 15 Task 0).</summary>
     internal double ReviveSeenAt { get; set; } = double.NegativeInfinity;
-    public Vector3 Velocity => -GlobalTransform.Basis.Z * Speed;
+    /// <summary>The train rolls backwards (a hijack's roll back, plan 16): it moves against the way it faces. Set by the train's sync.</summary>
+    public bool Reversing { get; set; }
+    /// <summary>The wagon's velocity in the world: forward (−Z) at <see cref="Speed"/>, backward while the train is <see cref="Reversing"/>.</summary>
+    public Vector3 Velocity => -GlobalTransform.Basis.Z * (Reversing ? -Speed : Speed);
 
     /// <summary>The prompt for the hero looking at the wagon; null or "" offers nothing. Set by the RailController.</summary>
     public Func<Adventurer, string>? PromptFor { get; set; }
@@ -85,7 +88,7 @@ public partial class TrainWagon : AnimatableBody3D, IInteractable, ICartBody
         Coupled = coupled;
         Visible = coupled;
         CollisionLayer = coupled ? 8u : 0u;
-        if (!coupled) Speed = 0f;
+        if (!coupled) { Speed = 0f; Reversing = false; }
     }
 
     /// <summary>Where a rider in <paramref name="seat"/> sits, in world space, facing forward: the hero place and the bench's two (a seat it lacks reads the hero place).</summary>

@@ -141,12 +141,13 @@ public partial class RailEncounterController : Node
             case CartEventKind.Departed:
                 FreeRideRunaway("the train departs"); // one lingering behind the stop goes before the next ride arms
                 ClearRide();
+                UnspareLeaps(); // a hijacker still on a wagon rides on as the ride's boarder (plan 16)
                 if (!float.IsNaN(_rails.DepartedPastS)) ArmFrom(e.Stop + 1, _rails.DepartedPastS); // the lift's takeover left from its own place (plan 15 Ruling 27)
                 else Arm(e.Stop + 1);
                 break;
             case CartEventKind.Wrecked:
                 FreeRideRunaway("the train is wrecked"); // a fall too
-                ClearRide(wrecked: true);
+                ClearRide(wrecked: true, all: true);
                 ClearAnswers();
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
@@ -155,7 +156,7 @@ public partial class RailEncounterController : Node
                 break;
             case CartEventKind.Restored:
                 FreeRideRunaway("the cart is restored"); // a wipe's rise or a load
-                ClearRide(loaded: true);
+                ClearRide(loaded: true, all: true);
                 ClearAnswers();
                 ClearThrowers();
                 ResetSwitchyard(undone: true);
@@ -170,7 +171,7 @@ public partial class RailEncounterController : Node
                 break;
             case CartEventKind.OnFoot:
                 FreeRideRunaway("the party is on foot");
-                ClearRide();
+                ClearRide(all: true);
                 ClearAnswers();
                 ResetSwitchyard(undone: false);
                 break;
@@ -189,16 +190,21 @@ public partial class RailEncounterController : Node
         WarmModels(ArmedRide); // nothing to do once the floor's warm-up is in: a model is kept for the session
         WarmLines(ArmedRide);
         ArmStanders(ArmedRide);
+        ArmAlcoves(ArmedRide); // the alcove shooters, hidden in their pockets (plan 16 Task 8)
     }
 
-    /// <summary>The ride is over (or undone): its live items go, the riders without a death or a word.</summary>
-    private void ClearRide(bool wrecked = false, bool loaded = false)
+    /// <summary>
+    /// The ride is over (or undone): its live items go, the riders without a death or a word. A hijacker on a wagon (a spared boarder, plan 16)
+    /// stays aboard unless <paramref name="all"/> (a wreck, a restore, the rest on foot): a departure or an arrival is not its end.
+    /// </summary>
+    private void ClearRide(bool wrecked = false, bool loaded = false, bool all = false)
     {
         ArmedRide = -1;
         ClearStanders();
+        ClearAlcoves(); // none outlives its ride: no shooter in a reverse roll, a return or a relief (plan 16 Task 8)
         ClearSwitchyard();
         ClearBarricades();
-        ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
+        ClearLeaps(wrecked, all); // boarders first: they are not on a slag cart's list
         ClearThrows(); // the wagons' throw clocks go with the ride
         ClearKiln(payOff: !loaded); // the golem goes like a rider (its corpse stays); a thrown spur lever sends it off the spur first
         var why = wrecked ? "the train is wrecked" : loaded ? "the cart is restored" : "the ride is over";
@@ -359,6 +365,7 @@ public partial class RailEncounterController : Node
         TickLeaps(dt); // boarders outlive the slag cart that threw them
         TickAnswers(); // a boarded, crewed wagon with no hero up is answered: by a seated shot, else a companion climbing to it (and back)
         TickThrows(dt); // a boarder alone with the prisoners is called out, glows and throws them off (plan 14 Task 5)
+        TickAlcoves(); // a done shooter goes quietly (plan 16 Task 8)
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null && _rideRunaway == null)
         {
@@ -500,6 +507,20 @@ public partial class RailEncounterController : Node
             if (p.Trestle is { Collapsed: true } trestle && IsInstanceValid(trestle)) into.Add((trestle.From, trestle.To));
             if (p.Bridge is { Gone: > 0 } bridge && IsInstanceValid(bridge)) into.Add((bridge.From, bridge.GoneToS)); // so a relief's seat target never lies in it either
         }
+    }
+
+    /// <summary>
+    /// What a train rolled back from a stop must stop short of (plan 16, Ruling 10): the party lane's holes (<see cref="CollectPartyLaneHoles"/>),
+    /// each live ore heap's face (S..S), a ride runaway still lingering on the party line (its span), and ride 4's whole bridge span standing or
+    /// gone (a load stands it whole: a deck over the cavern is no place to roll onto). <paramref name="into"/> is cleared first.
+    /// </summary>
+    internal void CollectRollBackHazards(List<(float From, float To)> into)
+    {
+        CollectPartyLaneHoles(into);
+        foreach (var p in _pieces)
+            if (p.Heap is { IsAlive: true } heap && IsInstanceValid(heap)) into.Add((heap.FaceS, heap.FaceS));
+        if (_rideRunaway is { OnSpur: false } w && IsInstanceValid(w.Body)) into.Add((Mathf.Min(w.Run.BackS, w.Run.FrontS), Mathf.Max(w.Run.BackS, w.Run.FrontS)));
+        if (!float.IsNaN(BridgeFromS) && !float.IsNaN(BridgeToS)) into.Add((BridgeFromS, BridgeToS));
     }
 
     /// <summary>The nearest live ore heap's face on the party line at or ahead of <paramref name="frontS"/> (a chaser halts at it as the party cart does), or +∞.</summary>

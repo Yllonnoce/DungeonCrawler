@@ -27,14 +27,15 @@ public static class RunOverSweep
     /// front, measured within <see cref="Window"/> of it, swept by <see cref="RunOverRules.Hits"/> in the cart's
     /// direction, and not hit within <see cref="JudgeAgain"/> (<paramref name="hitAt"/>, which this keeps). A body riding
     /// a cart (this one's <see cref="ICartBody.Riders"/>, or any other) is carried, never run over. The owner filters the
-    /// fallen and the dead out of <paramref name="bodies"/>.
+    /// fallen and the dead out of <paramref name="bodies"/>. <paramref name="lead"/> puts the leading face that far past the cart's
+    /// own front (a train rolling back: its last wagon's back, plan 16).
     /// </summary>
-    public static void Judge(CartRun run, IReadOnlyList<Node3D> bodies, double now, Dictionary<ulong, double> hitAt, List<(Node3D body, TrackBody tb)> hits)
+    public static void Judge(CartRun run, IReadOnlyList<Node3D> bodies, double now, Dictionary<ulong, double> hitAt, List<(Node3D body, TrackBody tb)> hits, float lead = 0f)
     {
         hits.Clear();
         Forget(hitAt, now);
         if (!run.Moving) return;
-        float sPrev = run.PrevS, sNow = run.State.S, frontS = run.FrontS;
+        float sPrev = run.PrevS, sNow = run.State.S, frontS = lead == 0f ? run.FrontS : run.FrontS + run.Dir * lead;
         var front = run.Track.Point(frontS);
         var cart = run.Body as ICartBody;
         for (var i = 0; i < bodies.Count; i++)
@@ -47,7 +48,7 @@ public static class RunOverSweep
             if (dx * dx + dz * dz > ScanRange * ScanRange) continue;
             if (!run.Track.Measure(pos, frontS, Window, out var b)) continue;
             b = b with { Radius = RadiusOf(body) };
-            if (!RunOverRules.Hits(sPrev, sNow, b, run.Dir)) continue;
+            if (!RunOverRules.Hits(sPrev, sNow, b, run.Dir, lead)) continue;
             var id = body.GetInstanceId();
             if (hitAt.TryGetValue(id, out var t) && now - t < JudgeAgain) continue;
             hitAt[id] = now;

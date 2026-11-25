@@ -66,10 +66,13 @@ public partial class RailController
         _playerOnRails = RunOverRules.OnRails(b with { Radius = RunOverSweep.BodyRadius });
         var lastBackS = TrainBackS + CartRules.HalfLength; // the train's last body's back
         var behind = ReliefRules.Behind(lastBackS, PlayerLineS);
-        _met = ReliefRules.Met(_met, State.Mode == CartMode.Rolling, CarOf(me) >= 0, behind); // the train met them: a wagon's seat too (Ruling 12)
+        // the train met them: a wagon's seat too (Ruling 12); a hijack's roll and its relief train keep the meeting (plan 16 Task 7): the train comes
+        // back to the stop it met them at, so a player far behind it is not sent a relief cart for it
+        _met = ReliefRules.Met(_met, State.Mode == CartMode.Rolling && !HijackLive, CarOf(me) >= 0, behind);
         var live = ReliefRules.LineLive(StopS.Length, StopIndex, State.Mode, Halted, !Cart.Visible);
         LeftBehindNow = ReliefRules.LeftBehind(new ReliefView(true, live, !me.Downed && !me.Parked, me.Seated, State.Mode != CartMode.Rolling, _met, behind));
         var counting = _chase is null or { Ended: true } or { Relief: true, Phase: ReliefPhase.Leaving };
+        if (HijackLive) counting = false; // no relief while the train is hijacked (plan 16 Ruling 30): the clock waits for the hijack's end
         if (_reliefClock.Tick(dt, LeftBehindNow, counting)) SendRelief(me, PlayerLineS, _playerOnRails);
     }
 

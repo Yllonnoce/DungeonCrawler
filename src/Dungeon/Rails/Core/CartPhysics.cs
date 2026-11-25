@@ -12,7 +12,9 @@ public readonly record struct CartState(float S, float V, CartMode Mode, float P
 /// <param name="StopAt">The S of the next stop; the cart halts there.</param>
 /// <param name="TargetOverride">The speed the drive aims for instead of <see cref="CartPhysics.TargetSpeed"/> (a slag cart pacing
 /// the party's: pumpers and crew wagons then count for nothing), or negative (the default) for none.</param>
-public readonly record struct CartInput(float Slope, bool Brake, int Pumpers, int CrewWagons, float StopAt, float TargetOverride = -1f);
+/// <param name="DriveAccel">The drive's acceleration at a full speed gap in place of <see cref="CartRules.DriveAccel"/> (the hijack's slow roll back,
+/// <see cref="HijackRules.DriveAccelFor"/>), or negative (the default) for the cart's own.</param>
+public readonly record struct CartInput(float Slope, bool Brake, int Pumpers, int CrewWagons, float StopAt, float TargetOverride = -1f, float DriveAccel = -1f);
 
 /// <summary>Every number for the mine cart. Engine-free; the Godot nodes only read it.</summary>
 public static class CartRules
@@ -72,7 +74,7 @@ public static class CartPhysics
         {
             var commanded = i.TargetOverride >= 0f;
             float gap = (commanded ? i.TargetOverride : TargetSpeed(i.Pumpers, i.CrewWagons)) - c.V;
-            a += (gap < -1f ? -1f : gap > 1f ? 1f : gap) * CartRules.DriveAccel;
+            a += (gap < -1f ? -1f : gap > 1f ? 1f : gap) * (i.DriveAccel >= 0f ? i.DriveAccel : CartRules.DriveAccel);
             // At or below target the drive also cancels drag, so the cart settles on the target; above it drag is real.
             if (gap >= 0f) a += CartRules.Drag * c.V * c.V;
             // A haul rope pulls the cart up a climb that the drive could not manage.

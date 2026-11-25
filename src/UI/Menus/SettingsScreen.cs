@@ -70,11 +70,22 @@ public partial class SettingsScreen : PanelContainer
             if (r == Settings.Resolution) res.Selected = i;
         }
         res.ItemSelected += i => { Settings.Resolution = Settings.Resolutions[(int)i]; Settings.Apply(); };
-        Row(v, "Resolution", res);
+        Row(v, "Resolution (fullscreen: the 3D view drawn at this size)", res);
         Check(v, "Fullscreen", Settings.Fullscreen, x => { Settings.Fullscreen = x; Settings.Apply(); });
         Check(v, "VSync", Settings.VSync, x => { Settings.VSync = x; Settings.Apply(); });
         Check(v, "Damage numbers over enemies", Settings.DamageNumbers, x => Settings.DamageNumbers = x);
         Slider(v, "Haze in the air", 0f, 1f, Settings.Haze, x => { Settings.Haze = x; Settings.Apply(); }, "P0");
+        Check(v, "Show FPS", Settings.ShowFps, x => Settings.ShowFps = x);
+        var scale = new OptionButton { FocusMode = FocusModeEnum.None };
+        for (var i = 0; i < GraphicsRules.RenderScales.Length; i++)
+        {
+            var step = GraphicsRules.RenderScales[i];
+            scale.AddItem(GraphicsRules.UsesFsr(step) ? $"{step * 100f:0} % (FSR)" : $"{step * 100f:0} %", i);
+            if (step == GraphicsRules.SnapScale(Settings.RenderScale)) scale.Selected = i;
+        }
+        scale.ItemSelected += i => { Settings.RenderScale = GraphicsRules.RenderScales[(int)i]; Settings.Apply(); };
+        Row(v, "Render scale", scale);
+        Check(v, "Shadows", Settings.Shadows, x => { Settings.Shadows = x; Settings.Apply(); });
 
         Header(v, "VR");
         var comfort = new OptionButton { FocusMode = FocusModeEnum.None };

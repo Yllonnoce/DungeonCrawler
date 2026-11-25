@@ -216,7 +216,7 @@ public sealed class KiteState : AiState
 /// <summary>A caster turning to a hurt ally: a wind-up, the cast, a recovery, then back to the fight.</summary>
 public sealed class SupportState : AiState
 {
-    public override string Name => "Support";
+    public override string Name => TelegraphRules.Support; // its wind-up is told under it: a client winds up on it (TelegraphRules.WindsUp)
     private readonly Enemy _ally;
     private float _timer;
     private bool _cast;

@@ -28,6 +28,7 @@ public partial class PartyController : Node3D
 
     private readonly Dictionary<string, AbilityProfile> _abilities = new();
     private readonly List<int> _effectVersions = new();
+    private readonly List<StatusTick> _effectTicks = new(); // the effect ticks of the member being ticked: one buffer, refilled per member
     private double _time;
     /// <summary>Interact held down on a target that offers a held use (plan 7: leave the prisoners behind); keys and the VR grip share it.</summary>
     private readonly InteractHold _hold = new();
@@ -58,7 +59,7 @@ public partial class PartyController : Node3D
     public Adventurer? Local => LocalIndex >= 0 && LocalIndex < Adventurers.Length && IsInstanceValid(Adventurers[LocalIndex]) ? Adventurers[LocalIndex] : null;
     /// <summary>Bodies that are in the world (not parked).</summary>
     public IEnumerable<Adventurer> Active => Adventurers.Where(a => IsInstanceValid(a) && !a.Parked);
-    public bool HasBodies => Local != null || Active.Any();
+    public bool HasBodies => Local != null || AnyActive(standing: false);
     /// <summary>Members the party screens show: every member whose body is in the world (in co-op, offline players and parked bots stay off the screens), all of them before the bodies exist.</summary>
     public int[] InPlayIndices() => Enumerable.Range(0, Members.Length).Where(i => i >= Adventurers.Length || !IsInstanceValid(Adventurers[i]) || !Adventurers[i].Parked).ToArray();
     /// <summary>The in-play member after <paramref name="index"/>, wrapping (the screens' "next member" key).</summary>
@@ -78,7 +79,13 @@ public partial class PartyController : Node3D
     public bool Guarding => Local?.Guarding ?? false;
     public IInteractable? LookingAt => Local?.LookingAt;
     /// <summary>Someone in the world is still standing. False when nobody is online.</summary>
-    public bool PartyAlive => Active.Any(a => !a.Downed);
+    public bool PartyAlive => AnyActive(standing: true);
+    /// <summary><see cref="Active"/>'s Any as a loop: every creature asks every tick, and the iterator was an allocation each time.</summary>
+    private bool AnyActive(bool standing)
+    {
+        foreach (var a in Adventurers) if (IsInstanceValid(a) && !a.Parked && (!standing || !a.Downed)) return true;
+        return false;
+    }
     public int ArrowCount => Bag.Count(ArrowDefId);
 
     /// <summary>Levels and gear of the members in the world, for budgeting floors.</summary>
@@ -314,10 +321,21 @@ public partial class PartyController : Node3D
     public IEnumerable<Adventurer> AdventurersWithin(Vector3 point, float radius)
         => Active.Where(a => !a.Downed && a.GlobalPosition.DistanceTo(point) <= radius);
 
+    /// <summary>The standing body in the world nearest <paramref name="point"/> (the first of a tie, as the ordered query gave), or null. A loop: no allocation.</summary>
     public Adventurer? NearestAlive(Vector3 point)
-        => Active.Where(a => !a.Downed).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(point)).FirstOrDefault();
+    {
+        Adventurer? best = null;
+        var bestD = 0f;
+        foreach (var a in Adventurers)
+        {
+            if (!IsInstanceValid(a) || a.Parked || a.Downed) continue;
+            var d = a.GlobalPosition.DistanceSquaredTo(point);
+            if (best == null || d < bestD) { best = a; bestD = d; }
+        }
+        return best;
+    }
 
-    public void SetMouseCaptured(bool captured) => Input.MouseMode = captured ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
+    public void SetMouseCaptured(bool captured) => Input.MouseMode = captured && DebugTools.Instance?.NoMouseCapture != true ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
 
     public void ApplySettings() { foreach (var a in Adventurers) a.ApplySettings(); }
 
@@ -523,7 +541,8 @@ public partial class PartyController : Node3D
             m.TickCooldowns(dt);
             m.Regenerate(dt, body.Guarding && m.Class.CanBlock, SafeRoomController.Instance?.IsInside(i) == true ? SafeRoomRules.RegenMultiplier : 1f); // x6 only for a member resting inside the safe room
             var wasAlive = m.IsAlive;
-            foreach (var tick in m.Effects.Update(dt))
+            m.Effects.Update(dt, _effectTicks);
+            foreach (var tick in _effectTicks)
             {
                 if (!m.IsAlive) break;
                 if (tick.IsHeal) m.Heal(tick.Amount);

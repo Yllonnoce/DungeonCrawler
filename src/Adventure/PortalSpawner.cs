@@ -36,10 +36,21 @@ public partial class PortalSpawner : Node
     private bool _announced;
     private readonly List<Enemy> _alive = new();
     private readonly List<string> _enemyIds = new();
-    // creatures still to come through the portal that just opened
-    private int _pending;
-    private Vector3 _portalAt;
-    private float _spawnTimer;
+
+    /// <summary>A portal still letting creatures through: the floor-wide one (<see cref="Stop"/> −1) or one of a siege wave's (plan 16).</summary>
+    private sealed class PendingPortal
+    {
+        public Vector3 At;
+        public int Count;
+        public float Timer;
+        /// <summary>The sieged stop this portal belongs to, or −1 for a floor-wide portal.</summary>
+        public int Stop = -1;
+        public int Wave;
+    }
+    // the portals open now, each streaming its own creatures (a siege wave opens several at once)
+    private readonly List<PendingPortal> _pending = new();
+    /// <summary>Creatures still to come through every open portal.</summary>
+    private int PendingCount { get { var n = 0; foreach (var p in _pending) n += p.Count; return n; } }
 
     public void Setup(FloorLayout layout, int floor, IReadOnlyList<string> enemyIds, int seed, float pressureSeconds, int waves)
     {
@@ -67,12 +78,20 @@ public partial class PortalSpawner : Node
     public void RefreshSilence()
     {
         Intensity = Settings.Reinforcements;
+        (Silenced, SilencedWhy) = Silence(rosterCounts: true);
+    }
+
+    /// <summary>
+    /// Every silence, in order: the setting, --no-portals, an empty roster (when <paramref name="rosterCounts"/>: the stop siege has its
+    /// own roster, plan 16 Ruling 5), a dead tier boss, an active ritual. One list for both modes, so a silence added here reaches both.
+    /// </summary>
+    private (bool Silent, string Why) Silence(bool rosterCounts)
+    {
         var bossFloor = PortalRules.BossFloorFor(_floor);
         var bossDead = (Game.Instance?.Floors.TryGetValue(bossFloor, out var s) == true && s.BossDefeated) || (bossFloor == _floor && Main.Instance?.BossDefeatedThisFloor == true);
-        (Silenced, SilencedWhy) =
-            !PortalRules.Enabled(Intensity) ? (true, "reinforcements are off in Settings")
+        return !PortalRules.Enabled(Intensity) ? (true, "reinforcements are off in Settings")
             : DebugTools.Instance?.NoPortals == true ? (true, "--no-portals")
-            : _enemyIds.Count == 0 ? (true, "no creatures in the roster")
+            : rosterCounts && _enemyIds.Count == 0 ? (true, "no creatures in the roster")
             : bossDead ? (true, $"the boss of floor {bossFloor} is dead")
             : Objectives.ObjectiveController.Instance is Objectives.RitualController { Active: true } ? (true, "the ritual's breaches are enough")
             : (false, "");
@@ -83,19 +102,20 @@ public partial class PortalSpawner : Node
         if (Net.NetSession.IsClient) return;
         var dt = (float)delta;
         _silenceCheck -= dt;
-        if (_silenceCheck <= 0f) { _silenceCheck = 2f; RefreshSilence(); }
+        if (_silenceCheck <= 0f) { _silenceCheck = 2f; RefreshSilence(); CheckSiegeSilence(); }
         var main = Main.Instance;
         if (main == null || !main.InGame || main.Builder.Layout != _layout) return;
         _alive.RemoveAll(e => !IsInstanceValid(e) || !e.IsAlive);
         TickSpawns(dt, main);
         TickHud(dt);
-        if (Silenced) return;
+        TickSiege(dt, main); // plan 16: the stop siege's waves and the stragglers of an ended one
+        if (Silenced || SiegeStop >= 1) return; // a siege pauses the floor-wide pressure (spec Ruling 6): its clock and timer keep their values
         PressureSeconds += dt;
         var grace = PortalRules.Grace(Intensity, Run.ClauseRules.Active.ExpeditedRank); // Expedited Delivery: 45 s, and the ramp halves per rank
         if (PressureSeconds < grace) return;
         _timer -= dt;
         if (_timer > 0f) return;
-        if (_alive.Count + _pending >= PortalRules.MaxAliveFor(Intensity)) { _timer = 5f; return; }
+        if (_alive.Count + PendingCount >= PortalRules.MaxAliveFor(Intensity)) { _timer = 5f; return; } // a siege's stragglers count (Ruling 4)
         var party = main.Party.Active.Where(a => !a.Downed).Select(a => DungeonBuilder.WorldToCell(a.GlobalPosition)).ToList();
         if (main.Exploration == null || party.Count == 0) { _timer = 5f; return; }
         var site = PortalRules.ChooseSite(_layout, main.Exploration.Seen, party, _rng);
@@ -108,9 +128,8 @@ public partial class PortalSpawner : Node
     {
         Waves++;
         LastPortalRoom = _layout.Rooms.IndexOf(room);
-        _portalAt = main.Builder.Surface(cell) + Vector3.Up * 0.05f;
-        _pending = count;
-        _spawnTimer = 1.1f;
+        var at = main.Builder.Surface(cell) + Vector3.Up * 0.05f;
+        _pending.Add(new PendingPortal { At = at, Count = count, Timer = 1.1f });
         var boss = Game.Instance.Adventure.Campaign?.Antagonist.Name;
         if (!_announced)
         {
@@ -119,25 +138,31 @@ public partial class PortalSpawner : Node
                 EventBus.Instance.RaiseNarration(string.IsNullOrWhiteSpace(boss) ? "The dungeon's master sends reinforcements. Push deeper; they will keep coming." : $"{boss} sends reinforcements. Push deeper; they will keep coming.", null);
         }
         else EventBus.Instance.Log("A portal tears open behind you.");
-        EventBus.Instance.RaisePortalOpened(_portalAt);
-        ShowPortal(_portalAt);
+        EventBus.Instance.RaisePortalOpened(at);
+        ShowPortal(at);
         GD.Print($"[portal] floor {_floor} wave {Waves}: {count} creature{(count == 1 ? "" : "s")} in room {LastPortalRoom} after {PressureSeconds:0} s (next in {_timer:0} s)");
     }
 
+    /// <summary>Every open portal lets one creature through each 0.45 s (the first 1.1 s after it opens), each portal on its own clock.</summary>
     private void TickSpawns(float dt, Main main)
     {
-        if (_pending <= 0) return;
-        _spawnTimer -= dt;
-        if (_spawnTimer > 0f) return;
-        _spawnTimer = 0.45f;
-        _pending--;
-        var jitter = new Vector3((float)(_rng.NextDouble() - 0.5) * 1.2f, 0.15f, (float)(_rng.NextDouble() - 0.5) * 1.2f);
-        var id = _enemyIds[_rng.Next(_enemyIds.Count)];
-        if (main.Builder.SpawnEnemy(id, _portalAt + jitter, _floor) is not { } e) { _pending = 0; return; }
-        e.IsReinforcement = true;
-        e.RunBoost = 1.15f;
-        e.ForceAggro();
-        _alive.Add(e);
+        for (var i = 0; i < _pending.Count; i++)
+        {
+            var p = _pending[i];
+            p.Timer -= dt;
+            if (p.Timer > 0f) continue;
+            p.Timer = 0.45f;
+            p.Count--;
+            var jitter = new Vector3((float)(_rng.NextDouble() - 0.5) * 1.2f, 0.15f, (float)(_rng.NextDouble() - 0.5) * 1.2f);
+            var id = p.Stop >= 1 ? SiegePick(p) : _enemyIds[_rng.Next(_enemyIds.Count)];
+            if (main.Builder.SpawnEnemy(id, p.At + jitter, _floor) is not { } e) { p.Count = 0; continue; }
+            e.IsReinforcement = true;
+            e.RunBoost = 1.15f;
+            e.ForceAggro();
+            _alive.Add(e);
+            if (p.Stop >= 1) SiegeCreature(e, p);
+        }
+        _pending.RemoveAll(p => p.Count <= 0);
     }
 
     private void TickHud(float dt)

@@ -63,6 +63,8 @@ namespace DungeonCrawler.Core;
 ///   --test-boarders[=move|reach|knock|throw|lone|pause|groups]  floor 12, lethality 3, solo (plan 14): fighting along the train; =throw (the default, Task 5): from stop 1 on ride 2 a hound alone in W3 with two crew is called out at its landing, glows at 4.5 s and 8.5 s, throws seat 5's crew member off at 6.0 s and seat 4's at 10.0 s (each dead, fled, hidden 1.2 s later, lost, logged), a companion answering a wagon whose hero place holds a downed hero lands on a crew seat freed by a throw, and a save and a load keep the thrown gone; =lone: the lead climbs from the cart to W4 (passing a companion in W2) within 5.6 s and the clock resets; =pause: ride 3's seated lever window pauses a W1 clock (moves refused, none offered) and a move landing on the throw's own tick resets it; =move (Task 3): from stop 0 on ride 1 the lead climbs car to car by the seat's yaw and the grip: "Climb back to wagon 1" lands after 0.6 s within a tick and logs, a press 0.3 s later does nothing, the cooldown, W2 past a companion in W3 to W4 in one move, forward to wagon 2, 1 and the cart, W2 under r1_beam (every head clear by 0.05 m), a double press for W1 refused (the place is booked), a mid-hop down dropped, never offered held at stop 1 ("Get out"), downed or on foot; =groups (Task 6): from the landing to the last stop with nobody pumping, stops 1-3's crew in W1..W3, every enemy culled but r1_hounds', r3_hounds' and r5_hounds' hounds: each hound leaps (r1's past r1_barricade + 5 m and by r1_beam), r3's cart is freed short of r3_switch_out's points - 2 m, r5's before the golem or by its burst and 3 m clear of its runner, every throw after its call and glow; one [boarders] group line per hound; an unknown variant prints an ERROR and fails; prints [boarders] RESULT ok (variant)
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught 25 m before the last ride's pit switch lever (ride 5's on floor 12) it is set at the switch's window start still rolling, the lead throws it from the seat and the train comes home past the pit and arrives at the last stop
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
+///   --test-perf[=crowd|ride|siege]  windowed only: floor 12 measured at fixed settings (VSync off, 1280x720 windowed, Haze 0.5, render scale 100 %, shadows on; in memory, never saved), lethality 1, heroes topped up each second, no gathering, no portals but =siege's, nothing culled; =crowd (the default, no ambushers): stop 4 on foot with 12 creatures sent at the party, 5 s discarded and 20 s measured; =ride: ride 1 seated with every set piece and enemy alive, from 5 s after the departure to stop 1; =siege: rc.Restore(4), the lead on the platform, stop 4's real siege hurried wave on wave (DebugSiegeNow) and measured for 20 s from the wave that fills its cap; prints [perf] {phase}: median, 1% low, worst second, worst frame, process/physics ms, draws, alloc_kb, enemies; then [perf] RESULT ok
+///   --test-stop-trap[=siege|ambush|roll|wonback|gotaway|limits|pockets|alcove]  floor 12 (plan 16's stop trap), --builtin, lethality 1, no gathering, every hero topped up each second, every enemy but the siege's creatures, the stop guards and the stop walls' ambushers culled; =siege (the default): the load restart at stop 1 (no wave for 10 s, then 1 portal x 2, the first-wave log, the warning once, the sites' clearances, the pressure clock still), the gaps 14/28 s and the cap (wave 4 waits at 6/6), the gate lifting on the guards with siege creatures alive, the departure ending the siege with the rooted stragglers freed before stop 2, stop 2's real arrival (4 s, 2 portals 8 m apart, then 12 s), heavy (8 s), the hard cap (7/8 sends 1), a save and load (10 s), a wipe's rise (15 s, RoseAtCart) and Reinforcements 0 (off within 2 s, no portal for 20 s); =ambush: the stop-wall points (stop 1: 2, stop 2: 3, a fresh StopAmbushRules.Place's, after the unchanged corridor points), rc.Restore(1) arming nothing, ride 1 seated and the lead out at stop 1 (2 burst 1.5 s after), a save and load (sprung stays sprung: no burst over two get-outs), ride 2 seated with nobody off (3 burst 6 s after the arrival); =wonback (hijackers on, NoHijack off): at stop 2's real siege, wave 1 tags nobody and wave 2 one cinder or hound, which runs for the cart, climbs (0.8 s), glows 3 s and rolls the train back, is struck off from foot (grip 1, 2, off), the brake and the return to the stop with nothing undone, no tag for 20 s, the next hijacker struck off from the rolling cart's seat, a restore mid-climb, a wagon's hijacker riding through HijackOver and the departure, the cull never freeing a hijacker; =pockets (NoAmbush off, 30 s): every pocket's ride, lane, S, lamp and distances to the nearest stop, hard and soft span, each ride's clear and placed counts equal to AlcoveRules.ShippedCounts (4/5/5/0/0), 12 or more in all, a ride with 4; =alcove (NoAmbush off): rides 1-3 ridden with the alcove shooters (the placement and a claimed pocket, untargetable while hidden, pinned, waking at 35 m, a bolt every 1.6 s within 25 m at a seated hero, a side-on hit, gone 30 m behind and none after an arrival, a refuge never in a shooter's pocket), rides 4 and 5 read from their arming lines; prints [stoptrap] RESULT ok (variant)
 /// </summary>
 public partial class DebugTools : Node
 {
@@ -128,6 +130,11 @@ public partial class DebugTools : Node
     /// <summary>--no-ambush / --no-portals: no corridor ambushers, no reinforcement portals this run.</summary>
     public bool NoAmbush { get; private set; }
     public bool NoPortals { get; private set; }
+    /// <summary>
+    /// No siege creature is tagged as a hijacker (plan 16 Ruling 22): set for every --test-stop-trap variant but =wonback and =gotaway, and for every
+    /// --test-perf phase. The stop trap's test hook <c>DebugTagNext</c> obeys it as the waves do. The RIDE server's <c>RailController.DebugHijack</c> tags nobody: it makes a driver directly (no siege there).
+    /// </summary>
+    public bool NoHijack { get; private set; }
     /// <summary>--no-gathering: the safe room's clock never sends creatures to its door.</summary>
     public bool NoGathering { get; private set; }
     /// <summary>No relief cart is sent to a solo player left behind on floor 12 (a test flow that strands its player on purpose sets it).</summary>
@@ -387,6 +394,14 @@ public partial class DebugTools : Node
             else if (arg == "--test-barricade") { _testBarricade = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
             else if (arg == "--test-track-view") { _testTrackView = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
             else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }
+            else if (arg == "--test-perf" || arg.StartsWith("--test-perf="))
+            {
+                var v = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "crowd";
+                _testPerf = true; _pfPhase = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= Dungeon.TierRules.MinLethality; NoGathering = true; NoPortals = v != "siege"; NoHijack = true; TraceAi = false; _quitAfter = 200; // =siege runs the real siege, with no hijacker (plan 16 Ruling 22)
+                if (v == "crowd") NoAmbush = true; // the ride keeps its ambushers (plan 16's alcove shooters appear in it)
+                PerfSettings();
+            }
+            else if (arg == "--test-stop-trap" || arg.StartsWith("--test-stop-trap=")) StopTrapArgs(arg);
             else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
@@ -509,6 +524,11 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--join=")) _netClient = true;
         }
         if (ForcedLethality is { } lethality) Dungeon.TierRules.Lethality = lethality; // Settings loaded before the flags were read
+        if (_testPerf)
+        {
+            if (_pfPhase is not ("crowd" or "ride" or "siege")) { GD.Print($"[perf] ERROR unknown phase \"{_pfPhase}\" (crowd, ride, siege)"); GD.Print($"[perf] RESULT FAIL ({_pfPhase}): unknown phase"); _done = true; GetTree().Quit(1); }
+            else Settings.Apply(); // the phase's settings, in memory: the window, VSync and render scale now
+        }
         if (_bakeDir != null && ReplayDir != null) Adventure.Ai.ClaudePlanner.StrictReplay = true; // a bake from recordings stops at the first missing one rather than filling in
         if ((_testCollectives || _testQuest || _testVoice || _testStory) && _seed == null) _seed = 4242; // scripted scenarios want a repeatable floor
         if (_testStructures && _seed == null) _seed = StructureSeed();
@@ -972,6 +992,8 @@ public partial class DebugTools : Node
         if (_testPit && !ScriptStalled("pit", _ptStep * 10 + _ptPass)) RunPitTest();
         if (_testBoarders && !ScriptStalled("boarders", _bdStep * 100 + _bdPhase)) RunBoardersTest();
         if (_testTrackView && !ScriptStalled("trackview", _tkvStep)) RunTrackViewTest();
+        if (_testPerf && !ScriptStalled("perf", _pfStep)) RunPerfTest();
+        if (_testStopTrap && !ScriptStalled("stoptrap", _stStep)) RunStopTrapTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;

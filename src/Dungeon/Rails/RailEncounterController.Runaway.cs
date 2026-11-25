@@ -83,7 +83,7 @@ public partial class RailEncounterController
     // ---- breaking loose --------------------------------------------------------------------------
 
     /// <summary>The train's last body's back now (the cart's, behind its coupled wagons).</summary>
-    private float TrainRearS => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
+    private float TrainRearS => RunawayRules.TrainRearS(_rails.Party.RearS, _rails.Train.Count, RailController.WagonSpacing); // facing-aware (a hijack's roll back)
 
     /// <summary>
     /// The party cart's front first reached ride <paramref name="ride"/>'s runaway piece: the wagon breaks loose behind the train when

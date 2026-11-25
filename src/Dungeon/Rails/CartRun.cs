@@ -25,8 +25,15 @@ public sealed class CartRun
     public float PoseFrom;
     /// <summary>The input the last <see cref="Step"/> ran on (its StopAt is <see cref="Limit"/>).</summary>
     public CartInput LastInput;
-    /// <summary>+1 runs toward higher S, −1 toward lower S.</summary>
+    /// <summary>+1 runs toward higher S, −1 toward lower S: its way of travel.</summary>
     public int Dir = 1;
+    /// <summary>
+    /// It rolls backwards, against its facing (the party's train in a hijack's roll back, plan 16): its body faces −<see cref="Dir"/>, so the
+    /// cart is unturned and its wagons stay on the side they were on. False for every other cart.
+    /// </summary>
+    public bool Reversing;
+    /// <summary>The way its body faces (+1 toward higher S): <see cref="Dir"/>, unless it is <see cref="Reversing"/>.</summary>
+    public int Facing => Reversing ? -Dir : Dir;
     /// <summary>The S the cart halts at (the input's StopAt): set it ahead of S, in <see cref="Dir"/>, before the cart rolls.</summary>
     public float Limit;
     /// <summary>
@@ -51,6 +58,11 @@ public sealed class CartRun
 
     /// <summary>The trailing end's S.</summary>
     public float BackS => State.S - Dir * CartRules.HalfLength;
+    /// <summary>
+    /// The S of its body's back face, the way it faces (<see cref="Facing"/>): <see cref="BackS"/> on every run but a reverse roll, where the back
+    /// of the way of travel is the body's front (plan 16). The party train's rear is built on this (the T5 review's M7).
+    /// </summary>
+    public float RearS => State.S - Facing * CartRules.HalfLength;
 
     /// <summary>S moved in <see cref="Dir"/> over the last step.</summary>
     public bool Moving => Dir >= 0 ? State.S > PrevS : State.S < PrevS;
@@ -129,20 +141,24 @@ public sealed class CartRun
         return (Mathf.RadToDeg(Mathf.Abs(turn * v)), Dir * v * rise);
     }
 
-    /// <summary>Put the body on the line at <paramref name="s"/> (<see cref="FrameOf"/>), facing its way of travel.</summary>
+    /// <summary>Put the body on the line at <paramref name="s"/> (<see cref="FrameOf"/>), facing its <see cref="Facing"/> (its way of travel unless it reverses).</summary>
     public void PoseAt(float s)
     {
         if (!GodotObject.IsInstanceValid(Body) || !Track.Valid) return;
         var frame = FrameOf(s);
-        var basis = Dir >= 0 ? frame.Basis : frame.Basis * new Basis(Vector3.Up, Mathf.Pi);
+        var basis = Facing >= 0 ? frame.Basis : frame.Basis * new Basis(Vector3.Up, Mathf.Pi);
         Body.GlobalTransform = new Transform3D(basis.Orthonormalized(), frame.Origin);
     }
 
-    /// <summary>A cart body (<see cref="ICartBody"/>) learns its speed and the bend it is in (its riders' ride feel and velocity).</summary>
+    /// <summary>
+    /// A cart body (<see cref="ICartBody"/>) learns its speed and the bend it is in (its riders' ride feel and velocity), the bend signed by the
+    /// way it faces; the party's cart also learns whether it rolls backwards (its velocity's sign, <see cref="MineCart.Reversing"/>).
+    /// </summary>
     public void Sync()
     {
         if (Body is not ICartBody cart || !GodotObject.IsInstanceValid(Body)) return;
         cart.Speed = State.V;
-        cart.Curvature = Dir * Track.Curvature(State.S); // a reversing cart reads the bend behind its back end: close enough for the lean
+        cart.Curvature = Facing * Track.Curvature(State.S); // a cart running toward lower S reads the bend behind its back end: close enough for the lean
+        if (Body is MineCart mine) mine.Reversing = Reversing;
     }
 }

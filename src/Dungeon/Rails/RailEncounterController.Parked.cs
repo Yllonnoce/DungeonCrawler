@@ -155,10 +155,13 @@ public partial class RailEncounterController
         _parkedJustRestored = false;
     }
 
-    /// <summary>A lift is due now (<see cref="ParkedRules.LiftDue"/>): the train's rear past the bridge's far edge, held at the last stop, no live cart, or wrecked inside.</summary>
+    /// <summary>
+    /// A lift is due now (<see cref="ParkedRules.LiftDue"/>): the train's rear past the bridge's far edge, held at the last stop, no live cart, or wrecked
+    /// inside. A train a hijack got away with (plan 16: the cart hidden while its relief train comes) is still a live cart: no lift for it.
+    /// </summary>
     private bool ParkedLiftDue()
         => ParkedRules.LiftDue(TrainRearS, ExitToS, _rails.State.Mode == CartMode.Held && _rails.StopIndex >= _rails.StopS.Length - 1,
-            liveCart: IsInstanceValid(_rails.Cart) && _rails.Cart.Visible, wreckedInside: _rails.LastWreckInside);
+            liveCart: IsInstanceValid(_rails.Cart) && (_rails.Cart.Visible || _rails.Hijack == HijackPhase.Gone), wreckedInside: _rails.LastWreckInside);
 
     /// <summary>The lantern blinks or not, the bell ringing at it as it starts (every role, by the same rule).</summary>
     private static void SetParkedAlarm(ParkedTrain train, bool alarm)

@@ -32,6 +32,24 @@ public static class RitualRules
     /// </summary>
     public static bool CountsAgainstRevive(bool alive, bool aware) => alive && aware;
 
+    /// <summary>
+    /// An enemy counts against a downed crew member's revive (plan 16 final fix wave, the controller's ruling on Fable I1): as
+    /// <see cref="CountsAgainstRevive(bool, bool)"/>, except a boarder riding the crew member's own wagon (<paramref name="onTheirWagon"/>: carried by
+    /// the wagon they are seated in) while the train is at its stop or hijacked (<paramref name="trainAtStop"/>, <see cref="TrainAtStop"/>). That
+    /// boarder is a hijacker spared on the wagon's rim (plan 16 Task 6): it sits inside the clear radius of every seat, and no fight with the
+    /// siege clears it. A siege creature and a boarder on another wagon still count; so does a ride's boarder on the wagon itself, which the
+    /// party knocks off with its blows. The 60 s bleed-out is unchanged.
+    /// </summary>
+    public static bool CountsAgainstRevive(bool alive, bool aware, bool onTheirWagon, bool trainAtStop)
+        => CountsAgainstRevive(alive, aware) && !(onTheirWagon && trainAtStop);
+
+    /// <summary>
+    /// The train is at its stop (held there, not halted on the line short of the next one) or hijacked, on every peer from the cart's state a
+    /// client is sent (<c>CartStateDto</c>'s mode, halted flag and hijack phase). Then every boarder on a wagon is a spared hijacker: the arrival
+    /// clears the ride's boarders, and the departure, which makes the train roll, turns the spared ones into the next ride's.
+    /// </summary>
+    public static bool TrainAtStop(bool held, bool halted, bool hijackLive) => hijackLive || (held && !halted);
+
     public static float Duration(int floor) => Math.Clamp(90f + 3f * floor, MinDuration, MaxDuration);
 
     /// <summary>Seconds between waves at this point of the rite (0..1): from 16 down to 8.</summary>
