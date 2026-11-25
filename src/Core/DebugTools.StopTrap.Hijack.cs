@@ -37,7 +37,9 @@ namespace DungeonCrawler.Core;
 //      on foot, the lead knocks the driver off from foot: at the Braking every runner is released to ChaseState (still a hijacker); the wagon's
 //      boarder is still aboard after HijackOver; with stop 1's crew seated in its wagon and the lead beside it, for 4 s it attacks and never
 //      targets or hurts the crew; the lead boards, the cage is waived and the train departs: 1 s after the Departed the boarder is aboard as the
-//      ride's ordinary boarder (not spared, its grip) going for its wagon's crew.
+//      ride's ordinary boarder (not spared, its grip) going for its wagon's crew. Before the departure (the final fix wave, Fable I1's ruling)
+//      the crew member nearest it is put down; once no aware siege creature stands within 6 m (the sweep's work) the wagon offers "Revive
+//      {name}" with the aware hijacker on its rim inside 6 m, and the revive is taken.
 //  Throughout (Ruling 32): no "straggler ... freed" line names a runner, the driver or a wagon's hijacker.
 public partial class DebugTools
 {
@@ -56,6 +58,8 @@ public partial class DebugTools
     private int _hjSub;
     private double _hjMark, _hjDriverAt, _hjClimbAt, _hjKnockAt, _hjOverAt, _hjRollAt;
     private Enemy? _hjRunner, _hjBoarder, _hjLast;
+    /// <summary>(i)'s crew member put down in the hijacker's wagon, to be revived under it (the final fix wave).</summary>
+    private Npc? _hjDowned;
     /// <summary>The driver whose hits are counted (the grip's readings).</summary>
     private Enemy? _hjStruck;
     private float _hjRunD0;
@@ -573,11 +577,51 @@ public partial class DebugTools
                 if (b.BoardTarget != null) { Fail($"at the stop the wagon's hijacker went for {b.BoardTarget.NpcName}, a crew member"); return; }
                 if (b.State is RunForCartState || b.State.Unaware) { Fail($"at the stop the wagon's hijacker is {b.State.Name}, not on the attack (the I1 fix)"); return; }
                 if (b.State is AttackState) _hjAttackSeen = true;
-                if (StNow - _hjMark < 4.0) break;
-                var hurt = _hjCrew.Where((n, i) => !IsInstanceValid(n) || n.Dead || n.Downed || n.Hp < _hjCrewHp[i]).Select(n => IsInstanceValid(n) ? n.NpcName : "?").ToList();
-                GD.Print($"[stoptrap] wonback: (i) 4 s at the stop with [{string.Join(", ", _hjCrew.Select(n => n.NpcName))}] in its wagon and the lead beside it: {b.Name} on the attack all through (now {b.State.Name}, {(_hjAttackSeen ? "it swung" : "nobody in its reach")}), its target {(b.HasTarget ? b.Target!.State.Name : "none")}, board target none, crew hurt [{string.Join(", ", hurt)}]");
-                if (!b.HasTarget) { Fail("the wagon's hijacker has no hero for its target at the stop"); return; }
-                if (hurt.Count > 0) { Fail($"the wagon's hijacker hurt crew at the stop: {string.Join(", ", hurt)}"); return; }
+                if (_hjSub == 2)
+                {
+                    if (StNow - _hjMark < 4.0) break;
+                    var hurt = _hjCrew.Where((n, i) => !IsInstanceValid(n) || n.Dead || n.Downed || n.Hp < _hjCrewHp[i]).Select(n => IsInstanceValid(n) ? n.NpcName : "?").ToList();
+                    GD.Print($"[stoptrap] wonback: (i) 4 s at the stop with [{string.Join(", ", _hjCrew.Select(n => n.NpcName))}] in its wagon and the lead beside it: {b.Name} on the attack all through (now {b.State.Name}, {(_hjAttackSeen ? "it swung" : "nobody in its reach")}), its target {(b.HasTarget ? b.Target!.State.Name : "none")}, board target none, crew hurt [{string.Join(", ", hurt)}]");
+                    if (!b.HasTarget) { Fail("the wagon's hijacker has no hero for its target at the stop"); return; }
+                    if (hurt.Count > 0) { Fail($"the wagon's hijacker hurt crew at the stop: {string.Join(", ", hurt)}"); return; }
+                    // (i) the revive under its own wagon's hijacker (the final fix wave, Fable I1's ruling): the flow's other hijackers (the knocked-off
+                    // driver and the runner on foot, held above 1 HP and spared by the sweep) die by the test's hand first, as a player would clear them;
+                    // then the crew member nearest the wagon's hijacker is put down
+                    HjKill(_hjRunner);
+                    _hjKeep.Remove(foot);
+                    HjKill(foot);
+                    _hjDowned = _hjCrew.Where(n => IsInstanceValid(n) && !n.Dead).OrderBy(n => n.GlobalPosition.DistanceTo(b.GlobalPosition)).FirstOrDefault();
+                    if (_hjDowned == null) { Fail("no crew member in the wagon to put down"); return; }
+                    _hjDowned.GoDown();
+                    _hjMark = StNow;
+                    _hjSub = 3;
+                    break;
+                }
+                if (_hjSub == 3)
+                {
+                    // with the hijacker on the wagon's rim and no siege creature within the clear radius, the downed crew member gets up
+                    var npc = _hjDowned!;
+                    if (StNow - _hjMark < 0.3) break;
+                    if (!IsInstanceValid(npc) || npc.Dead || !npc.Downed || npc.Cart is not TrainWagon dw) { Fail($"{npc.NpcName} is not down in a wagon (dead {npc.Dead}, down {npc.Downed})"); return; }
+                    var blockers = npc.GetParent().GetChildren().OfType<Enemy>()
+                        .Where(e => e.IsAlive && !e.IsUnaware && e.Carrier != dw && e.GlobalPosition.DistanceTo(npc.GlobalPosition) < RitualRules.ReviveClearRadius).ToList();
+                    if (blockers.Count > 0)
+                    {
+                        if (StNow - _hjMark > 12.0) Fail($"(i) revive: in 12 s an aware enemy off the wagon always stood within {RitualRules.ReviveClearRadius} m of {npc.NpcName} ({string.Join(", ", blockers.Select(e => $"{e.Name} {e.Profile.Id} {e.State.Name}, a hijacker {trap.IsHijacker(e)}, {e.GlobalPosition.DistanceTo(npc.GlobalPosition):0.0} m"))})");
+                        break; // the sweep kills them
+                    }
+                    var rim = b.GlobalPosition.DistanceTo(npc.GlobalPosition);
+                    var plain = rc.PlainPromptOf(dw, me!) ?? "";
+                    var taken = npc.ReviveTaken;
+                    GD.Print($"[stoptrap] wonback: (i) revive: {npc.NpcName} down in wagon {dw.Number} with {b.Name} on its rim {rim:0.00} m off (alive {b.IsAlive}, aware {!b.IsUnaware}, carried by it {b.Carrier == dw}), no siege creature within {RitualRules.ReviveClearRadius} m: the revive taken {taken}, the wagon offers \"{plain}\"");
+                    if (!b.IsAlive || b.IsUnaware || b.Carrier != dw || !(rim < RitualRules.ReviveClearRadius)) { Fail($"(i) revive: the hijacker is not an aware boarder on {npc.NpcName}'s wagon within the clear radius (the old rule would not have refused)"); return; }
+                    if (!taken || plain != $"Revive {npc.NpcName}") { Fail($"(i) revive: the hijacker on {npc.NpcName}'s own wagon still blocks the revive (taken {taken}, offered \"{plain}\")"); return; }
+                    if (!npc.TryRevive() || npc.Downed) { Fail($"(i) revive: {npc.NpcName} could not be got up"); return; }
+                    GD.Print($"[stoptrap] wonback: (i) revive: {npc.NpcName} gets up beside the hijacker on the wagon's rim");
+                    _hjSummary.Add("a crew member downed in the wagon a hijacker rode was revived with no siege creature near");
+                    _hjDowned = null;
+                    _hjSub = 4;
+                }
                 HjKill(_hjRunner);
                 _hjKeep.Remove(foot);
                 HjKill(foot);
