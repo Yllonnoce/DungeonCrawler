@@ -9,7 +9,9 @@ namespace DungeonCrawler.Adventure;
 /// <summary>
 /// The floor's ambushers: creatures hidden in rubble mounds and wall niches along the corridors (placed by
 /// <see cref="AmbushRules"/>) that burst out, already hunting, when an adventurer steps within a few metres. A sprung
-/// point stays sprung in the save; the creature itself is dynamic like a horde's and is not kept.
+/// point stays sprung in the save; the creature itself is dynamic like a horde's and is not kept. Plan 16 appends the cage stops' wall
+/// points (<see cref="AddStopPoints"/>, <see cref="StopAmbushRules"/>) after the corridor ones, so a saved index keeps its point: they spring
+/// only by <see cref="SpringStop"/> (the stop trap's arming), never by a hero's nearness.
 /// </summary>
 public partial class AmbushSpawner : Node
 {
@@ -17,7 +19,7 @@ public partial class AmbushSpawner : Node
     /// <summary>Metres from the trigger cell's centre at which an ambush springs.</summary>
     public const float TriggerRadius = 3.2f;
 
-    public IReadOnlyList<AmbushPoint> Points { get; private set; } = Array.Empty<AmbushPoint>();
+    public IReadOnlyList<AmbushPoint> Points => _points;
     public HashSet<int> Sprung { get; } = new();
     public int Alive => _alive.Count(e => IsInstanceValid(e) && e.IsAlive);
 
@@ -25,6 +27,11 @@ public partial class AmbushSpawner : Node
     private int _floor;
     private float _timer;
     private readonly List<Enemy> _alive = new();
+    private readonly List<AmbushPoint> _points = new();
+    /// <summary>The creatures the stop walls let loose (<see cref="SpringStop"/>), alive or not.</summary>
+    private readonly HashSet<Enemy> _fromStops = new();
+    /// <summary>The corridor points' count: those the proximity tick watches (the stop points follow them).</summary>
+    private int _corridor;
 
     public void Setup(FloorLayout layout, int floor, IReadOnlyList<AmbushPoint> points, IEnumerable<int>? sprung)
     {
@@ -32,7 +39,9 @@ public partial class AmbushSpawner : Node
         Name = "Ambushes";
         _layout = layout;
         _floor = floor;
-        Points = points;
+        _points.Clear();
+        _points.AddRange(points);
+        _corridor = _points.Count;
         if (sprung != null) foreach (var i in sprung) Sprung.Add(i);
     }
 
@@ -40,17 +49,43 @@ public partial class AmbushSpawner : Node
 
     public void Restore(IEnumerable<int> sprung) { foreach (var i in sprung) Sprung.Add(i); }
 
+    /// <summary>
+    /// The cage stops' wall points (<see cref="StopAmbushRules.Place"/>), appended after every point already here so the corridor points keep
+    /// their indices (and a save's <c>SprungAmbushes</c> its meaning). Returns the index of the first one appended.
+    /// </summary>
+    public int AddStopPoints(IReadOnlyList<AmbushPoint> points)
+    {
+        var first = _points.Count;
+        _points.AddRange(points);
+        return first;
+    }
+
+    /// <summary>Stop <paramref name="stop"/>'s wall points not sprung yet, each let loose now through <see cref="Spring"/>; how many creatures burst.</summary>
+    public int SpringStop(int stop)
+    {
+        var n = 0;
+        for (var i = 0; i < _points.Count; i++)
+        {
+            if (_points[i].Stop != stop || Sprung.Contains(i)) continue;
+            if (Spring(i) is { } e) { _fromStops.Add(e); n++; }
+        }
+        return n;
+    }
+
+    /// <summary>A creature some stop's walls let loose (the flows spare these from their cull).</summary>
+    public bool IsStopAmbusher(Enemy e) => _fromStops.Contains(e);
+
     public override void _PhysicsProcess(double delta)
     {
-        if (Net.NetSession.IsClient || Points.Count == 0 || Sprung.Count >= Points.Count) return;
+        if (Net.NetSession.IsClient || _corridor == 0) return;
         _timer -= (float)delta;
         if (_timer > 0f) return;
         _timer = 0.15f;
         var main = Main.Instance;
         if (main?.Builder.Layout == null || !main.InGame) return;
-        for (var i = 0; i < Points.Count; i++)
+        for (var i = 0; i < _corridor; i++) // the stop points follow: they spring with their stop, not by nearness
         {
-            if (Sprung.Contains(i)) continue;
+            if (Sprung.Contains(i) || Points[i].Stop >= 0) continue;
             var at = main.Builder.Surface(Points[i].Trigger);
             foreach (var adv in main.Party.Active)
             {

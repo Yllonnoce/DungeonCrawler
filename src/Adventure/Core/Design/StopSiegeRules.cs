@@ -142,9 +142,10 @@ public static class StopSiegeRules
     /// The cells a creature can walk to from the platform without leaving the room's widened box: a flood from the platform's
     /// neighbours over walkable cells (<see cref="FloorLayout.CanStep(GridPos, GridPos, bool)"/>: heights, ramps, blocked edges),
     /// never onto a line cell, a bridge, a chasm, a prop (<paramref name="blocked"/>), a vault or the boss arena. A portal behind a
-    /// wall, across the line or a drop, or in a sealed room would hold creatures against the cap that never reach the party.
+    /// wall, across the line or a drop, or in a sealed room would hold creatures against the cap that never reach the party. The stop-wall
+    /// ambushers' triggers (<see cref="StopAmbushRules.Place"/>) are taken from it too, so none bursts where it cannot reach the party.
     /// </summary>
-    private static HashSet<GridPos> Reachable(FloorLayout layout, Room room, RailStop stop, Func<GridPos, bool>? blocked)
+    internal static HashSet<GridPos> Reachable(FloorLayout layout, Room room, RailStop stop, Func<GridPos, bool>? blocked)
     {
         bool InBox(GridPos c) => c.X >= room.X - Around && c.X <= room.Right + Around && c.Y >= room.Y - Around && c.Y <= room.Bottom + Around;
         bool Passable(GridPos c) => InBox(c) && layout.IsWalkable(c) && !layout.IsRail(c) && !layout.IsBridge(c) && !layout.IsChasm(c)

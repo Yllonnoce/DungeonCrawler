@@ -16,7 +16,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// stop mode with the row's first-wave delay; its departure, a wreck or the rest on foot ends it; a restore (a load, a wipe's rise)
 /// ends it and, with the train held at a cage stop, starts it again from wave 1 after the restart's grace (Ruling 3). On a stop's
 /// first siege Grisel, or else the nearest up freed crew member, calls a warning. The RIDE pass's server runs no siege (Ruling 2).
-/// Later tasks add their parts (T4 the wall ambushers, T6 the hijack) as further files of this partial class.
+/// Later tasks add their parts (T4 the wall ambushers, StopTrapController.Ambush.cs; T6 the hijack) as further files of this partial class.
 /// </summary>
 public partial class StopTrapController : Node
 {
@@ -37,6 +37,7 @@ public partial class StopTrapController : Node
         Name = "StopTrap";
         _rails = rails;
         _rails.CartEvents += OnCartEvent;
+        BuildAmbushes(builder, layout); // built after the objective's cages (PlaceStopTrap follows PlaceObjective), on every role
     }
 
     public override void _ExitTree()
@@ -53,6 +54,7 @@ public partial class StopTrapController : Node
     private void OnCartEvent(CartEvent e)
     {
         if (NetSession.IsClient) return;
+        OnAmbushCartEvent(e);
         switch (e.Kind)
         {
             case CartEventKind.Arrived:
@@ -105,7 +107,9 @@ public partial class StopTrapController : Node
 
     public override void _PhysicsProcess(double delta)
     {
-        if (NetSession.IsClient || _warnStop < 1 || !_warnArmed) return;
+        if (NetSession.IsClient) return;
+        TickAmbush((float)delta);
+        if (_warnStop < 1 || !_warnArmed) return;
         _warnClock += (float)delta;
         if (_warnClock < 1f) return;
         _warnClock = 0f;
