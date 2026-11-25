@@ -665,7 +665,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         TelegraphDecal.Hide(this);
     }
 
-    /// <summary>Client only: the server said this enemy began a wind-up ("Attack"/"Shoot") or a signature ("Signature:Slam").</summary>
+    /// <summary>
+    /// Client only: the server said this enemy began a wind-up (any state <see cref="TelegraphRules.WindsUp"/> accepts: an Attack, a Shoot, an alcove
+    /// shooter's, a caster's Support), a signature ("Signature:Slam"), a kiln golem's <see cref="TelegraphRules.RailSlam"/>, a boarder's
+    /// <see cref="TelegraphRules.BoarderThrow"/>, or a Stagger that ends any of them.
+    /// </summary>
     public void ClientTelegraph(string state)
     {
         if (!IsAlive) return;
@@ -677,7 +681,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             PlayAnim("HitReact", force: true);
             return;
         }
-        if (TelegraphRules.WindsUp(state)) BeginWindup(WindupSeconds); // an Attack, a Shoot or an alcove shooter's
+        if (TelegraphRules.WindsUp(state)) BeginWindup(WindupSeconds); // an Attack, a Shoot, an alcove shooter's or a caster's Support
         else if (state == TelegraphRules.RailSlam)
         {
             TelegraphFx.HandGlow(this, TelegraphRules.RailSlamWindup); // the kiln golem's fist, as the server's glows

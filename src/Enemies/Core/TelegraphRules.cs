@@ -30,12 +30,18 @@ public static class TelegraphRules
     public const string BoarderThrow = "BoarderThrow";
     /// <summary>An alcove shooter's state (plan 16 Task 8): its wind-ups are told under this name, and a client winds up on it as on a Shoot.</summary>
     public const string Alcove = "Alcove";
+    /// <summary>
+    /// A caster's turn to a hurt ally (<c>SupportState</c>): its wind-up (the clip, the hand's glow, the tint) is told under this name, and a client winds
+    /// up on it as on an Attack (plan 16 final fix wave: a forge priest's heal had no wind-up on clients, and the priests are a quarter of every siege wave).
+    /// </summary>
+    public const string Support = "Support";
 
     /// <summary>
     /// A telegraph told under <paramref name="state"/> is an attack's wind-up a client plays as its own (the clip, the hand's glow, the tint): an Attack,
-    /// a Shoot, or an alcove shooter's (<see cref="Alcove"/>, Task 8 fix round 1: it was dropped on clients).
+    /// a Shoot, an alcove shooter's (<see cref="Alcove"/>, Task 8 fix round 1: it was dropped on clients) or a caster's heal or shield
+    /// (<see cref="Support"/>, the final fix wave).
     /// </summary>
-    public static bool WindsUp(string state) => state is "Attack" or "Shoot" or Alcove;
+    public static bool WindsUp(string state) => state is "Attack" or "Shoot" or Alcove or Support;
 
     public static float Delay(Signature s) => s == Signature.Charge ? ChargeDelay : s == Signature.Volley ? VolleyDelay : s == Signature.Summon ? SummonDelay : SlamDelay;
     /// <summary>The clip speed that puts its strike frame at the end of the wind-up.</summary>
