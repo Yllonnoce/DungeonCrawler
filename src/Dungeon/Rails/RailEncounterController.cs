@@ -190,6 +190,7 @@ public partial class RailEncounterController : Node
         WarmModels(ArmedRide); // nothing to do once the floor's warm-up is in: a model is kept for the session
         WarmLines(ArmedRide);
         ArmStanders(ArmedRide);
+        ArmAlcoves(ArmedRide); // the alcove shooters, hidden in their pockets (plan 16 Task 8)
     }
 
     /// <summary>
@@ -200,6 +201,7 @@ public partial class RailEncounterController : Node
     {
         ArmedRide = -1;
         ClearStanders();
+        ClearAlcoves(); // none outlives its ride: no shooter in a reverse roll, a return or a relief (plan 16 Task 8)
         ClearSwitchyard();
         ClearBarricades();
         ClearLeaps(wrecked, all); // boarders first: they are not on a slag cart's list
@@ -363,6 +365,7 @@ public partial class RailEncounterController : Node
         TickLeaps(dt); // boarders outlive the slag cart that threw them
         TickAnswers(); // a boarded, crewed wagon with no hero up is answered: by a seated shot, else a companion climbing to it (and back)
         TickThrows(dt); // a boarder alone with the prisoners is called out, glows and throws them off (plan 14 Task 5)
+        TickAlcoves(); // a done shooter goes quietly (plan 16 Task 8)
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null && _rideRunaway == null)
         {

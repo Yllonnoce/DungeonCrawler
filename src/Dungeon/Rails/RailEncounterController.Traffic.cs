@@ -51,6 +51,8 @@ public partial class RailEncounterController
         public Vector3 Spot;
         public Vector3? PriorTarget;
         public bool PriorOverride;
+        /// <summary>Held by a test's hook (<see cref="DebugClaimPocket"/>): not let go until the hook says.</summary>
+        public bool Held;
     }
 
     private SlagCart? _traffic;
@@ -242,7 +244,7 @@ public partial class RailEncounterController
         {
             var p = pockets[i];
             float dx = p.X - pos.X, dz = p.Z - pos.Z, d = dx * dx + dz * dz;
-            if (d >= bestD || Mathf.Abs(p.Y - pos.Y) > 3f) continue;
+            if (d >= bestD || Mathf.Abs(p.Y - pos.Y) > 3f || ShooterIn(p)) continue; // never a pocket with a live alcove shooter in it (plan 16 Task 8)
             if (!run.Track.Measure(p, bodyS, SeekRange + 2f, out var pb) || pb.S < run.FrontS + 1.5f) continue; // its front is there already
             bestD = d;
             best = p;
@@ -298,6 +300,7 @@ public partial class RailEncounterController
         _seekerGone.Clear();
         foreach (var (id, k) in _seekers)
         {
+            if (k.Held && IsInstanceValid(k.Body)) continue; // a test's claim (DebugClaimPocket)
             var body = k.Body;
             var alive = IsInstanceValid(body) && !body.IsQueuedForDeletion() && body switch
             {

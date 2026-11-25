@@ -581,8 +581,15 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         ChangeState(new HoldState());
     }
 
+    /// <summary>
+    /// Pinned to its post (plan 16's alcove shooters): <see cref="ChangeState"/> refuses every state but <see cref="DeadState"/>, so nothing (a hurt,
+    /// an alarm, a flee, a hold) takes it out of its own. Set after the pinned state is entered. Server and solo.
+    /// </summary>
+    public bool Pinned { get; set; }
+
     public void ChangeState(AiState next)
     {
+        if (Pinned && next is not DeadState) return;
         if (DebugTools.TraceAi) GD.Print($"[ai] {Name}: {State.Name} -> {next.Name} (hp {Hp:0}, dist {DistanceToParty():0.0})");
         var wasUnaware = State.Unaware;
         State.Exit(this);
@@ -697,7 +704,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     private PhysicsRayQueryParameters3D? _sightRay; // one per enemy, re-aimed per ray (sight asks up to four a tick)
 
-    private bool LineOfSightTo(Vector3 point)
+    internal bool LineOfSightTo(Vector3 point)
     {
         var space = GetWorld3D().DirectSpaceState;
         _sightRay ??= PhysicsRayQueryParameters3D.Create(Vector3.Zero, Vector3.Up, collisionMask: 1);
@@ -1112,13 +1119,30 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     public void FireAtParty() { WindupLeft = -1f; Fire(Attack, 0f, playClip: false); }
 
+    /// <summary>Where its bolts leave from.</summary>
+    public Vector3 Muzzle => GlobalPosition + Vector3.Up * (1.3f * Profile.Scale);
+
+    /// <summary>A bolt at <paramref name="aim"/> (a world point: an alcove shooter's lead aim, plan 16), at the end of a wind-up begun by its state.</summary>
+    public void FireAt(Vector3 aim)
+    {
+        WindupLeft = -1f;
+        if (Party == null || Main.Instance?.Builder.FloorRoot is not { } root) return;
+        var dir = aim - Muzzle;
+        if (dir.LengthSquared() < 1e-6f) return;
+        Launch(root, Attack, dir.Normalized());
+    }
+
     private void Fire(AttackProfile attack, float yawOffsetDegrees, bool playClip = true)
     {
         if (playClip) PlayAnim("Punch", force: true);
         if (Party == null || Main.Instance?.Builder.FloorRoot is not { } root) return;
-        var from = GlobalPosition + Vector3.Up * (1.3f * Profile.Scale);
         var to = TargetPosition + Vector3.Up * 1.2f;
-        var dir = (to - from).Normalized().Rotated(Vector3.Up, Mathf.DegToRad(yawOffsetDegrees));
+        Launch(root, attack, (to - Muzzle).Normalized().Rotated(Vector3.Up, Mathf.DegToRad(yawOffsetDegrees)));
+    }
+
+    private void Launch(Node3D root, AttackProfile attack, Vector3 dir)
+    {
+        var from = Muzzle;
         var p = _projectileScene.Instantiate<Projectile>();
         root.AddChild(p);
         p.GlobalPosition = from + dir * 0.8f;

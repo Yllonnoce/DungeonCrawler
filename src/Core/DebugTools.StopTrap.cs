@@ -7,11 +7,11 @@ using Godot;
 namespace DungeonCrawler.Core;
 
 // ---- --test-stop-trap[=siege|ambush|roll|wonback|gotaway|limits|pockets|alcove] (plan 16) ---------------------------------------
-// The stop trap's flows, one variant a run, each added by the task that builds it (T3: =siege, the default; T4: =ambush; T5: =roll; T6: =wonback; T7: =gotaway, =limits). Every variant runs on the
+// The stop trap's flows, one variant a run, each added by the task that builds it (T3: =siege, the default; T4: =ambush; T5: =roll; T6: =wonback; T7: =gotaway, =limits; T8: =pockets, =alcove). Every variant runs on the
 // built-in campaign's floor 12 at lethality 1 (ForcedLethality ??= 1), with no gathering and no AI trace; every hero is topped up to full
 // HP each second (a downed one stood up first) unless the flow is taking them down. NoPortals is off for =siege, =wonback and =gotaway;
 // NoAmbush is off for =ambush, =pockets and =alcove; NoHijack is off for =wonback and =gotaway only (Ruling 22). The cull frees (kills, as the other floor-12 flows do) every enemy but the
-// variant's own: siege creatures, stop guards, the stop walls' ambushers and a variant's own (_stKeep: =roll's cinder) here (the hijackers are siege creatures); the later tasks spare their alcove shooters. Prints
+// variant's own: siege creatures, stop guards, the stop walls' ambushers, the alcove shooters and a variant's own (_stKeep: =roll's cinder) here (the hijackers are siege creatures). Prints
 // [stoptrap] lines and [stoptrap] RESULT ok ({variant}) or [stoptrap] RESULT FAIL ({variant}): {why}.
 public partial class DebugTools
 {
@@ -23,7 +23,7 @@ public partial class DebugTools
     private bool _stNoTopUp;
     private int _stRevived;
     /// <summary>The variants built so far (each task adds its own).</summary>
-    private static readonly string[] StopTrapVariants = { "siege", "ambush", "roll", "wonback", "gotaway", "limits" };
+    private static readonly string[] StopTrapVariants = { "siege", "ambush", "roll", "wonback", "gotaway", "limits", "pockets", "alcove" };
 
     /// <summary>The flag: the variant, its switches and its budget (Ruling 22).</summary>
     private void StopTrapArgs(string arg)
@@ -82,6 +82,8 @@ public partial class DebugTools
             case "wonback": RunStopTrapWonback(main, layout, root, rc, portals); break;
             case "gotaway": RunStopTrapGotAway(main, layout, root, rc, portals); break;
             case "limits": RunStopTrapLimits(rc); break;
+            case "pockets": RunStopTrapPockets(rc); break;
+            case "alcove": RunStopTrapAlcove(main, layout, root, rc); break;
         }
     }
 
@@ -100,18 +102,19 @@ public partial class DebugTools
 
     /// <summary>
     /// Every frame: every living enemy that is not the variant's own dies by the test's hand, as the floor-12 flows cull (the floor's
-    /// own, the rides' set pieces, a floor-wide portal's, a corridor ambusher): the stop guards (they hold the gates), the siege's creatures and the
-    /// stop walls' ambushers stay.
+    /// own, the rides' set pieces, a floor-wide portal's, a corridor ambusher): the stop guards (they hold the gates), the siege's creatures, the
+    /// stop walls' ambushers and the alcove shooters stay.
     /// </summary>
     private void StopTrapCull(Main main, FloorLayout layout, Node3D root, PortalSpawner portals)
     {
         if (_stStep == 0) return;
         _stCull.Clear();
         var walls = root.GetChildren().OfType<AmbushSpawner>().FirstOrDefault();
+        var rails = RailEncounterController.Instance;
         foreach (var e in Enemies.Enemy.Live)
         {
             if (!IsInstanceValid(e) || !e.IsAlive || e.GetParent() != root) continue;
-            if (portals.IsSiegeCreature(e) || HoldsAStop(main, layout, e) || walls?.IsStopAmbusher(e) == true || _stKeep.Contains(e)) continue;
+            if (portals.IsSiegeCreature(e) || HoldsAStop(main, layout, e) || walls?.IsStopAmbusher(e) == true || _stKeep.Contains(e) || rails?.IsAlcoveShooter(e) == true) continue;
             _stCull.Add(e);
         }
         foreach (var e in _stCull) e.Kill();
