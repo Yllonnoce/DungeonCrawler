@@ -371,6 +371,7 @@ public partial class RailTrack : Node3D
             {
                 Name = $"{name}{c}", Mesh = mesh, MaterialOverride = material,
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                VisibilityRangeEnd = System.Environment.GetEnvironmentVariable("DC_TRACK_RANGE") is { } r ? float.Parse(r) : 0f, // EXPERIMENT
             });
         }
     }
