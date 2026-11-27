@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/Warrior_Sword_Texture.png-73f2f8ccb17e96c8476
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.8
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1

@@ -18,9 +18,9 @@ dest_files=["res://.godot/imported/wren_0.png-be79a6f1a3d09f2a83558e17b580a498.c
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.8
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
